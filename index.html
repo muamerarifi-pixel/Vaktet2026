@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Vaktet – Kohët e namazit në Kosovë</title>
+  <meta name="description" content="Kohët e namazit për qytetet e Kosovës sipas Takvimit të Bashkësisë Islame të Kosovës. Funksionon edhe pa internet.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#EEF1EE" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E1513" media="(prefers-color-scheme: dark)">
+  <style>
+    /* Paint the right background before anything else loads, so opening the app at night never flashes light. */
+    html { background: #EEF1EE; }
+    @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #0E1513; } }
+    html[data-theme="dark"] { background: #0E1513; }
+  </style>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("vaktet:theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.dataset.theme = t;
+          var c = t === "dark" ? "#0E1513" : "#EEF1EE";
+          var m = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Vaktet">
+  <link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-view="today">
+  <script>
+    (function () {
+      try {
+        var b = document.body;
+        if (localStorage.getItem("vaktet:focus") === "1") b.classList.add("is-focus");
+        if (localStorage.getItem("vaktet:tips") === "0") b.classList.add("no-tips");
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+  <header class="top">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M20.5 5.5a11 11 0 1 0 6 19.2A12.5 12.5 0 0 1 20.5 5.5Z" fill="currentColor"/></svg>
+      <span>Vaktet</span>
+    </div>
+    <div class="top-actions">
+      <label class="city">
+        <span class="sr-only">Qyteti</span>
+        <select id="city" aria-label="Qyteti"></select>
+        <svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </label>
+      <button class="icon-btn" id="settingsBtn" aria-label="Cilësimet" title="Cilësimet">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel today" id="todayView" aria-labelledby="dateText">
+      <div class="date-row">
+        <button class="step" id="prevDay" aria-label="Dita e mëparshme">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="date-text">
+          <h1 id="dateText">&nbsp;</h1>
+          <p id="hijriText" class="hijri">&nbsp;</p>
+        </div>
+        <button class="step" id="nextDay" aria-label="Dita tjetër">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <button class="back-today" id="backToday" hidden>Kthehu te sot</button>
+
+      <div class="next" id="nextCard" aria-live="polite">
+        <div class="sky" aria-hidden="true">
+          <div class="sky-stars"></div>
+          <div class="sky-haze"></div>
+          <div class="sky-orb"></div>
+          <svg class="sky-hills" viewBox="0 0 400 60" preserveAspectRatio="none"><path class="hill-far" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-near" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/></svg>
+          <div class="sky-veil"></div>
+        </div>
+        <p class="next-intro"><svg class="forbid-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 12.4 12.4 3.6" stroke="currentColor" stroke-width="1.6"/></svg><span id="nextIntro">Namazi i ardhshëm</span></p>
+        <div class="next-main">
+          <span class="next-name" id="nextName">&nbsp;</span>
+          <span class="next-time" id="nextTime"></span>
+        </div>
+        <p class="countdown"><span id="countdown" class="countdown-num">--:--:--</span> <span class="countdown-label" id="countdownLabel">deri në fillim</span></p>
+        <p class="next-alt" id="nextAlt" hidden><span id="nextAltText"></span> <strong id="nextAltCount"></strong></p>
+        <div class="dayline" id="dayline" aria-hidden="true">
+          <div class="dayline-fill" id="daylineFill"></div>
+          <div class="dayline-ticks" id="daylineTicks"></div>
+          <div class="dayline-now" id="daylineNow"></div>
+        </div>
+      </div>
+
+      <div class="below-card">
+        <button type="button" class="focus-btn" id="focusBtn" aria-pressed="false">
+          <svg class="ico-hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c5.5 0 9 5.5 9 7 0 .7-.8 2.2-2.2 3.7M6.5 6.6C4.3 8 3 10.9 3 12c0 1.5 3.5 7 9 7 1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="ico-show" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c0-1.5 3.5-7 9-7s9 5.5 9 7-3.5 7-9 7-9-5.5-9-7Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
+          <span id="focusLabel">Fshih vaktet</span>
+        </button>
+
+        <section class="tips" id="tips" aria-labelledby="tipsTitle">
+          <div class="tips-head">
+            <h2 class="tips-title" id="tipsTitle">Dy këshilla për sot</h2>
+            <button type="button" class="tips-toggle" id="tipsToggle" aria-controls="tipsList" aria-expanded="true">Fshih</button>
+          </div>
+          <div id="tipsList"></div>
+        </section>
+      </div>
+
+      <div class="alarm" id="alarmCard" hidden>
+        <svg class="alarm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 9.5V13l2.5 1.5M4.5 5 7 3M19.5 5 17 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="alarm-body">
+          <p class="alarm-title">Alarmi për sabah</p>
+          <p class="alarm-sub" id="alarmSub"></p>
+        </div>
+        <span class="alarm-time" id="alarmTime"></span>
+      </div>
+
+      <ol class="times" id="times"></ol>
+      <p class="city-note" id="cityNote"></p>
+    </section>
+
+    <section class="panel month" id="monthView" aria-labelledby="monthTitle">
+      <div class="month-head">
+        <button class="step" id="prevMonth" aria-label="Muaji i mëparshëm">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 id="monthTitle">&nbsp;</h2>
+        <button class="step" id="nextMonth" aria-label="Muaji tjetër">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table class="month-table">
+          <thead>
+            <tr>
+              <th scope="col" class="c-day">Dita</th>
+              <th scope="col"><span class="full">Imsaku</span><span class="abbr" aria-hidden="true">Ims.</span></th>
+              <th scope="col"><span class="full">Sabahu</span><span class="abbr" aria-hidden="true">Sab.</span></th>
+              <th scope="col"><span class="full">Lindja</span><span class="abbr" aria-hidden="true">Lin.</span></th>
+              <th scope="col"><span class="full">Hyrja e drekës</span><span class="abbr" aria-hidden="true">Dre.</span></th>
+              <th scope="col"><span class="full">Ikindia</span><span class="abbr" aria-hidden="true">Iki.</span></th>
+              <th scope="col"><span class="full">Akshami</span><span class="abbr" aria-hidden="true">Aks.</span></th>
+              <th scope="col"><span class="full">Jacia</span><span class="abbr" aria-hidden="true">Jac.</span></th>
+            </tr>
+          </thead>
+          <tbody id="monthBody"></tbody>
+        </table>
+      </div>
+      <p class="table-note">Kolona e drekës tregon hyrjen e kohës. Dreka falet në 12:00 në dimër dhe në 13:00 në verë.</p>
+    </section>
+  </main>
+
+  <nav class="tabs" aria-label="Pamja">
+    <button class="tab" id="tabToday" aria-pressed="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span>Sot</span>
+    </button>
+    <button class="tab" id="tabMonth" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span>Muaji</span>
+    </button>
+  </nav>
+
+  <dialog id="settings" aria-labelledby="settingsTitle">
+    <form method="dialog" class="sheet">
+      <div class="sheet-head">
+        <h2 id="settingsTitle">Cilësimet</h2>
+        <button class="icon-btn" value="close" aria-label="Mbyll">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <fieldset class="field">
+        <legend>Pamja</legend>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="theme" value="auto"><span>Automatike</span></label>
+          <label><input type="radio" name="theme" value="light"><span>E çelët</span></label>
+          <label><input type="radio" name="theme" value="dark"><span>E errët</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Data hixhri</legend>
+        <p class="hint">Nëse data hixhri ndryshon nga ajo e shpallur nga BIK, korrigjojeni me ditë.</p>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="hijri" value="-2"><span>−2</span></label>
+          <label><input type="radio" name="hijri" value="-1"><span>−1</span></label>
+          <label><input type="radio" name="hijri" value="0"><span>0</span></label>
+          <label><input type="radio" name="hijri" value="1"><span>+1</span></label>
+          <label><input type="radio" name="hijri" value="2"><span>+2</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Alarmi për sabah</legend>
+        <p class="hint">Sa minuta para lindjes së diellit të sugjerohet alarmi.</p>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="alarm" value="15"><span>15 min</span></label>
+          <label><input type="radio" name="alarm" value="30"><span>30 min</span></label>
+          <label><input type="radio" name="alarm" value="45"><span>45 min</span></label>
+          <label><input type="radio" name="alarm" value="60"><span>60 min</span></label>
+        </div>
+      </fieldset>
+
+      <div class="field" id="installField" hidden>
+        <button type="button" class="primary" id="installBtn">Instalo aplikacionin</button>
+      </div>
+
+      <div class="about">
+        <p>Kohët janë nga Takvimi zyrtar i Bashkësisë Islame të Kosovës. Qytetet që Takvimi i shënon me dallim (Prishtina, Ferizaj, Gjilani, Podujeva, Vushtrria −1 min, Sharri +2 min) e kanë të llogaritur dallimin; qytetet e tjera përdorin kohët bazë.</p>
+        <p>Aplikacioni punon pa internet dhe e llogarit vetë kalimin në orën verore e dimërore, prandaj kohët mbeten të sakta edhe në vitet në vijim.</p>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/data.js"></script>
+  <script src="/tips.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Vaktet – Kohët e namazit në Kosovë",
+  "short_name": "Vaktet",
+  "description": "Kohët e namazit për qytetet e Kosovës sipas Takvimit të BIK. Punon pa internet.",
+  "lang": "sq",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1513",
+  "theme_color": "#0E1513",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
