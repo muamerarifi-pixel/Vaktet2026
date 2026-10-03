@@ -7,12 +7,12 @@
   <meta name="description" content="Kohët e namazit për qytetet e Kosovës sipas Takvimit të Bashkësisë Islame të Kosovës. Funksionon edhe pa internet.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#EEF1EE" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0E1513" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <style>
     /* Paint the right background before anything else loads, so opening the app at night never flashes light. */
     html { background: #EEF1EE; }
-    @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #0E1513; } }
-    html[data-theme="dark"] { background: #0E1513; }
+    @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #000000; } }
+    html[data-theme="dark"] { background: #000000; }
   </style>
   <script>
     (function () {
@@ -20,7 +20,7 @@
         var t = localStorage.getItem("vaktet:theme");
         if (t === "light" || t === "dark") {
           document.documentElement.dataset.theme = t;
-          var c = t === "dark" ? "#0E1513" : "#EEF1EE";
+          var c = t === "dark" ? "#000000" : "#EEF1EE";
           var m = document.querySelectorAll('meta[name="theme-color"]');
           for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
         }
@@ -87,10 +87,12 @@
           <svg class="sky-hills" viewBox="0 0 400 60" preserveAspectRatio="none"><path class="hill-far" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-near" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/></svg>
           <div class="sky-veil"></div>
         </div>
-        <p class="next-intro"><svg class="forbid-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 12.4 12.4 3.6" stroke="currentColor" stroke-width="1.6"/></svg><span id="nextIntro">Namazi i ardhshëm</span></p>
-        <div class="next-main">
-          <span class="next-name" id="nextName">&nbsp;</span>
-          <span class="next-time" id="nextTime"></span>
+        <div class="next-head">
+          <p class="next-intro"><svg class="forbid-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 12.4 12.4 3.6" stroke="currentColor" stroke-width="1.6"/></svg><span id="nextIntro">Namazi i ardhshëm</span></p>
+          <div class="next-main">
+            <span class="next-name" id="nextName">&nbsp;</span>
+            <span class="next-time" id="nextTime"></span>
+          </div>
         </div>
         <p class="countdown"><span id="countdown" class="countdown-num">--:--:--</span> <span class="countdown-label" id="countdownLabel">deri në fillim</span></p>
         <p class="next-alt" id="nextAlt" hidden><span id="nextAltText"></span> <strong id="nextAltCount"></strong></p>

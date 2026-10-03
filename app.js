@@ -155,9 +155,34 @@
     const root = document.documentElement;
     if (state.theme === "light" || state.theme === "dark") root.dataset.theme = state.theme;
     else delete root.dataset.theme;
-    const metas = document.querySelectorAll('meta[name="theme-color"]');
+    updateChrome();
+  }
+
+  // The phone's status bar takes the page colour, or the top of the sky when the card fills the screen.
+  const SKY_TOP = { night: "#060A1C", dawn: "#121844", morning: "#154F96", noon: "#0B3F7E", afternoon: "#1A3560", dusk: "#0F1032" };
+  let lastChrome = "";
+  function mixHex(hex, rgb, a, shade) {
+    const n = parseInt(hex.slice(1), 16);
+    const c = [n >> 16, (n >> 8) & 255, n & 255].map((v, i) => Math.round((v * (1 - a) + rgb[i] * a) * shade));
+    return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+  }
+  function isFullSky() {
+    const b = document.body;
+    return b.classList.contains("is-focus") && b.classList.contains("no-tips") && b.dataset.view === "today" &&
+      !$("nextCard").hidden && window.matchMedia("(max-width: 899px)").matches;
+  }
+  function updateChrome() {
     const dark = state.theme === "dark" || (state.theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    metas.forEach((m) => m.setAttribute("content", dark ? "#0E1513" : "#EEF1EE"));
+    let c = dark ? "#000000" : "#EEF1EE";
+    const top = SKY_TOP[document.body.dataset.phase];
+    if (top && isFullSky()) {
+      // matches the sky's top edge after the screen's top shade (and the night dimming in dark mode)
+      const forbid = $("nextCard").classList.contains("is-forbidden");
+      c = mixHex(top, [120, 18, 22], forbid ? 0.72 : 0, (dark ? 0.86 : 1) * 0.7);
+    }
+    if (c === lastChrome) return;
+    lastChrome = c;
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", c));
   }
 
   // Focus mode: hide the prayer list and keep only the countdown (today only).
@@ -166,6 +191,7 @@
     document.body.classList.toggle("is-focus", on);
     $("focusBtn").setAttribute("aria-pressed", String(state.focus));
     $("focusLabel").textContent = state.focus ? "Shfaq vaktet" : "Fshih vaktet";
+    updateChrome();
   }
 
   // Daily tips, shown only while the prayer list is hidden. Two per day, never the same day to day:
@@ -195,6 +221,7 @@
     document.body.classList.toggle("no-tips", !state.tipsOn);
     $("tipsToggle").textContent = state.tipsOn ? "Fshih" : "Shfaq";
     $("tipsToggle").setAttribute("aria-expanded", String(state.tipsOn));
+    updateChrome();
   }
   function renderTips() {
     const box = $("tipsList");
@@ -338,6 +365,8 @@
     card.style.setProperty("--oy", (0.34 - 0.24 * Math.sin(Math.PI * p)).toFixed(4));
     // the taller centred card (prayer list hidden) gets a flatter arc in its own band of sky above the text
     card.style.setProperty("--oyf", (0.16 - 0.08 * Math.sin(Math.PI * p)).toFixed(4));
+    // the full-screen sky: a wide arc between the header and the prayer name
+    card.style.setProperty("--oyz", (0.3 - 0.1 * Math.sin(Math.PI * p)).toFixed(4));
   }
 
   function renderNextCard(day, rows, next, now) {
@@ -520,6 +549,7 @@
     $("tabToday").setAttribute("aria-pressed", String(v === "today"));
     $("tabMonth").setAttribute("aria-pressed", String(v === "month"));
     window.scrollTo(0, 0);
+    updateChrome();
   }
 
   function select(day) {
@@ -530,6 +560,7 @@
 
   // ---------- Clock ----------
   function tick() {
+    updateChrome();
     const t = kosovoToday();
     if (!sameDay(t, state.today)) {
       const wasToday = sameDay(state.selected, state.today);
