@@ -28,12 +28,22 @@ const List<Shadow> _countShadowFull = [
 
 /// The "next prayer" card: the sky with the prayer's name, time and a big countdown.
 class NextCard extends StatelessWidget {
-  const NextCard({super.key, required this.model, required this.now, required this.mode, required this.clock});
+  const NextCard({
+    super.key,
+    required this.model,
+    required this.now,
+    required this.mode,
+    required this.clock,
+    this.reveal,
+  });
 
   final TodayModel model;
   final int now;
   final SkyMode mode;
   final SkyClock? clock;
+
+  /// Full screen only: how far the prayer-times sheet is open (0–1). The countdown moves up out of its way.
+  final Animation<double>? reveal;
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +52,11 @@ class NextCard extends StatelessWidget {
     final content = switch (mode) {
       SkyMode.card => _Normal(model: model, card: card, now: now, vw: width),
       SkyMode.focus => _Centered(card: card, now: now, vw: width),
-      SkyMode.full => _FullScreen(card: card, now: now, vw: width),
+      SkyMode.full => _FullScreen(card: card, now: now, vw: width, reveal: reveal),
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, child: content),
     );
   }
 }
@@ -347,11 +357,12 @@ class _Centered extends StatelessWidget {
 
 /// The countdown sits exactly in the middle of the screen; the prayer name above it, the extra line below.
 class _FullScreen extends StatelessWidget {
-  const _FullScreen({required this.card, required this.now, required this.vw});
+  const _FullScreen({required this.card, required this.now, required this.vw, this.reveal});
 
   final NextCardModel card;
   final int now;
   final double vw;
+  final Animation<double>? reveal;
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +371,7 @@ class _FullScreen extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, box) {
           final size = (box.maxWidth * .205).clamp(0.0, 124.0);
-          return Column(
+          final layout = Column(
             children: [
               Expanded(
                 child: Align(
@@ -404,14 +415,32 @@ class _FullScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 64),
                     child: card.altText == null
                         ? null
-                        : ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 380),
-                            child: _Alt(card: card, now: now, center: true),
+                        : FadeTransition(
+                            // it would sit under the prayer-times sheet
+                            opacity: reveal == null ? kAlwaysCompleteAnimation : ReverseAnimation(reveal!),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 380),
+                              child: _Alt(card: card, now: now, center: true),
+                            ),
                           ),
                   ),
                 ),
               ),
             ],
+          );
+          final r = reveal;
+          if (r == null) return layout;
+          return AnimatedBuilder(
+            animation: r,
+            child: layout,
+            builder: (context, child) {
+              final v = r.value;
+              if (v == 0) return child!;
+              return Transform.translate(
+                offset: Offset(0, -box.maxHeight * .2 * v),
+                child: Transform.scale(scale: 1 - .14 * v, child: child),
+              );
+            },
           );
         },
       ),

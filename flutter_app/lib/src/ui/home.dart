@@ -1,6 +1,5 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 import '../state/app_controller.dart';
@@ -18,23 +17,30 @@ const double _wideBreakpoint = 900;
 const double _maxContentWidth = 1120;
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.controller});
+  const HomePage({super.key, required this.controller, this.skyMotion = true});
 
   final AppController controller;
+
+  /// Whether the sky moves (tests turn it off, so the screen can settle).
+  final bool skyMotion;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  final SkyClock _sky = SkyClock();
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver, TickerProviderStateMixin {
+  late final SkyClock _sky = SkyClock(this);
+
+  /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
+  late final AnimationController _sheet = AnimationController(vsync: this);
+  final GlobalKey _sheetKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller.start();
-    _sky.start();
+    if (widget.skyMotion) _sky.start();
   }
 
   @override
@@ -51,6 +57,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.stop();
     _sky.dispose();
+    _sheet.dispose();
     super.dispose();
   }
 
@@ -59,11 +66,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       widget.controller.start();
-      _sky.start();
+      if (widget.skyMotion) _sky.start();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       widget.controller.stop();
       _sky.stop();
     }
+  }
+
+  // ---------- The prayer-times sheet of the full-screen sky ----------
+
+  double get _sheetHeight =>
+      (_sheetKey.currentContext?.size?.height ?? 0) > 0 ? _sheetKey.currentContext!.size!.height : 380;
+
+  /// The sheet follows the finger.
+  void _dragSheet(DragUpdateDetails d) {
+    _sheet.stop();
+    _sheet.value = (_sheet.value - d.primaryDelta! / _sheetHeight).clamp(0.0, 1.0);
+  }
+
+  /// A flick decides; otherwise it goes to whichever side is nearer.
+  void _endSheetDrag(DragEndDetails d) {
+    final vy = d.velocity.pixelsPerSecond.dy;
+    final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
+    _settleSheet(open, velocity: -vy / _sheetHeight);
+  }
+
+  /// Springs the sheet open or shut.
+  void _settleSheet(bool open, {double velocity = 0}) {
+    final target = open ? 1.0 : 0.0;
+    if (_sheet.value == target && !_sheet.isAnimating) return;
+    _sheet.animateWith(
+      _ClampedSpring(
+        SpringSimulation(
+          const SpringDescription(mass: 1, stiffness: 320, damping: 34),
+          _sheet.value,
+          target,
+          velocity,
+          tolerance: const Tolerance(distance: .001, velocity: .01),
+        ),
+        target,
+      ),
+    );
   }
 
   @override
@@ -86,8 +129,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final wide = size.width >= _wideBreakpoint;
     final colors = context.colors;
     final model = c.model;
-    final clock = MediaQuery.disableAnimationsOf(context) ? null : _sky;
+    final clock = MediaQuery.disableAnimationsOf(context) || !widget.skyMotion ? null : _sky;
     final fullSky = !wide && c.view == HomeView.today && c.focusOn && !c.tipsOn;
+    if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
+      // the sheet starts closed the next time the sky fills the screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _sheet.stop();
+        _sheet.value = 0;
+      });
+    }
 
     // The status bar takes the page colour, or the top of the sky when the sky fills the screen.
     final lightIcons = fullSky || colors.dark;
@@ -104,7 +155,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final header = _Header(controller: c, onSky: fullSky, wide: wide);
 
     Widget body;
+    String layout;
     if (wide) {
+      layout = 'wide';
       body = Column(
         children: [
           header,
@@ -140,39 +193,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ],
       );
     } else if (fullSky) {
-      body = Stack(
-        fit: StackFit.expand,
-        children: [
-          NextCard(model: model, now: c.now, mode: SkyMode.full, clock: clock),
-          Column(
-            children: [
-              header,
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      DateRow(controller: c, onSky: true),
-                      const Spacer(),
-                      BelowCard(controller: c, onSky: true),
-                    ],
-                  ),
-                ),
-              ),
-              _Tabs(controller: c, onSky: true),
-            ],
-          ),
-        ],
-      );
+      layout = 'full';
+      body = _fullSky(c, header, clock);
     } else {
       final today = c.view == HomeView.today;
+      layout = today ? 'today-${c.focusOn}-${c.selected}' : 'month';
       body = Column(
         children: [
           header,
           Expanded(
             child: SingleChildScrollView(
-              key: ValueKey(c.view), // a fresh scroll position on each tab
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: today
                   ? TodayPanel(controller: c, clock: clock)
@@ -188,16 +218,138 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       value: overlay,
       child: Scaffold(
         backgroundColor: colors.bg,
-        body: Stack(
+        // one layout fades into the next (hiding the times, the full sky, the tabs, another day)
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 340),
+          reverseDuration: const Duration(milliseconds: 240),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, ?current]),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(scale: Tween(begin: .985, end: 1.0).animate(animation), child: child),
+          ),
+          child: Stack(
+            key: ValueKey(layout),
+            fit: StackFit.expand,
+            children: [
+              if (!fullSky) PageGlow(phase: model.phase),
+              body,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The sky fills the screen with only the countdown; the day's times are swiped up from the bottom, and
+  /// swiped down again (or a tap on the sky, or Back) to hide them.
+  Widget _fullSky(AppController c, Widget header, SkyClock? clock) {
+    final fadeOut = ReverseAnimation(_sheet);
+    return AnimatedBuilder(
+      animation: _sheet,
+      builder: (context, child) => PopScope(
+        canPop: _sheet.value == 0,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _settleSheet(false);
+        },
+        child: child!,
+      ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onVerticalDragUpdate: _dragSheet,
+        onVerticalDragEnd: _endSheetDrag,
+        onTap: () {
+          if (_sheet.value > 0) _settleSheet(false);
+        },
+        child: Stack(
           fit: StackFit.expand,
           children: [
-            if (!fullSky) PageGlow(phase: model.phase),
-            body,
+            NextCard(model: c.model, now: c.now, mode: SkyMode.full, clock: clock, reveal: _sheet),
+            Column(
+              children: [
+                header,
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FadeTransition(
+                              opacity: fadeOut,
+                              child: DateRow(controller: c, onSky: true),
+                            ),
+                            const Spacer(),
+                            FadeTransition(
+                              opacity: fadeOut,
+                              child: SwipeHint(onTap: () => _settleSheet(true), clock: clock),
+                            ),
+                            const SizedBox(height: 6),
+                            FadeTransition(
+                              opacity: fadeOut,
+                              child: BelowCard(controller: c, onSky: true),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: ClipRect(
+                          child: LayoutBuilder(
+                            builder: (context, box) => AnimatedBuilder(
+                              animation: _sheet,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.bottomCenter,
+                                child: SizedBox(
+                                  width: box.maxWidth,
+                                  child: SkyTimesSheet(key: _sheetKey, controller: c),
+                                ),
+                              ),
+                              builder: (context, sheet) {
+                                final v = _sheet.value;
+                                if (v == 0) return const SizedBox.shrink();
+                                return Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(maxHeight: box.maxHeight),
+                                    child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _Tabs(controller: c, onSky: true),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+/// A spring that never overshoots its end (the sheet would otherwise bounce past fully open or shut).
+class _ClampedSpring extends Simulation {
+  _ClampedSpring(this.spring, this.target);
+
+  final SpringSimulation spring;
+  final double target;
+
+  @override
+  double x(double time) => spring.isDone(time) ? target : spring.x(time).clamp(0.0, 1.0);
+
+  @override
+  double dx(double time) => spring.isDone(time) ? 0 : spring.dx(time);
+
+  @override
+  bool isDone(double time) => spring.isDone(time);
 }
 
 /// The brand, the city picker and the settings button.
@@ -259,42 +411,37 @@ class _Tabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottom),
-          decoration: BoxDecoration(
-            color: onSky ? const Color(0x33000000) : c.bg.withValues(alpha: .88),
-            border: Border(top: BorderSide(color: onSky ? const Color(0x24FFFFFF) : c.line)),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 368),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _Tab(
-                      label: 'Sot',
-                      icon: VIcon.tabToday,
-                      selected: controller.view == HomeView.today,
-                      onSky: onSky,
-                      onTap: () => controller.setView(HomeView.today),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _Tab(
-                      label: 'Muaji',
-                      icon: VIcon.tabMonth,
-                      selected: controller.view == HomeView.month,
-                      onSky: onSky,
-                      onTap: () => controller.setView(HomeView.month),
-                    ),
-                  ),
-                ],
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottom),
+      decoration: BoxDecoration(
+        color: onSky ? const Color(0x40000000) : c.bg.withValues(alpha: .94),
+        border: Border(top: BorderSide(color: onSky ? const Color(0x24FFFFFF) : c.line)),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 368),
+          child: Row(
+            children: [
+              Expanded(
+                child: _Tab(
+                  label: 'Sot',
+                  icon: VIcon.tabToday,
+                  selected: controller.view == HomeView.today,
+                  onSky: onSky,
+                  onTap: () => controller.setView(HomeView.today),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Tab(
+                  label: 'Muaji',
+                  icon: VIcon.tabMonth,
+                  selected: controller.view == HomeView.month,
+                  onSky: onSky,
+                  onTap: () => controller.setView(HomeView.month),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -331,7 +478,9 @@ class _Tab extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
           child: Row(

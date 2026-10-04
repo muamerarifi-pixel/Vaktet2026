@@ -6,9 +6,12 @@ import 'ui/home.dart';
 import 'ui/text.dart';
 
 class VaktetApp extends StatelessWidget {
-  const VaktetApp({super.key, required this.controller});
+  const VaktetApp({super.key, required this.controller, this.skyMotion = true});
 
   final AppController controller;
+
+  /// Whether the sky moves (tests turn it off, so the screen can settle).
+  final bool skyMotion;
 
   ThemeData _theme(VaktetColors c) {
     final base = ThemeData(
@@ -46,7 +49,7 @@ class VaktetApp extends StatelessWidget {
         },
         builder: (context, child) =>
             MediaQuery.withClampedTextScaling(minScaleFactor: .85, maxScaleFactor: 1.3, child: child!),
-        home: HomePage(controller: controller),
+        home: HomePage(controller: controller, skyMotion: skyMotion),
       ),
     );
   }
