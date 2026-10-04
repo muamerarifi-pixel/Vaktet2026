@@ -85,5 +85,6 @@ jobs:
         with:
           files: flutter_app/dist/*.apk
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
+          target_commitish: ${{ github.sha }} # tag the commit the APK was built from, not the default branch
           name: Vaktet ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build {0}', github.run_number) }}
           generate_release_notes: true
