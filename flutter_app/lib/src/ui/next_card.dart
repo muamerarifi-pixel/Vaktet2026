@@ -6,6 +6,7 @@ import 'glass.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
 import 'text.dart';
+import 'widgets.dart';
 
 const Color _white = Color(0xFFFFFFFF);
 
@@ -28,25 +29,57 @@ const List<Shadow> _countShadowFull = [
 
 /// The "next prayer" card: the sky with the prayer's name, time and a big countdown.
 class NextCard extends StatelessWidget {
-  const NextCard({super.key, required this.model, required this.now, required this.mode, required this.clock});
+  const NextCard({
+    super.key,
+    required this.model,
+    required this.now,
+    required this.mode,
+    required this.clock,
+    this.countdownWeight = 900,
+  });
 
   final TodayModel model;
   final int now;
   final SkyMode mode;
   final SkyClock? clock;
 
+  /// Thickness of the countdown digits (picked in the settings).
+  final int countdownWeight;
+
   @override
   Widget build(BuildContext context) {
     final card = model.card!;
     final width = MediaQuery.sizeOf(context).width;
     final content = switch (mode) {
-      SkyMode.card => _Normal(model: model, card: card, now: now, vw: width),
-      SkyMode.focus => _Centered(card: card, now: now, vw: width),
-      SkyMode.full => _FullScreen(card: card, now: now, vw: width),
+      SkyMode.card => _Normal(model: model, card: card, now: now, vw: width, weight: countdownWeight),
+      SkyMode.focus => _Centered(card: card, now: now, vw: width, weight: countdownWeight),
+      SkyMode.full => _FullScreen(card: card, now: now, vw: width, weight: countdownWeight),
     };
+    // Hiding or showing the prayer times: the card changes height smoothly while its content cross-fades.
+    final animated = mode == SkyMode.full
+        ? content
+        : AnimatedSize(
+            duration: motion(context),
+            curve: Curves.easeInOutCubic,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: motion(context),
+              switchInCurve: const Interval(.3, 1, curve: Curves.easeOut),
+              switchOutCurve: const Interval(.5, 1, curve: Curves.easeIn),
+              // the old content does not hold the card open; the card takes the new content's height
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  for (final p in previous) Positioned(left: 0, right: 0, top: 0, child: p),
+                  ?current,
+                ],
+              ),
+              child: KeyedSubtree(key: ValueKey(mode), child: content),
+            ),
+          );
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, child: animated),
     );
   }
 }
@@ -136,10 +169,17 @@ class _NameAndTime extends StatelessWidget {
 
 /// The big `HH:MM:SS`: digits at full strength, the colons a touch softer.
 class _CountdownNumber extends StatelessWidget {
-  const _CountdownNumber({required this.text, required this.size, required this.center, this.full = false});
+  const _CountdownNumber({
+    required this.text,
+    required this.size,
+    required this.weight,
+    required this.center,
+    this.full = false,
+  });
 
   final String text;
   final double size;
+  final int weight;
   final bool center;
   final bool full;
 
@@ -147,7 +187,7 @@ class _CountdownNumber extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = vt(
       size,
-      900,
+      weight.toDouble(),
       color: _white,
       ls: full ? -.03 : -.025,
       height: 1,
@@ -224,12 +264,13 @@ class _Alt extends StatelessWidget {
 // ---------- Normal card ----------
 
 class _Normal extends StatelessWidget {
-  const _Normal({required this.model, required this.card, required this.now, required this.vw});
+  const _Normal({required this.model, required this.card, required this.now, required this.vw, required this.weight});
 
   final TodayModel model;
   final NextCardModel card;
   final int now;
   final double vw;
+  final int weight;
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +285,12 @@ class _Normal extends StatelessWidget {
           const SizedBox(height: 6),
           _NameAndTime(card: card, vw: vw, center: false),
           const SizedBox(height: 10),
-          _CountdownNumber(text: fmtCount(card.target - now), size: clampPx(54, vw * .16, 74), center: false),
+          _CountdownNumber(
+            text: fmtCount(card.target - now),
+            size: clampPx(54, vw * .16, 74),
+            weight: weight,
+            center: false,
+          ),
           const SizedBox(height: 6),
           _CountdownLabel(text: card.countdownLabel),
           const SizedBox(height: 16),
@@ -308,11 +354,12 @@ class _DaylinePainter extends CustomPainter {
 // ---------- Centred card (prayer list hidden) ----------
 
 class _Centered extends StatelessWidget {
-  const _Centered({required this.card, required this.now, required this.vw});
+  const _Centered({required this.card, required this.now, required this.vw, required this.weight});
 
   final NextCardModel card;
   final int now;
   final double vw;
+  final int weight;
 
   @override
   Widget build(BuildContext context) {
@@ -330,7 +377,7 @@ class _Centered extends StatelessWidget {
               const SizedBox(height: 6),
               _NameAndTime(card: card, vw: vw, center: true),
               const SizedBox(height: 14),
-              _CountdownNumber(text: fmtCount(card.target - now), size: size, center: true),
+              _CountdownNumber(text: fmtCount(card.target - now), size: size, weight: weight, center: true),
               const SizedBox(height: 6),
               _CountdownLabel(text: card.countdownLabel),
               SizedBox(height: card.altText != null ? 14 : 4),
@@ -347,11 +394,12 @@ class _Centered extends StatelessWidget {
 
 /// The countdown sits exactly in the middle of the screen; the prayer name above it, the extra line below.
 class _FullScreen extends StatelessWidget {
-  const _FullScreen({required this.card, required this.now, required this.vw});
+  const _FullScreen({required this.card, required this.now, required this.vw, required this.weight});
 
   final NextCardModel card;
   final int now;
   final double vw;
+  final int weight;
 
   @override
   Widget build(BuildContext context) {
@@ -381,7 +429,13 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _CountdownNumber(text: fmtCount(card.target - now), size: size, center: true, full: true),
+                  _CountdownNumber(
+                    text: fmtCount(card.target - now),
+                    size: size,
+                    weight: weight,
+                    center: true,
+                    full: true,
+                  ),
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
                     height: 0,

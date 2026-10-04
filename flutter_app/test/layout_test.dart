@@ -50,6 +50,26 @@ void main() {
           }
         }
 
+        // every font at the largest text size, in every mode
+        for (final font in FontChoice.values) {
+          for (final mode in ['list', 'focus', 'full']) {
+            SharedPreferences.setMockInitialValues({
+              'city': 'dragash',
+              'font': font.name,
+              'fontScale': 1.25,
+              'focus': mode != 'list',
+              'tips': mode == 'focus',
+            });
+            final controller = AppController(
+              prefs: await SharedPreferences.getInstance(),
+              clock: () => instants['forbidden']!.millisecondsSinceEpoch,
+            );
+            await tester.pumpWidget(VaktetApp(controller: controller));
+            await tester.pump(const Duration(milliseconds: 50));
+            expect(tester.takeException(), isNull, reason: '${font.name} ×1.25 $mode');
+          }
+        }
+
         // the month tab and the settings
         SharedPreferences.setMockInitialValues({'city': 'dragash'});
         final controller = AppController(

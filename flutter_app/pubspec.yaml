@@ -1,7 +1,7 @@
 name: vaktet
 description: "Vaktet – kohët e namazit në Kosovë sipas Takvimit të Bashkësisë Islame të Kosovës. Punon pa internet."
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.2+3
 
 environment:
   sdk: ^3.13.5
@@ -22,3 +22,12 @@ flutter:
     - family: Figtree
       fonts:
         - asset: assets/fonts/Figtree.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito.ttf
+    - family: Lora
+      fonts:
+        - asset: assets/fonts/Lora.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono.ttf

@@ -143,7 +143,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       body = Stack(
         fit: StackFit.expand,
         children: [
-          NextCard(model: model, now: c.now, mode: SkyMode.full, clock: clock),
+          NextCard(model: model, now: c.now, mode: SkyMode.full, clock: clock, countdownWeight: c.countdownWeight),
           Column(
             children: [
               header,
@@ -188,12 +188,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       value: overlay,
       child: Scaffold(
         backgroundColor: colors.bg,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (!fullSky) PageGlow(phase: model.phase),
-            body,
-          ],
+        // going to (or leaving) the full-screen sky: the new page fades in while it grows into place
+        body: AnimatedSwitcher(
+          duration: motion(context),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween(begin: fullSky ? .94 : 1.04, end: 1.0).animate(animation),
+              child: child,
+            ),
+          ),
+          child: Stack(
+            key: ValueKey(fullSky),
+            fit: StackFit.expand,
+            children: [
+              if (!fullSky) PageGlow(phase: model.phase),
+              body,
+            ],
+          ),
         ),
       ),
     );

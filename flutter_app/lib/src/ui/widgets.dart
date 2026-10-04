@@ -280,3 +280,37 @@ class Brand extends StatelessWidget {
     );
   }
 }
+
+// ---------- Motion ----------
+
+/// How long the show/hide animations take.
+const Duration kMotion = Duration(milliseconds: 420);
+
+/// [kMotion], or nothing when the phone asks for less motion.
+Duration motion(BuildContext context) => MediaQuery.disableAnimationsOf(context) ? Duration.zero : kMotion;
+
+/// Shows or hides [child]: its height slides open (or closed) from the top while it fades.
+class Reveal extends StatelessWidget {
+  const Reveal({super.key, required this.visible, required this.child});
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: motion(context),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: const Interval(.25, 1)),
+        child: SizeTransition(sizeFactor: animation, alignment: Alignment.topCenter, child: child),
+      ),
+      layoutBuilder: (current, previous) =>
+          Stack(alignment: Alignment.topCenter, fit: StackFit.passthrough, children: [...previous, ?current]),
+      child: visible
+          ? KeyedSubtree(key: const ValueKey(true), child: child)
+          : const SizedBox(key: ValueKey(false), width: double.infinity),
+    );
+  }
+}

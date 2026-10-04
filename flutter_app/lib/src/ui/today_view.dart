@@ -38,22 +38,37 @@ class TodayPanel extends StatelessWidget {
           ),
         ],
         if (model.isToday) ...[
-          NextCard(model: model, now: c.now, mode: focusOn ? SkyMode.focus : SkyMode.card, clock: clock),
+          NextCard(
+            model: model,
+            now: c.now,
+            mode: focusOn ? SkyMode.focus : SkyMode.card,
+            clock: clock,
+            countdownWeight: c.countdownWeight,
+          ),
           BelowCard(controller: c),
-          if (!focusOn && model.alarm != null) AlarmCard(alarm: model.alarm!),
-        ],
-        if (!focusOn) ...[
-          TimesList(model: model, now: c.now),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              cityNote(c.city),
-              textAlign: TextAlign.center,
-              style: vt(13.5, 500, color: context.colors.muted),
-            ),
+          Reveal(
+            visible: !focusOn && model.alarm != null,
+            child: model.alarm == null ? const SizedBox.shrink() : AlarmCard(alarm: model.alarm!),
           ),
         ],
+        Reveal(
+          visible: !focusOn,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TimesList(model: model, now: c.now),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  cityNote(c.city),
+                  textAlign: TextAlign.center,
+                  style: vt(13.5, 500, color: context.colors.muted),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -137,7 +152,10 @@ class BelowCard extends StatelessWidget {
           expand: true,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         ),
-        if (focusOn) TipsSection(controller: c, onSky: onSky),
+        Reveal(
+          visible: focusOn,
+          child: TipsSection(controller: c, onSky: onSky),
+        ),
       ],
     );
   }
@@ -160,7 +178,7 @@ class TipsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(4, 0, 4, (onSky || !c.tipsOn) ? 0 : 10),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -192,8 +210,19 @@ class TipsSection extends StatelessWidget {
               ],
             ),
           ),
-          if (c.tipsOn)
-            for (var i = 0; i < tips.length; i++) ...[if (i > 0) const SizedBox(height: 10), _TipCard(tip: tips[i])],
+          Reveal(
+            visible: c.tipsOn,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 10),
+                for (var i = 0; i < tips.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 10),
+                  _TipCard(tip: tips[i]),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
