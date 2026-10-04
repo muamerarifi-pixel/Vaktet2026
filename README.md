@@ -45,5 +45,12 @@ Për ta provuar në kompjuter: `npx serve .` dhe hapni adresën që shfaqet.
 
 Për ta instaluar në telefon: hapni faqen → menyja e shfletuesit → "Shto në ekranin kryesor" / "Install app".
 
+## Aplikacioni Android (Flutter)
+Dosja [`flutter_app/`](flutter_app/) e përmban këtë aplikacion të ndërtuar me Flutter, si aplikacion Android (APK). Pamja dhe sjellja janë si këtu, dhe punon pa internet.
+
+APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/android-apk.yml`): hapni **Actions → Android APK → ekzekutimin e fundit** dhe shkarkoni **vaktet-apk**. Udhëzimet e plota janë te [`flutter_app/README.md`](flutter_app/README.md).
+
+`.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
+
 ## Përditësimi
 Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v15`) që pajisjet ta marrin versionin e ri.
