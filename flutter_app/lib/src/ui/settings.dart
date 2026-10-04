@@ -100,6 +100,33 @@ class _Sheet extends StatelessWidget {
                 onChanged: c.setAlarmOffset,
               ),
             ),
+            _Field(
+              title: 'Stili i shkronjave',
+              child: Segmented<FontChoice>(
+                options: [for (final f in FontChoice.values) (f.label, f)],
+                value: c.font,
+                onChanged: c.setFont,
+                fontOf: (f) => f.family,
+              ),
+            ),
+            _Field(
+              title: 'Madhësia e shkronjave',
+              child: Segmented<double>(
+                options: const [('E vogël', .9), ('Normale', 1.0), ('E madhe', 1.12), ('Më e madhe', 1.25)],
+                value: c.fontScale,
+                onChanged: c.setFontScale,
+              ),
+            ),
+            _Field(
+              title: 'Trashësia e kohës së mbetur',
+              hint: 'Sa të trasha janë shifrat e mëdha të kohës deri te vakti tjetër.',
+              child: Segmented<int>(
+                options: const [('Hollë', 300), ('Normale', 500), ('E trashë', 700), ('Shumë', 900)],
+                value: c.countdownWeight,
+                onChanged: c.setCountdownWeight,
+                weightOf: (w) => w.toDouble(),
+              ),
+            ),
             Container(
               margin: const EdgeInsets.only(top: 18),
               padding: const EdgeInsets.only(top: 14),
@@ -159,11 +186,22 @@ class _Field extends StatelessWidget {
 
 /// A pill-shaped choice of one of a few options.
 class Segmented<T> extends StatelessWidget {
-  const Segmented({super.key, required this.options, required this.value, required this.onChanged});
+  const Segmented({
+    super.key,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+    this.fontOf,
+    this.weightOf,
+  });
 
   final List<(String, T)> options;
   final T value;
   final ValueChanged<T> onChanged;
+
+  /// Shows each option in its own font / weight (a preview of the choice).
+  final String Function(T)? fontOf;
+  final double Function(T)? weightOf;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +242,12 @@ class Segmented<T> extends StatelessWidget {
                       child: Text(
                         options[i].$1,
                         softWrap: false,
-                        style: vt(14, 720, color: options[i].$2 == value ? c.ink : c.muted, height: 1.5),
+                        style: vt(
+                          14,
+                          weightOf?.call(options[i].$2) ?? 720,
+                          color: options[i].$2 == value ? c.ink : c.muted,
+                          height: 1.5,
+                        ).copyWith(fontFamily: fontOf?.call(options[i].$2)),
                       ),
                     ),
                   ),

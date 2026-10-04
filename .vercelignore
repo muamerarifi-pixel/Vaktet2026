@@ -1,3 +1,4 @@
 # The Flutter app and the CI files are not part of the website.
 flutter_app
 .github
+docs

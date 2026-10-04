@@ -11,6 +11,23 @@ enum ThemeChoice { auto, light, dark }
 
 enum HomeView { today, month }
 
+/// The font of the whole app. All four are bundled (variable fonts, subset to Latin), so they work offline.
+enum FontChoice {
+  figtree('Figtree', 'Moderne'),
+  nunito('Nunito', 'E butë'),
+  lora('Lora', 'Klasike'),
+  mono('JetBrainsMono', 'Digjitale');
+
+  const FontChoice(this.family, this.label);
+
+  /// The family name in pubspec.yaml.
+  final String family;
+  final String label;
+}
+
+/// What the app shell rebuilds from: the theme and the text look (not every tick).
+typedef Look = ({ThemeChoice theme, FontChoice font, double fontScale});
+
 /// Everything the screens show: the settings (kept on the phone), the selected day, and the ticking clock.
 class AppController extends ChangeNotifier {
   AppController({required SharedPreferences prefs, int Function()? clock})
@@ -18,7 +35,12 @@ class AppController extends ChangeNotifier {
       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
     city = cityById(prefs.getString(_kCity));
     theme = ThemeChoice.values.firstWhere((t) => t.name == prefs.getString(_kTheme), orElse: () => ThemeChoice.auto);
-    themeNotifier = ValueNotifier<ThemeChoice>(theme);
+    font = FontChoice.values.firstWhere((f) => f.name == prefs.getString(_kFont), orElse: () => FontChoice.figtree);
+    final scale = prefs.getDouble(_kFontScale) ?? 1.0;
+    fontScale = fontScales.contains(scale) ? scale : 1.0;
+    final weight = prefs.getInt(_kCountWeight) ?? 900;
+    countdownWeight = countdownWeights.contains(weight) ? weight : 900;
+    lookNotifier = ValueNotifier<Look>(_look);
     final adj = prefs.getInt(_kHijri) ?? 0;
     hijriAdj = adj.clamp(-2, 2);
     final alarm = prefs.getInt(_kAlarm) ?? 30;
@@ -39,8 +61,17 @@ class AppController extends ChangeNotifier {
   static const _kAlarm = 'alarm';
   static const _kFocus = 'focus';
   static const _kTips = 'tips';
+  static const _kFont = 'font';
+  static const _kFontScale = 'fontScale';
+  static const _kCountWeight = 'countdownWeight';
 
   static const List<int> alarmChoices = [15, 30, 45, 60];
+
+  /// Text size, on top of the phone's own setting.
+  static const List<double> fontScales = [.9, 1.0, 1.12, 1.25];
+
+  /// Thickness of the big countdown digits.
+  static const List<int> countdownWeights = [300, 500, 700, 900];
 
   final SharedPreferences _prefs;
   final int Function() _clock;
@@ -49,8 +80,14 @@ class AppController extends ChangeNotifier {
   late City city;
   late ThemeChoice theme;
 
-  /// Changes only when the theme does (the app rebuilds from this, not from every tick).
-  late final ValueNotifier<ThemeChoice> themeNotifier;
+  late FontChoice font;
+  late double fontScale;
+  late int countdownWeight;
+
+  /// Changes only when the theme or the text look does (the app rebuilds from this, not from every tick).
+  late final ValueNotifier<Look> lookNotifier;
+
+  Look get _look => (theme: theme, font: font, fontScale: fontScale);
   late int hijriAdj;
   late int alarmOffset;
 
@@ -121,7 +158,7 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     stop();
-    themeNotifier.dispose();
+    lookNotifier.dispose();
     super.dispose();
   }
 
@@ -140,8 +177,28 @@ class AppController extends ChangeNotifier {
 
   void setTheme(ThemeChoice t) {
     theme = t;
-    themeNotifier.value = t;
+    lookNotifier.value = _look;
     _prefs.setString(_kTheme, t.name);
+    _changed();
+  }
+
+  void setFont(FontChoice f) {
+    font = f;
+    lookNotifier.value = _look;
+    _prefs.setString(_kFont, f.name);
+    _changed();
+  }
+
+  void setFontScale(double v) {
+    fontScale = v;
+    lookNotifier.value = _look;
+    _prefs.setDouble(_kFontScale, v);
+    _changed();
+  }
+
+  void setCountdownWeight(int w) {
+    countdownWeight = w;
+    _prefs.setInt(_kCountWeight, w);
     _changed();
   }
 

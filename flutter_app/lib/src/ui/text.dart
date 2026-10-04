@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 
-const String kFont = 'Figtree';
-
 FontWeight _nearest(double w) => FontWeight.values[((w / 100).round() - 1).clamp(0, 8)];
 
-/// Figtree is a variable font, so the exact CSS weights (850, 880 …) can be used.
+/// The fonts are variable fonts, so the exact CSS weights (850, 880 …) can be used.
 /// [ls] is letter-spacing in em, as in the web app's CSS.
+/// The family is not set here: it comes from the theme, so it follows the font picked in the settings.
 TextStyle vt(
   double size,
   double weight, {
@@ -17,7 +16,6 @@ TextStyle vt(
   double? opacity,
 }) {
   return TextStyle(
-    fontFamily: kFont,
     fontSize: size,
     fontWeight: _nearest(weight),
     fontVariations: [FontVariation('wght', weight)],

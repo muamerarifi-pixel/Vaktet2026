@@ -3,7 +3,7 @@
 The Android app for [Vaktet](../README.md): prayer times for the towns of Kosovo from the official Takvim of the
 Islamic Community of Kosovo (BIK). It is a Flutter port of the web app in the repository root and looks and behaves
 the same: the sky card that follows the prayer time, forbidden times, hide-the-times mode with daily tips, the Sabah
-alarm suggestion, the month table, Hijri date with correction, light/dark/automatic theme, 19 towns. Works fully
+alarm suggestion, the month table, Hijri date with correction, light/dark/automatic theme, a choice of font, text size and countdown thickness, 19 towns. Works fully
 offline.
 
 ## Get the APK
@@ -40,7 +40,7 @@ flutter build apk --release  # build/app/outputs/flutter-apk/app-release.apk
 | `lib/src/data/` | Generated data: the Takvim (`vaktet_base.dart`), the tips, the Umm al-Qura month table |
 | `lib/src/state/` | `AppController`: settings (kept on the phone), selected day, the ticking clock |
 | `lib/src/ui/` | The screens: sky painter, next-prayer card, Today, Month, Settings, home layout (phone and tablet) |
-| `assets/fonts/` | Figtree (SIL Open Font License) |
+| `assets/fonts/` | Figtree, Nunito, Lora, JetBrains Mono – variable fonts subset to Latin (SIL Open Font License) |
 | `test/` | Unit, widget and layout tests, and the web-parity test (below) |
 | `tool/` | `gen_web_reference.mjs`, which records what the web app shows, for the parity test |
 

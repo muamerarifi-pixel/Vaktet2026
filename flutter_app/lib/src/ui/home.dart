@@ -197,7 +197,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       body = _fullSky(c, header, clock);
     } else {
       final today = c.view == HomeView.today;
-      layout = today ? 'today-${c.focusOn}-${c.selected}' : 'month';
+      layout = today ? 'today' : 'month';
       body = Column(
         children: [
           header,
@@ -218,16 +218,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       value: overlay,
       child: Scaffold(
         backgroundColor: colors.bg,
-        // one layout fades into the next (hiding the times, the full sky, the tabs, another day)
+        // going to (or leaving) the full-screen sky, or to another tab: the new page fades in while it grows into place
         body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 340),
-          reverseDuration: const Duration(milliseconds: 240),
+          duration: motion(context),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
-          layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, ?current]),
           transitionBuilder: (child, animation) => FadeTransition(
             opacity: animation,
-            child: ScaleTransition(scale: Tween(begin: .985, end: 1.0).animate(animation), child: child),
+            child: ScaleTransition(
+              scale: Tween(begin: fullSky ? .94 : 1.04, end: 1.0).animate(animation),
+              child: child,
+            ),
           ),
           child: Stack(
             key: ValueKey(layout),
@@ -265,7 +266,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         child: Stack(
           fit: StackFit.expand,
           children: [
-            NextCard(model: c.model, now: c.now, mode: SkyMode.full, clock: clock, reveal: _sheet),
+            NextCard(
+              model: c.model,
+              now: c.now,
+              mode: SkyMode.full,
+              clock: clock,
+              countdownWeight: c.countdownWeight,
+              reveal: _sheet,
+            ),
             Column(
               children: [
                 header,

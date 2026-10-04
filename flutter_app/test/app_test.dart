@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/state/app_controller.dart';
+import 'package:vaktet/src/ui/widgets.dart';
 
 import 'test_fonts.dart';
 
@@ -33,6 +34,12 @@ Future<void> _close(WidgetTester tester) async {
 }
 
 Finder _label(String text) => find.bySemanticsLabel(text);
+
+/// Lets a show/hide animation finish.
+Future<void> _animate(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(kMotion + const Duration(milliseconds: 50));
+}
 
 void main() {
   setUpAll(loadAppFonts);
@@ -134,7 +141,10 @@ void main() {
     final c = await _open(tester);
     expect(find.text('Imsaku'), findsOneWidget);
     await tester.tap(find.text('Fshih vaktet'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    // the list slides away
+    expect(find.text('Imsaku'), findsOneWidget);
+    await _animate(tester);
     expect(c.focusOn, isTrue);
     expect(find.text('Imsaku'), findsNothing);
     expect(find.text('Shfaq vaktet'), findsOneWidget);
@@ -143,7 +153,7 @@ void main() {
     expect(find.text('Si musliman'), findsOneWidget);
     // hide the tips too: the full-screen sky
     await tester.tap(_label('Fshih këshillat'));
-    await tester.pumpAndSettle();
+    await _animate(tester);
     expect(c.tipsOn, isFalse);
     expect(find.text('Për jetën'), findsNothing);
     expect(find.text('Shfaq'), findsOneWidget);
@@ -154,7 +164,7 @@ void main() {
     expect(prefs.getBool('tips'), isFalse);
     // bring everything back
     await tester.tap(find.text('Shfaq vaktet'));
-    await tester.pumpAndSettle();
+    await _animate(tester);
     expect(find.text('Imsaku'), findsOneWidget);
     handle.dispose();
     await _close(tester);
@@ -231,6 +241,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Cilësimet'), findsNothing);
     expect(find.text('23 Rebiul Ahir 1448 h.'), findsOneWidget);
+    handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('settings: font, text size and countdown thickness', (tester) async {
+    final handle = tester.ensureSemantics();
+    final c = await _open(tester);
+    double countdownWeight() {
+      final text = tester.widget<RichText>(find.textContaining('01:14:00', findRichText: true));
+      return text.text.style!.fontVariations!.single.value;
+    }
+
+    expect(countdownWeight(), 900);
+    await tester.tap(_label('Cilësimet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Stili i shkronjave'), findsOneWidget);
+    await tester.tap(find.text('Klasike'));
+    await tester.pumpAndSettle();
+    expect(c.font, FontChoice.lora);
+    expect(Theme.of(tester.element(find.text('Pamja'))).textTheme.bodyMedium!.fontFamily, 'Lora');
+    await tester.tap(find.text('E madhe'));
+    await tester.pumpAndSettle();
+    expect(c.fontScale, 1.12);
+    expect(MediaQuery.textScalerOf(tester.element(find.text('Pamja'))).scale(100), closeTo(112, .01));
+    await tester.tap(find.text('Hollë'));
+    await tester.pumpAndSettle();
+    expect(c.countdownWeight, 300);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('font'), 'lora');
+    expect(prefs.getDouble('fontScale'), 1.12);
+    expect(prefs.getInt('countdownWeight'), 300);
+    await tester.tap(_label('Mbyll'));
+    await tester.pumpAndSettle();
+    expect(countdownWeight(), 300);
     handle.dispose();
     await _close(tester);
   });
