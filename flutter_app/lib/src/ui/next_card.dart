@@ -35,6 +35,7 @@ class NextCard extends StatelessWidget {
     required this.now,
     required this.mode,
     required this.clock,
+    this.reveal,
     this.countdownWeight = 900,
   });
 
@@ -42,6 +43,9 @@ class NextCard extends StatelessWidget {
   final int now;
   final SkyMode mode;
   final SkyClock? clock;
+
+  /// Full screen only: how far the prayer-times sheet is open (0–1). The countdown moves up out of its way.
+  final Animation<double>? reveal;
 
   /// Thickness of the countdown digits (picked in the settings).
   final int countdownWeight;
@@ -53,7 +57,7 @@ class NextCard extends StatelessWidget {
     final content = switch (mode) {
       SkyMode.card => _Normal(model: model, card: card, now: now, vw: width, weight: countdownWeight),
       SkyMode.focus => _Centered(card: card, now: now, vw: width, weight: countdownWeight),
-      SkyMode.full => _FullScreen(card: card, now: now, vw: width, weight: countdownWeight),
+      SkyMode.full => _FullScreen(card: card, now: now, vw: width, weight: countdownWeight, reveal: reveal),
     };
     // Hiding or showing the prayer times: the card changes height smoothly while its content cross-fades.
     final animated = mode == SkyMode.full
@@ -79,7 +83,7 @@ class NextCard extends StatelessWidget {
           );
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, child: animated),
+      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, child: animated),
     );
   }
 }
@@ -394,12 +398,13 @@ class _Centered extends StatelessWidget {
 
 /// The countdown sits exactly in the middle of the screen; the prayer name above it, the extra line below.
 class _FullScreen extends StatelessWidget {
-  const _FullScreen({required this.card, required this.now, required this.vw, required this.weight});
+  const _FullScreen({required this.card, required this.now, required this.vw, required this.weight, this.reveal});
 
   final NextCardModel card;
   final int now;
   final double vw;
   final int weight;
+  final Animation<double>? reveal;
 
   @override
   Widget build(BuildContext context) {
@@ -408,7 +413,7 @@ class _FullScreen extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, box) {
           final size = (box.maxWidth * .205).clamp(0.0, 124.0);
-          return Column(
+          final layout = Column(
             children: [
               Expanded(
                 child: Align(
@@ -445,7 +450,16 @@ class _FullScreen extends StatelessWidget {
                       maxHeight: 80,
                       child: Padding(
                         padding: const EdgeInsets.only(top: 12),
-                        child: _CountdownLabel(text: card.countdownLabel, full: true),
+                        child: reveal == null
+                            ? _CountdownLabel(text: card.countdownLabel, full: true)
+                            : FadeTransition(
+                                // it would peek out above the prayer-times sheet on short screens
+                                opacity: Tween(
+                                  begin: 1.0,
+                                  end: 0.0,
+                                ).animate(CurvedAnimation(parent: reveal!, curve: const Interval(0, .6))),
+                                child: _CountdownLabel(text: card.countdownLabel, full: true),
+                              ),
                       ),
                     ),
                   ),
@@ -458,14 +472,32 @@ class _FullScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 64),
                     child: card.altText == null
                         ? null
-                        : ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 380),
-                            child: _Alt(card: card, now: now, center: true),
+                        : FadeTransition(
+                            // it would sit under the prayer-times sheet
+                            opacity: reveal == null ? kAlwaysCompleteAnimation : ReverseAnimation(reveal!),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 380),
+                              child: _Alt(card: card, now: now, center: true),
+                            ),
                           ),
                   ),
                 ),
               ),
             ],
+          );
+          final r = reveal;
+          if (r == null) return layout;
+          return AnimatedBuilder(
+            animation: r,
+            child: layout,
+            builder: (context, child) {
+              final v = r.value;
+              if (v == 0) return child!;
+              return Transform.translate(
+                offset: Offset(0, -box.maxHeight * .2 * v),
+                child: Transform.scale(scale: 1 - .14 * v, child: child),
+              );
+            },
           );
         },
       ),

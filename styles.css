@@ -321,6 +321,7 @@ body::before {
     radial-gradient(44% 40% at 78% 66%, var(--haze-b), transparent 70%);
   filter: blur(26px);
   z-index: 1;
+  will-change: transform;
 }
 .sky-stars {
   position: absolute;
@@ -358,7 +359,8 @@ body::before {
   opacity: 0;
   pointer-events: none;
   z-index: 2;
-  transition: left 1s linear, top 1s linear, opacity .6s ease;
+  transition: opacity .6s ease;
+  will-change: transform;
 }
 .next[data-orb="sun"] .sky-orb {
   opacity: 1;
@@ -428,16 +430,39 @@ body::before {
 :root[data-theme="dark"] .next::before { filter: blur(28px) brightness(.86); opacity: .4; }
 @media (prefers-reduced-motion: no-preference) {
   .sky-haze { animation: sky-drift 26s ease-in-out infinite alternate; }
-  .sky-stars { animation: sky-twinkle 5s ease-in-out infinite alternate; }
+  .sky-stars { animation: sky-twinkle 5s ease-in-out infinite alternate; will-change: opacity; }
 }
+@media (prefers-reduced-motion: no-preference) and (max-width: 899px) {
+  body.is-focus.no-tips[data-view="today"] .sky-orb { animation: orb-breathe 6s ease-in-out infinite; }
+}
+@keyframes orb-breathe { 50% { scale: 1.06; } }
 @keyframes sky-drift {
   from { transform: translate3d(-4%, -2%, 0) rotate(0deg); }
   to { transform: translate3d(4%, 3%, 0) rotate(7deg); }
 }
 @keyframes sky-twinkle {
-  from { filter: brightness(1); }
-  to { filter: brightness(.55); }
+  from { opacity: var(--stars); }
+  to { opacity: calc(var(--stars) * .55); }
 }
+
+/* The living sky of the full screen (twinkling stars, shooting stars, sun rays, clouds) is drawn on a canvas. */
+.sky-live { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; display: none; pointer-events: none; }
+
+/* Buttons dip a little under the finger, so every tap is felt at once */
+@media (prefers-reduced-motion: no-preference) {
+  button, .city select { transition: transform .16s ease, opacity .16s ease, background-color .2s ease, color .2s ease; }
+  button:active, .city select:active { transform: scale(.96); opacity: .85; transition-duration: .07s; }
+  .tab:active { transform: scale(.97); }
+
+  /* the page cross-fades when a mode changes (View Transitions) */
+  ::view-transition-old(root) { animation: vt-out .22s ease-in both; }
+  ::view-transition-new(root) { animation: vt-in .34s cubic-bezier(.2, .8, .2, 1) both; }
+}
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: scale(.985); } }
+
+/* Swipe up for the prayer times (full-screen sky only) */
+.swipe-hint, .sky-sheet { display: none; }
 
 .next-intro {
   display: flex;
@@ -459,8 +484,6 @@ body::before {
   border-radius: 999px;
   background: rgba(255, 255, 255, .14);
   border: 1px solid rgba(255, 255, 255, .28);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
 }
 .next.is-forbidden .forbid-icon { display: block; }
 .next-alt {
@@ -469,8 +492,7 @@ body::before {
   border-radius: 16px;
   background: rgba(255, 255, 255, .14);
   border: 1px solid rgba(255, 255, 255, .22);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 999px rgba(10, 14, 30, .08); /* reads like frosted glass, without a live blur over the moving sky */
   font-size: 14.5px;
   font-weight: 650;
   line-height: 1.4;
@@ -494,8 +516,7 @@ body::before {
   border-radius: 999px;
   background: rgba(255, 255, 255, .15);
   border: 1px solid rgba(255, 255, 255, .24);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 999px rgba(10, 14, 30, .07);
 }
 .countdown { margin: 10px 0 16px; font-size: 14.5px; }
 .countdown-num {
@@ -612,6 +633,8 @@ body.no-tips .tips-title { opacity: .6; }
   /* sky details sized for the whole screen */
   body.is-focus.no-tips[data-view="today"] .sky-orb { top: calc(var(--oyz, .26) * 100%); width: 300px; height: 300px; margin: -150px 0 0 -150px; }
   body.is-focus.no-tips[data-view="today"] .sky-stars { inset: 0 0 38% 0; background-size: 300px 270px; }
+  body.is-focus.no-tips[data-view="today"].sky-is-live .sky-stars { display: none; } /* the canvas draws them */
+  body.is-focus.no-tips[data-view="today"] .sky-live { display: block; }
   body.is-focus.no-tips[data-view="today"] .sky-haze { filter: blur(40px); }
   body.is-focus.no-tips[data-view="today"] .sky-hills { height: 20%; max-height: 170px; }
   body.is-focus.no-tips[data-view="today"] .sky-veil {
@@ -640,8 +663,7 @@ body.no-tips .tips-title { opacity: .6; }
     background: rgba(255, 255, 255, .13);
     border-color: rgba(255, 255, 255, .24);
     color: #fff;
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    box-shadow: inset 0 0 0 999px rgba(10, 14, 30, .1);
   }
   body.is-focus.no-tips[data-view="today"] .city select option { color: var(--ink); background: var(--surface); }
   body.is-focus.no-tips[data-view="today"] .city .chev { color: rgba(255, 255, 255, .8); }
@@ -659,18 +681,107 @@ body.no-tips .tips-title { opacity: .6; }
   body.is-focus.no-tips[data-view="today"] .hijri { color: rgba(255, 255, 255, .78); }
   body.is-focus.no-tips[data-view="today"] .step { color: rgba(255, 255, 255, .82); }
   body.is-focus.no-tips[data-view="today"] .step:hover { background: rgba(255, 255, 255, .14); color: #fff; }
-  body.is-focus.no-tips[data-view="today"] .below-card { margin-top: auto; }
+  body.is-focus.no-tips[data-view="today"] .below-card { margin-top: 0; }
   body.is-focus.no-tips[data-view="today"] .focus-btn { margin-top: 0; }
   body.is-focus.no-tips[data-view="today"] .tips { margin-top: 12px; }
   body.is-focus.no-tips[data-view="today"] .tips-head { margin-bottom: 0; }
   body.is-focus.no-tips[data-view="today"] .tips-title { opacity: 1; color: rgba(255, 255, 255, .82); text-shadow: 0 1px 8px rgba(0, 0, 0, .35); }
   body.is-focus.no-tips[data-view="today"] .tabs {
-    background: rgba(0, 0, 0, .2);
+    background: rgba(0, 0, 0, .25);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     border-top-color: rgba(255, 255, 255, .14);
   }
   body.is-focus.no-tips[data-view="today"] .tab { color: rgba(255, 255, 255, .72); }
   body.is-focus.no-tips[data-view="today"] .tab[aria-pressed="true"] { background: rgba(255, 255, 255, .17); color: #fff; }
   body.is-focus.no-tips[data-view="today"] :focus-visible { outline-color: #fff; }
+
+  /* the sky responds to the sheet: everything rises out of its way while the date and buttons fade */
+  body.is-focus.no-tips[data-view="today"] { --reveal: 0; touch-action: none; overscroll-behavior: none; }
+  body.is-focus.no-tips[data-view="today"] .next-head,
+  body.is-focus.no-tips[data-view="today"] .countdown {
+    translate: 0 calc(var(--reveal) * -20vh);
+    scale: calc(1 - var(--reveal) * .14);
+  }
+  body.is-focus.no-tips[data-view="today"] .countdown { transform-origin: 50% 0; }
+  body.is-focus.no-tips[data-view="today"] .countdown-label { opacity: calc(.86 * (1 - var(--reveal) * 1.6)); }
+  body.is-focus.no-tips[data-view="today"] .next-alt { translate: 0 calc(var(--reveal) * -20vh); opacity: calc(1 - var(--reveal)); }
+  body.is-focus.no-tips[data-view="today"] .sky-orb { translate: 0 calc(var(--reveal) * -20vh); }
+  body.is-focus.no-tips[data-view="today"] .date-row,
+  body.is-focus.no-tips[data-view="today"] .below-card,
+  body.is-focus.no-tips[data-view="today"] .swipe-hint { opacity: calc(1 - var(--reveal)); }
+  body.is-focus.no-tips[data-view="today"].sheet-open .date-row,
+  body.is-focus.no-tips[data-view="today"].sheet-open .below-card,
+  body.is-focus.no-tips[data-view="today"].sheet-open .swipe-hint { pointer-events: none; }
+  body.is-focus.no-tips[data-view="today"].sheet-settling .next-head,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .countdown,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .next-alt,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .sky-orb,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .date-row,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .below-card,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .swipe-hint,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .countdown-label,
+  body.is-focus.no-tips[data-view="today"].sheet-settling .sky-sheet {
+    transition: translate .42s cubic-bezier(.2, .9, .25, 1), scale .42s cubic-bezier(.2, .9, .25, 1),
+      opacity .42s ease, transform .42s cubic-bezier(.2, .9, .25, 1);
+  }
+
+  body.is-focus.no-tips[data-view="today"] .swipe-hint {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: auto auto 6px;
+    padding: 6px 14px;
+    border: 0;
+    background: none;
+    color: rgba(255, 255, 255, .82);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .35);
+    cursor: pointer;
+  }
+  .swipe-hint svg { width: 18px; height: 18px; color: rgba(255, 255, 255, .9); }
+  @media (prefers-reduced-motion: no-preference) {
+    .swipe-hint svg { animation: hint-bob 1.6s ease-in-out infinite; }
+  }
+  @keyframes hint-bob { 50% { transform: translateY(-4px); } }
+
+  body.is-focus.no-tips[data-view="today"] .sky-sheet {
+    display: block;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(63.5px + env(safe-area-inset-bottom) + 12px);
+    z-index: 4;
+    max-height: calc(100dvh - 63.5px - env(safe-area-inset-bottom) - 120px);
+    overflow: hidden;
+    padding: 8px;
+    border-radius: 26px;
+    background: rgba(11, 16, 36, .92);
+    border: 1px solid rgba(255, 255, 255, .18);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    color: #fff;
+    transform: translateY(calc((1 - var(--reveal)) * (100% + 90px)));
+    visibility: hidden;
+  }
+  body.is-focus.no-tips[data-view="today"].sheet-visible .sky-sheet { visibility: visible; }
+  .sky-sheet .grab { width: 38px; height: 4px; margin: 0 auto; border-radius: 2px; background: rgba(255, 255, 255, .4); }
+  .sky-sheet-head { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px 6px; font-size: 13.5px; font-weight: 700; color: rgba(255, 255, 255, .78); }
+  .sky-sheet-head span:first-child { font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .sky-sheet ol { list-style: none; margin: 0; padding: 0; }
+  .sky-sheet li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; border-radius: 14px; border: 1px solid transparent; font-size: 16.5px; font-weight: 750; }
+  .sky-sheet li .t-time { font-size: 17.5px; font-variant-numeric: tabular-nums; }
+  .sky-sheet li.is-past { color: rgba(255, 255, 255, .5); font-weight: 650; }
+  .sky-sheet li.is-next { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .2); font-weight: 880; }
+}
+@media (max-width: 899px) and (max-height: 700px) {
+  .sky-sheet li { padding: 6px 14px; font-size: 15.5px; }
+  .sky-sheet li .t-time { font-size: 16px; }
+  .sky-sheet-head { padding: 6px 12px 2px; }
 }
 
 .dayline { position: relative; height: 18px; }

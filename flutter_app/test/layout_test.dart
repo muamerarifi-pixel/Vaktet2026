@@ -43,9 +43,17 @@ void main() {
                 prefs: await SharedPreferences.getInstance(),
                 clock: () => entry.value.millisecondsSinceEpoch,
               );
-              await tester.pumpWidget(VaktetApp(controller: controller));
+              await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
               await tester.pump(const Duration(milliseconds: 50));
               expect(tester.takeException(), isNull, reason: '${entry.key} $mode dark=$dark');
+              if (mode == 'full' && size.width < 900) {
+                // the prayer times swiped up over the sky
+                await tester.pumpAndSettle();
+                await tester.tap(find.bySemanticsLabel('Shfaq vaktet e sotme'), warnIfMissed: false);
+                await tester.pumpAndSettle();
+                expect(find.text('VAKTET E SOTME'), findsOneWidget, reason: '${entry.key} sheet dark=$dark');
+                expect(tester.takeException(), isNull, reason: '${entry.key} sheet dark=$dark');
+              }
             }
           }
         }
@@ -64,7 +72,7 @@ void main() {
               prefs: await SharedPreferences.getInstance(),
               clock: () => instants['forbidden']!.millisecondsSinceEpoch,
             );
-            await tester.pumpWidget(VaktetApp(controller: controller));
+            await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
             await tester.pump(const Duration(milliseconds: 50));
             expect(tester.takeException(), isNull, reason: '${font.name} ×1.25 $mode');
           }
@@ -76,7 +84,7 @@ void main() {
           prefs: await SharedPreferences.getInstance(),
           clock: () => instants['dusk']!.millisecondsSinceEpoch,
         );
-        await tester.pumpWidget(VaktetApp(controller: controller));
+        await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
         controller.setView(HomeView.month);
         await tester.pump(const Duration(milliseconds: 50));
         expect(tester.takeException(), isNull, reason: 'month');
@@ -84,6 +92,7 @@ void main() {
         controller.setView(HomeView.today);
         await tester.pump(const Duration(milliseconds: 50));
         expect(tester.takeException(), isNull, reason: 'another day');
+        await tester.pumpAndSettle();
         await tester.tap(find.bySemanticsLabel('Cilësimet'), warnIfMissed: false);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: 'settings');

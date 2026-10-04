@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
@@ -385,6 +387,147 @@ class _TimeRow extends StatelessWidget {
           ),
           if (divider) Positioned(left: 16, right: 16, top: 0, child: Container(height: 1, color: c.line)),
         ],
+      ),
+    );
+  }
+}
+
+/// The day's prayer times on the full-screen sky: a sheet that is swiped up from the bottom.
+class SkyTimesSheet extends StatelessWidget {
+  const SkyTimesSheet({super.key, required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final model = c.model;
+    final now = c.now;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xEB0B1024),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0x2EFFFFFF)),
+        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // the grab handle
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(color: const Color(0x66FFFFFF), borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Row(
+              children: [
+                Text('VAKTET E SOTME', style: vt(12.5, 800, color: const Color(0xC7FFFFFF), ls: .08, height: 1.4)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    c.city.name,
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: vt(13.5, 700, color: const Color(0xC7FFFFFF), height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          for (final row in model.rows)
+            _SkyTimeRow(row: row, isNext: identical(row, model.nextRow), isPast: model.isPast(row, now)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkyTimeRow extends StatelessWidget {
+  const _SkyTimeRow({required this.row, required this.isNext, required this.isPast});
+
+  final PrayerRow row;
+  final bool isNext;
+  final bool isPast;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _white.withValues(alpha: isPast ? .5 : 1);
+    final weight = isNext ? 880.0 : (isPast ? 650.0 : 750.0);
+    return Semantics(
+      container: true,
+      label: '${row.name} ${fmtTime(row.local)}',
+      excludeSemantics: true,
+      selected: isNext,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: isNext ? const Color(0x2EFFFFFF) : null,
+          borderRadius: BorderRadius.circular(14),
+          border: isNext ? Border.all(color: const Color(0x33FFFFFF)) : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(row.name, style: vt(16.5, weight, color: color, height: 1.4)),
+            ),
+            const SizedBox(width: 12),
+            Text(fmtTime(row.local), style: vt(17.5, weight, color: color, ls: .01, height: 1.4)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Swipe up for the prayer times", with a chevron that floats up and down.
+class SwipeHint extends StatelessWidget {
+  const SwipeHint({super.key, required this.onTap, required this.clock});
+
+  final VoidCallback onTap;
+  final SkyClock? clock;
+
+  @override
+  Widget build(BuildContext context) {
+    final chevron = SvgIcon(VIcon.chevUp, size: 18, color: const Color(0xE6FFFFFF));
+    return Tap(
+      onTap: onTap,
+      label: 'Shfaq vaktet e sotme',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            clock == null
+                ? chevron
+                : AnimatedBuilder(
+                    animation: clock!,
+                    child: chevron,
+                    builder: (context, child) {
+                      final bob = .5 + .5 * math.sin(clock!.seconds / 1.6 * 2 * math.pi);
+                      return Transform.translate(offset: Offset(0, -4 * bob), child: child);
+                    },
+                  ),
+            Text(
+              'Rrëshqit lart për vaktet',
+              style: vt(
+                13,
+                700,
+                color: const Color(0xD1FFFFFF),
+                height: 1.3,
+                shadows: const [Shadow(color: Color(0x59000000), blurRadius: 8, offset: Offset(0, 1))],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

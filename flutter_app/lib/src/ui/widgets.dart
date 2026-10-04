@@ -10,8 +10,9 @@ const Color _skyFill = Color(0x21FFFFFF);
 const Color _skyBorder = Color(0x3DFFFFFF);
 const Color _white = Color(0xFFFFFFFF);
 
-/// Makes a widget tappable with an accessible name.
-class Tap extends StatelessWidget {
+/// Makes a widget tappable with an accessible name. It dips a little under the finger, so every tap is felt
+/// at once.
+class Tap extends StatefulWidget {
   const Tap({super.key, required this.onTap, required this.label, required this.child, this.button = true});
 
   final VoidCallback onTap;
@@ -20,12 +21,39 @@ class Tap extends StatelessWidget {
   final bool button;
 
   @override
+  State<Tap> createState() => _TapState();
+}
+
+class _TapState extends State<Tap> {
+  bool _down = false;
+
+  void _press(bool down) {
+    if (_down != down) setState(() => _down = down);
+  }
+
+  @override
   Widget build(BuildContext context) => Semantics(
-    button: button,
-    label: label,
+    button: widget.button,
+    label: widget.label,
     excludeSemantics: true,
-    onTap: onTap,
-    child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: child),
+    onTap: widget.onTap,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      onTapDown: (_) => _press(true),
+      onTapUp: (_) => _press(false),
+      onTapCancel: () => _press(false),
+      child: AnimatedScale(
+        scale: _down ? .95 : 1,
+        duration: Duration(milliseconds: _down ? 70 : 160),
+        curve: Curves.easeOut,
+        child: AnimatedOpacity(
+          opacity: _down ? .8 : 1,
+          duration: Duration(milliseconds: _down ? 70 : 160),
+          child: widget.child,
+        ),
+      ),
+    ),
   );
 }
 
@@ -56,9 +84,7 @@ class RoundIconButton extends StatelessWidget {
       onTap: onTap,
       label: label,
       child: onSky
-          ? ClipOval(
-              child: Glass(radius: 999, fill: Colors.transparent, border: Colors.transparent, blur: 14, child: circle),
-            )
+          ? Glass(radius: 999, fill: Colors.transparent, border: Colors.transparent, blur: 14, child: circle)
           : circle,
     );
   }

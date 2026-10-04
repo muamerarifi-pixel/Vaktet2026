@@ -173,6 +173,7 @@ class VIcon {
   static final stepPrev = VIcon.stroked(16, 1.7, ['M10 3.5 5.5 8l4.5 4.5']);
   static final stepNext = VIcon.stroked(16, 1.7, ['M6 3.5 10.5 8 6 12.5']);
   static final chevDown = VIcon.stroked(16, 1.6, ['M4 6l4 4 4-4']);
+  static final chevUp = VIcon.stroked(16, 1.6, ['M4 10l4-4 4 4']);
   static final forbid = VIcon.stroked(16, 1.6, [circle(8, 8, 6.3), 'M3.6 12.4 12.4 3.6']);
   static final hide = VIcon.stroked(24, 1.9, [
     'M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c5.5 0 9 5.5 9 7 0 .7-.8 2.2-2.2 3.7M6.5 6.6C4.3 8 3 10.9 3 12c0 1.5 3.5 7 9 7 1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2',

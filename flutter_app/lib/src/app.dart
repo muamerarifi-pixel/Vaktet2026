@@ -5,9 +5,12 @@ import 'ui/colors.dart';
 import 'ui/home.dart';
 
 class VaktetApp extends StatelessWidget {
-  const VaktetApp({super.key, required this.controller});
+  const VaktetApp({super.key, required this.controller, this.skyMotion = true});
 
   final AppController controller;
+
+  /// Whether the sky moves (tests turn it off, so the screen can settle).
+  final bool skyMotion;
 
   ThemeData _theme(VaktetColors c, FontChoice font) {
     final base = ThemeData(
@@ -52,7 +55,7 @@ class VaktetApp extends StatelessWidget {
             child: child!,
           );
         },
-        home: HomePage(controller: controller),
+        home: HomePage(controller: controller, skyMotion: skyMotion),
       ),
     );
   }

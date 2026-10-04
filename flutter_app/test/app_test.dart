@@ -23,14 +23,14 @@ Future<AppController> _open(
   tester.view.physicalSize = size * 2;
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(VaktetApp(controller: controller));
+  await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
   await tester.pump(const Duration(milliseconds: 100));
   return controller;
 }
 
 Future<void> _close(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox());
-  await tester.pump();
+  await tester.pumpAndSettle();
 }
 
 Finder _label(String text) => find.bySemanticsLabel(text);
@@ -67,12 +67,12 @@ void main() {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(VaktetApp(controller: controller));
-    await tester.pump();
+    await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
+    await tester.pumpAndSettle();
     expect(find.textContaining('01:14:00', findRichText: true), findsOneWidget);
     now += 61 * 1000;
     controller.tick();
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.textContaining('01:12:59', findRichText: true), findsOneWidget);
     await _close(tester);
   });
@@ -101,17 +101,17 @@ void main() {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
     await tester.tap(_label('Dita tjetër'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('E diel, 4 tetor 2026'), findsOneWidget);
     expect(find.text('Kthehu te sot'), findsOneWidget);
     expect(find.text('NAMAZI I ARDHSHËM'), findsNothing);
     expect(find.text('04:54'), findsOneWidget); // Imsaku on 4 October
     await tester.tap(find.text('Kthehu te sot'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(c.isToday, isTrue);
     expect(find.text('E shtunë, 3 tetor 2026'), findsOneWidget);
     await tester.tap(_label('Dita e mëparshme'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('E premte, 2 tetor 2026'), findsOneWidget);
     expect(find.text('Xhumaja'), findsOneWidget);
     handle.dispose();
@@ -166,6 +166,39 @@ void main() {
     await tester.tap(find.text('Shfaq vaktet'));
     await _animate(tester);
     expect(find.text('Imsaku'), findsOneWidget);
+    handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('full-screen sky: swipe up shows the prayer times, swipe down hides them', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _open(tester, prefs: {'focus': true, 'tips': false});
+    await tester.pumpAndSettle();
+    expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
+    expect(find.text('Imsaku'), findsNothing);
+    // swipe up on the sky
+    await tester.flingFrom(const Offset(195, 600), const Offset(0, -300), 1200);
+    await tester.pumpAndSettle();
+    expect(find.text('VAKTET E SOTME'), findsOneWidget);
+    expect(find.text('Imsaku'), findsOneWidget);
+    expect(find.text('Jacia'), findsWidgets);
+    expect(tester.takeException(), isNull);
+    // swipe down hides them again
+    await tester.flingFrom(const Offset(195, 500), const Offset(0, 300), 1200);
+    await tester.pumpAndSettle();
+    expect(find.text('Imsaku'), findsNothing);
+    // a slow drag that goes less than half way springs back shut
+    await tester.dragFrom(const Offset(195, 600), const Offset(0, -60));
+    await tester.pumpAndSettle();
+    expect(find.text('Imsaku'), findsNothing);
+    // the hint opens them too, and Back closes them
+    await tester.tap(find.text('Rrëshqit lart për vaktet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Imsaku'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Imsaku'), findsNothing);
+    expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
     handle.dispose();
     await _close(tester);
   });
@@ -250,21 +283,21 @@ void main() {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
     await tester.tap(_label('Muaji'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Tetor 2026'), findsOneWidget);
     expect(find.text('Ims.'), findsOneWidget);
     expect(find.text('04:52'), findsOneWidget); // 1 October
     await tester.tap(_label('Muaji tjetër'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Nëntor 2026'), findsOneWidget);
     await tester.tap(_label('Muaji i mëparshëm'));
     await tester.tap(_label('Muaji i mëparshëm'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Shtator 2026'), findsOneWidget);
     await tester.tap(_label('Muaji tjetër'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(_label('E premte, 9 tetor'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     // tapped a day: back on the Today tab, showing that day
     expect(c.view, HomeView.today);
     expect(c.selected.d, 9);
