@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
@@ -79,13 +81,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       (_sheetKey.currentContext?.size?.height ?? 0) > 0 ? _sheetKey.currentContext!.size!.height : 380;
 
   /// The sheet follows the finger.
+  /// Whether the current drag started in the bottom edge zone and is ignored.
+  bool _edgeDrag = false;
+
+  /// A swipe that starts down at the bottom edge — the tabs or the phone's own home gesture — doesn't open
+  /// the sheet, so going to the home screen doesn't pull up the times by accident.
+  void _startSheetDrag(DragStartDetails d) {
+    final mq = MediaQuery.of(context);
+    final edge = math.max(mq.systemGestureInsets.bottom, mq.padding.bottom) + 96;
+    _edgeDrag = _sheet.value == 0 && d.globalPosition.dy > mq.size.height - edge;
+  }
+
   void _dragSheet(DragUpdateDetails d) {
+    if (_edgeDrag) return;
     _sheet.stop();
     _sheet.value = (_sheet.value - d.primaryDelta! / _sheetHeight).clamp(0.0, 1.0);
   }
 
   /// A flick decides; otherwise it goes to whichever side is nearer.
   void _endSheetDrag(DragEndDetails d) {
+    if (_edgeDrag) {
+      _edgeDrag = false;
+      return;
+    }
     final vy = d.velocity.pixelsPerSecond.dy;
     final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
     _settleSheet(open, velocity: -vy / _sheetHeight);
@@ -258,6 +276,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
+        onVerticalDragStart: _startSheetDrag,
         onVerticalDragUpdate: _dragSheet,
         onVerticalDragEnd: _endSheetDrag,
         onTap: () {

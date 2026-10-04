@@ -176,6 +176,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
     expect(find.text('Imsaku'), findsNothing);
+    // a swipe from the very bottom edge (the phone's home gesture) leaves them hidden
+    final h = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    await tester.flingFrom(Offset(195, h - 4), const Offset(0, -300), 1200);
+    await tester.pumpAndSettle();
+    expect(find.text('Imsaku'), findsNothing);
     // swipe up on the sky
     await tester.flingFrom(const Offset(195, 600), const Offset(0, -300), 1200);
     await tester.pumpAndSettle();

@@ -660,6 +660,8 @@
     document.addEventListener("pointerdown", (e) => {
       if (!isFullSky() || e.button > 0) return;
       if (e.target.closest && e.target.closest(".top, .tabs, dialog")) return;
+      // a swipe from the bottom edge is the phone's home gesture, not a request for the times
+      if (sheet.v === 0 && e.clientY > window.innerHeight - 56) return;
       sheet.drag = { id: e.pointerId, y0: e.clientY, v0: sheet.v, last: e.clientY, t: e.timeStamp, vy: 0, moving: false, target: e.target };
     });
     document.addEventListener("pointermove", (e) => {
