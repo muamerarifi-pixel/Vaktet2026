@@ -18,6 +18,11 @@
     (function () {
       try {
         var t = localStorage.getItem("vaktet:theme");
+        var r = document.documentElement, f = localStorage.getItem("vaktet:font"),
+          z = parseFloat(localStorage.getItem("vaktet:fontScale")), w = parseInt(localStorage.getItem("vaktet:countdownWeight"), 10);
+        if (f === "nunito" || f === "lora" || f === "mono") r.dataset.font = f;
+        if (z >= .9 && z <= 1.25) r.style.setProperty("--text-scale", z);
+        if (w >= 300 && w <= 900) r.style.setProperty("--cd-weight", w);
         if (t === "light" || t === "dark") {
           document.documentElement.dataset.theme = t;
           var c = t === "dark" ? "#000000" : "#EEF1EE";
@@ -224,6 +229,37 @@
           <label><input type="radio" name="alarm" value="30"><span>30 min</span></label>
           <label><input type="radio" name="alarm" value="45"><span>45 min</span></label>
           <label><input type="radio" name="alarm" value="60"><span>60 min</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Stili i shkronjave</legend>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="font" value="figtree"><span class="font-figtree">Moderne</span></label>
+          <label><input type="radio" name="font" value="nunito"><span class="font-nunito">E butë</span></label>
+          <label><input type="radio" name="font" value="lora"><span class="font-lora">Klasike</span></label>
+          <label><input type="radio" name="font" value="mono"><span class="font-mono">Digjitale</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Madhësia e shkronjave</legend>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="fontScale" value="0.9"><span>E vogël</span></label>
+          <label><input type="radio" name="fontScale" value="1"><span>Normale</span></label>
+          <label><input type="radio" name="fontScale" value="1.12"><span>E madhe</span></label>
+          <label><input type="radio" name="fontScale" value="1.25"><span>Më e madhe</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Trashësia e kohës së mbetur</legend>
+        <p class="hint">Sa të trasha janë shifrat e mëdha të kohës deri te vakti tjetër.</p>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="countdownWeight" value="300"><span style="font-weight:300">Hollë</span></label>
+          <label><input type="radio" name="countdownWeight" value="500"><span style="font-weight:500">Normale</span></label>
+          <label><input type="radio" name="countdownWeight" value="700"><span style="font-weight:700">E trashë</span></label>
+          <label><input type="radio" name="countdownWeight" value="900"><span style="font-weight:900">Shumë</span></label>
         </div>
       </fieldset>
 

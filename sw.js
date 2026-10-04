@@ -1,5 +1,5 @@
 // Service worker: keeps the whole app available offline.
-const CACHE = "vaktet-v17";
+const CACHE = "vaktet-v18";
 const ASSETS = [
   "/",
   "/index.html",
@@ -9,6 +9,10 @@ const ASSETS = [
   "/tips.js",
   "/manifest.webmanifest",
   "/fonts/figtree.woff2",
+  "/fonts/Figtree.ttf",
+  "/fonts/Nunito.ttf",
+  "/fonts/Lora.ttf",
+  "/fonts/JetBrainsMono.ttf",
   "/icons/favicon.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

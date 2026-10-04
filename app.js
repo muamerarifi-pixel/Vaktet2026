@@ -141,6 +141,9 @@
     alarmOffset: parseInt(store.get("alarm", "30"), 10) || 30,
     focus: store.get("focus", "0") === "1",
     tipsOn: store.get("tips", "1") === "1",
+    font: ["figtree", "nunito", "lora", "mono"].includes(store.get("font", "figtree")) ? store.get("font", "figtree") : "figtree",
+    fontScale: [0.9, 1, 1.12, 1.25].includes(parseFloat(store.get("fontScale", "1"))) ? parseFloat(store.get("fontScale", "1")) : 1,
+    countdownWeight: [300, 500, 700, 900].includes(parseInt(store.get("countdownWeight", "900"), 10)) ? parseInt(store.get("countdownWeight", "900"), 10) : 900,
     today: kosovoToday(),
     selected: null,
     cursor: null,
@@ -156,6 +159,14 @@
     if (state.theme === "light" || state.theme === "dark") root.dataset.theme = state.theme;
     else delete root.dataset.theme;
     updateChrome();
+  }
+
+  // Font style, text size and countdown thickness (the settings)
+  function applyLook() {
+    const r = document.documentElement;
+    if (state.font === "figtree") delete r.dataset.font; else r.dataset.font = state.font;
+    r.style.setProperty("--text-scale", String(state.fontScale));
+    r.style.setProperty("--cd-weight", String(state.countdownWeight));
   }
 
   // The phone's status bar takes the page colour, or the top of the sky when the card fills the screen.
@@ -859,6 +870,9 @@
       document.querySelectorAll('input[name="theme"]').forEach((r) => { r.checked = r.value === state.theme; });
       document.querySelectorAll('input[name="hijri"]').forEach((r) => { r.checked = parseInt(r.value, 10) === state.hijriAdj; });
       document.querySelectorAll('input[name="alarm"]').forEach((r) => { r.checked = parseInt(r.value, 10) === state.alarmOffset; });
+      document.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === state.font; });
+      document.querySelectorAll('input[name="fontScale"]').forEach((r) => { r.checked = parseFloat(r.value) === state.fontScale; });
+      document.querySelectorAll('input[name="countdownWeight"]').forEach((r) => { r.checked = parseInt(r.value, 10) === state.countdownWeight; });
       if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
     });
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
@@ -870,6 +884,15 @@
     }));
     document.querySelectorAll('input[name="alarm"]').forEach((r) => r.addEventListener("change", () => {
       state.alarmOffset = parseInt(r.value, 10); store.set("alarm", r.value); renderToday();
+    }));
+    document.querySelectorAll('input[name="font"]').forEach((r) => r.addEventListener("change", () => {
+      state.font = r.value; store.set("font", r.value); applyLook();
+    }));
+    document.querySelectorAll('input[name="fontScale"]').forEach((r) => r.addEventListener("change", () => {
+      state.fontScale = parseFloat(r.value); store.set("fontScale", r.value); applyLook();
+    }));
+    document.querySelectorAll('input[name="countdownWeight"]').forEach((r) => r.addEventListener("change", () => {
+      state.countdownWeight = parseInt(r.value, 10); store.set("countdownWeight", r.value); applyLook();
     }));
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
 
@@ -897,6 +920,7 @@
 
   // ---------- Start ----------
   applyTheme();
+  applyLook();
   applyTipsVisibility();
   lockPortrait();
   renderCities();

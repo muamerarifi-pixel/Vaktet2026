@@ -1,3 +1,15 @@
+/* Figtree below 500 (the "thin" countdown) comes from the full variable font */
+@font-face {
+  font-family: "Figtree";
+  src: url("/fonts/Figtree.ttf") format("truetype");
+  font-weight: 300 499;
+  font-style: normal;
+  font-display: swap;
+}
+/* The other font styles of the settings (loaded only when picked) */
+@font-face { font-family: "Nunito"; src: url("/fonts/Nunito.ttf") format("truetype"); font-weight: 200 1000; font-display: swap; }
+@font-face { font-family: "Lora"; src: url("/fonts/Lora.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-display: swap; }
 @font-face {
   font-family: "Figtree";
   src: url("/fonts/figtree.woff2") format("woff2");
@@ -1048,3 +1060,32 @@ dialog::backdrop { background: rgba(8, 14, 12, .45); }
 @media (prefers-reduced-motion: no-preference) {
   .times li, .tab, .step { transition: background-color .2s ease, color .2s ease; }
 }
+
+/* ---------- Font style, text size and countdown thickness (settings) ---------- */
+:root[data-font="nunito"] { --font: "Nunito", ui-rounded, system-ui, sans-serif; }
+:root[data-font="lora"] { --font: "Lora", Georgia, "Times New Roman", serif; }
+:root[data-font="mono"] { --font: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
+:root[data-font] body, :root[data-font] button, :root[data-font] select, :root[data-font] input { font-family: var(--font); }
+.font-figtree { font-family: "Figtree", sans-serif; }
+.font-nunito { font-family: "Nunito", sans-serif; }
+.font-lora { font-family: "Lora", serif; }
+.font-mono { font-family: "JetBrains Mono", monospace; }
+
+.countdown-num { font-weight: var(--cd-weight, 900); }
+
+/* the text grows or shrinks with the size picked in the settings (the sky and layout stay put) */
+.top, .date-row, .back-today, .next-head, .countdown, .next-alt, .below-card, .swipe-hint, .alarm, .times,
+.city-note, .month, .sky-sheet, .tabs .tab span, .sheet { zoom: var(--text-scale, 1); }
+
+/* hiding / showing the prayer times: the sky card changes size smoothly and the list slides (View Transitions) */
+@media (prefers-reduced-motion: no-preference) {
+  .next { view-transition-name: sky-card; }
+  #times { view-transition-name: times-list; }
+  #tips { view-transition-name: tips; }
+  ::view-transition-group(sky-card) { animation-duration: .42s; animation-timing-function: cubic-bezier(.3, .8, .25, 1); }
+  ::view-transition-old(sky-card), ::view-transition-new(sky-card) { height: 100%; object-fit: cover; animation-duration: .42s; }
+  ::view-transition-old(times-list), ::view-transition-old(tips) { animation: vt-slide-out .3s ease-in both; }
+  ::view-transition-new(times-list), ::view-transition-new(tips) { animation: vt-slide-in .42s cubic-bezier(.2, .8, .2, 1) both; }
+}
+@keyframes vt-slide-out { to { opacity: 0; transform: translateY(16px); } }
+@keyframes vt-slide-in { from { opacity: 0; transform: translateY(16px); } }
