@@ -105,33 +105,44 @@ const List<(double, double, double)> _stars = [
   (91, 64, 1.2),
 ];
 
-/// A star of the full-screen sky: where it is (0–1), how big, and how it twinkles.
+/// A star of the full-screen sky: where it is (0–1), how big, how bright, its tint, and how it twinkles.
 class _Star {
-  const _Star(this.x, this.y, this.r, this.period, this.phase, this.depth);
+  const _Star(this.x, this.y, this.r, this.bright, this.tint, this.period, this.phase, this.depth);
 
   final double x;
   final double y;
+
+  /// Radius in logical pixels.
   final double r;
+
+  /// Brightness, 0–1.
+  final double bright;
+  final Color tint;
   final double period;
   final double phase;
 
-  /// How far the star dims at the bottom of its twinkle (0 = steady, 1 = goes out).
+  /// How far the star dims at the bottom of its twinkle.
   final double depth;
 }
 
-/// The same stars on every start (a fixed seed), scattered over the upper sky, a few of them bright.
+/// The same stars on every start (a fixed seed): mostly tiny and faint, a handful a little brighter,
+/// some faintly blue or warm, each twinkling gently on its own beat.
 final List<_Star> _fieldStars = () {
   final rnd = math.Random(1447);
-  return List<_Star>.generate(140, (i) {
-    final bright = i % 11 == 0;
+  const tints = [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFDCE6FF), Color(0xFFFFF1DE)];
+  return List<_Star>.generate(170, (i) {
     final y = math.pow(rnd.nextDouble(), 1.35).toDouble(); // denser towards the top
+    final lucky = rnd.nextDouble() < .06;
+    final bright = lucky ? .75 + rnd.nextDouble() * .25 : .18 + math.pow(rnd.nextDouble(), 2) * .5;
     return _Star(
       rnd.nextDouble(),
       y,
-      bright ? 2.2 + rnd.nextDouble() * .8 : 1.1 + rnd.nextDouble() * 1.1,
-      2.2 + rnd.nextDouble() * 4.5,
+      lucky ? .75 + rnd.nextDouble() * .3 : .35 + rnd.nextDouble() * .4,
+      bright,
+      tints[rnd.nextInt(tints.length)],
+      3 + rnd.nextDouble() * 6,
       rnd.nextDouble() * 2 * math.pi,
-      bright ? .35 : .45 + rnd.nextDouble() * .5,
+      .12 + rnd.nextDouble() * .3,
     );
   });
 }();
@@ -333,30 +344,21 @@ class SkyPainter extends CustomPainter {
 
     if (_full) {
       final boxH = h * .66;
-      final glint = Paint()
-        ..isAntiAlias = true
-        ..strokeCap = StrokeCap.round;
-      for (final s in _fieldStars) {
-        final y = s.y * boxH;
+      for (final st in _fieldStars) {
         // fade out over the lower part of the star field
-        final fade = s.y <= .55 ? 1.0 : 1 - (s.y - .55) / .45;
-        final tw = 1 - s.depth * _wave(t, s.period, s.phase);
-        final a = (pal.stars * tw * fade).clamp(0.0, 1.0);
+        final fade = st.y <= .55 ? 1.0 : 1 - (st.y - .55) / .45;
+        final tw = 1 - st.depth * _wave(t, st.period, st.phase);
+        final a = (pal.stars * st.bright * tw * fade).clamp(0.0, 1.0);
         if (a <= .02) continue;
-        final p = Offset(s.x * w, y);
-        paint.color = white.withValues(alpha: a);
-        canvas.drawCircle(p, s.r / 2, paint);
-        if (s.r > 2.1) {
-          // the bright ones sparkle: a soft halo and a little cross of light
-          paint.color = white.withValues(alpha: a * .16);
-          canvas.drawCircle(p, s.r * 1.8, paint);
-          final len = s.r * (2.2 + 2.2 * tw);
-          glint
-            ..color = white.withValues(alpha: a * .55)
-            ..strokeWidth = .7;
-          canvas.drawLine(p.translate(-len, 0), p.translate(len, 0), glint);
-          canvas.drawLine(p.translate(0, -len), p.translate(0, len), glint);
+        final p = Offset(st.x * w, st.y * boxH);
+        final tint = _k(st.tint);
+        if (st.r > .7) {
+          // the brighter ones have the faintest halo
+          paint.color = tint.withValues(alpha: a * .07);
+          canvas.drawCircle(p, st.r * 3, paint);
         }
+        paint.color = tint.withValues(alpha: a);
+        canvas.drawCircle(p, st.r, paint);
       }
       return;
     }
@@ -367,7 +369,7 @@ class SkyPainter extends CustomPainter {
       final x = sx / 100 * w, y = sy / 100 * boxH;
       final fade = y <= .55 * boxH ? 1.0 : 1 - (y - .55 * boxH) / (.45 * boxH);
       // each star twinkles on its own beat
-      final twinkle = 1 - .5 * _wave(t, 3.2 + (i * 7 % 5) * .55, i * 1.7);
+      final twinkle = 1 - .3 * _wave(t, 3.2 + (i * 7 % 5) * .55, i * 1.7);
       paint.color = white.withValues(alpha: (pal.stars * twinkle * fade).clamp(0.0, 1.0));
       canvas.drawCircle(Offset(x, y), math.max(.6, r / 2), paint);
       i++;
@@ -377,12 +379,12 @@ class SkyPainter extends CustomPainter {
   /// Now and then a star falls across the night sky.
   void _shootingStar(Canvas canvas, Size size, SkyPalette pal, double t) {
     if (pal.stars < .5) return;
-    const every = 7.0, lasts = 1.1;
+    const every = 11.0, lasts = .9;
     final n = (t / every).floor();
     final local = t - n * every;
     if (local > lasts) return;
     final rnd = math.Random(n * 7919 + 13);
-    if (rnd.nextDouble() < .35) return; // not every time
+    if (rnd.nextDouble() < .5) return; // not every time
     final w = size.width, h = size.height;
     final start = Offset((.25 + rnd.nextDouble() * .7) * w, (.04 + rnd.nextDouble() * .28) * h);
     final angle = (150 + rnd.nextDouble() * 25) * math.pi / 180; // down and to the left
@@ -390,18 +392,17 @@ class SkyPainter extends CustomPainter {
     final travel = w * (.35 + rnd.nextDouble() * .2);
     final p = Curves.easeOutCubic.transform(local / lasts);
     final head = start + dir * (travel * p);
-    final tail = head - dir * (70 + 60 * math.sin(math.pi * p));
-    final alpha = math.sin(math.pi * (local / lasts)) * pal.stars;
+    final tail = head - dir * (40 + 45 * math.sin(math.pi * p));
+    final alpha = math.sin(math.pi * (local / lasts)) * pal.stars * .55;
     final white = _k(const Color(0xFFFFFFFF));
     canvas.drawLine(
       tail,
       head,
       Paint()
-        ..strokeWidth = 1.6
+        ..strokeWidth = .9
         ..strokeCap = StrokeCap.round
-        ..shader = ui.Gradient.linear(tail, head, [white.withValues(alpha: 0), white.withValues(alpha: alpha * .9)]),
+        ..shader = ui.Gradient.linear(tail, head, [white.withValues(alpha: 0), white.withValues(alpha: alpha)]),
     );
-    canvas.drawCircle(head, 1.6, Paint()..color = white.withValues(alpha: alpha));
   }
 
   /// The sun with its rays, or the moon with a crescent.

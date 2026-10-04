@@ -708,11 +708,19 @@
     let a = seed >>> 0;
     return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   }
+  // mostly tiny and faint, a handful a little brighter, some faintly blue or warm, each twinkling gently
   const FIELD = (() => {
     const r = seeded(1447);
-    return Array.from({ length: 140 }, (_, i) => {
-      const bright = i % 11 === 0;
-      return { x: r(), y: Math.pow(r(), 1.35), r: bright ? 2.2 + r() * .8 : 1.1 + r() * 1.1, period: 2.2 + r() * 4.5, phase: r() * Math.PI * 2, depth: bright ? .35 : .45 + r() * .5 };
+    const tints = [[255, 255, 255], [255, 255, 255], [220, 230, 255], [255, 241, 222]];
+    return Array.from({ length: 170 }, () => {
+      const y = Math.pow(r(), 1.35), lucky = r() < .06;
+      return {
+        x: r(), y,
+        r: lucky ? .75 + r() * .3 : .35 + r() * .4,
+        bright: lucky ? .75 + r() * .25 : .18 + Math.pow(r(), 2) * .5,
+        tint: tints[Math.floor(r() * tints.length)],
+        period: 3 + r() * 6, phase: r() * Math.PI * 2, depth: .12 + r() * .3
+      };
     });
   })();
   const CLOUDS = [[.14, 1, 150, .1], [.3, .75, 115, .62], [.44, .55, 95, .35]];
@@ -759,37 +767,31 @@
       const boxH = h * .66;
       FIELD.forEach((s) => {
         const fade = s.y <= .55 ? 1 : 1 - (s.y - .55) / .45;
-        const tw = 1 - s.depth * wave(t, s.period, s.phase);
-        const a = Math.min(1, pal.stars * tw * fade);
+        const a = Math.min(1, pal.stars * s.bright * (1 - s.depth * wave(t, s.period, s.phase)) * fade);
         if (a <= .02) return;
         const x = s.x * w, y = s.y * boxH;
-        ctx.fillStyle = rgba([255, 255, 255], a);
-        ctx.beginPath(); ctx.arc(x, y, s.r / 2, 0, Math.PI * 2); ctx.fill();
-        if (s.r > 2.1) {
-          ctx.fillStyle = rgba([255, 255, 255], a * .16);
-          ctx.beginPath(); ctx.arc(x, y, s.r * 1.8, 0, Math.PI * 2); ctx.fill();
-          const len = s.r * (2.2 + 2.2 * tw);
-          ctx.strokeStyle = rgba([255, 255, 255], a * .55); ctx.lineWidth = .7;
-          ctx.beginPath(); ctx.moveTo(x - len, y); ctx.lineTo(x + len, y); ctx.moveTo(x, y - len); ctx.lineTo(x, y + len); ctx.stroke();
+        if (s.r > .7) { // the brighter ones have the faintest halo
+          ctx.fillStyle = rgba(s.tint, a * .07);
+          ctx.beginPath(); ctx.arc(x, y, s.r * 3, 0, Math.PI * 2); ctx.fill();
         }
+        ctx.fillStyle = rgba(s.tint, a);
+        ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2); ctx.fill();
       });
       // now and then a star falls
-      const every = 7, lasts = 1.1, n = Math.floor(t / every), local = t - n * every;
+      const every = 11, lasts = .9, n = Math.floor(t / every), local = t - n * every;
       const r = seeded(n * 7919 + 13);
-      if (pal.stars >= .5 && local <= lasts && r() >= .35) {
+      if (pal.stars >= .5 && local <= lasts && r() >= .5) {
         const sx = (.25 + r() * .7) * w, sy = (.04 + r() * .28) * h;
         const ang = (150 + r() * 25) * Math.PI / 180, dx = Math.cos(ang), dy = Math.sin(ang);
         const travel = w * (.35 + r() * .2);
         const p = 1 - Math.pow(1 - local / lasts, 3);
         const hx = sx + dx * travel * p, hy = sy + dy * travel * p;
-        const tl = 70 + 60 * Math.sin(Math.PI * p);
-        const alpha = Math.sin(Math.PI * local / lasts) * pal.stars;
+        const tl = 40 + 45 * Math.sin(Math.PI * p);
+        const alpha = Math.sin(Math.PI * local / lasts) * pal.stars * .55;
         const g = ctx.createLinearGradient(hx - dx * tl, hy - dy * tl, hx, hy);
-        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, rgba([255, 255, 255], alpha * .9));
-        ctx.strokeStyle = g; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, rgba([255, 255, 255], alpha));
+        ctx.strokeStyle = g; ctx.lineWidth = .9; ctx.lineCap = "round";
         ctx.beginPath(); ctx.moveTo(hx - dx * tl, hy - dy * tl); ctx.lineTo(hx, hy); ctx.stroke();
-        ctx.fillStyle = rgba([255, 255, 255], alpha);
-        ctx.beginPath(); ctx.arc(hx, hy, 1.6, 0, Math.PI * 2); ctx.fill();
       }
     }
 

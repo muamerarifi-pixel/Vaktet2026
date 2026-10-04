@@ -27,7 +27,7 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 ## Të reja në versionin 1.1
 
-✨ **Qielli merr jetë** – në gjithë ekranin yjet vezullojnë secili në ritmin e vet, herë pas here bie një yll, dielli lëshon rreze të buta që rrotullohen ngadalë, retë lundrojnë nëpër qiell gjatë ditës dhe drita e hënës merr frymë.
+✨ **Qielli merr jetë** – në gjithë ekranin yje të vegjël e të butë vezullojnë lehtë, secili në ritmin e vet, herë pas here bie një yll, dielli lëshon rreze të buta që rrotullohen ngadalë, retë lundrojnë nëpër qiell gjatë ditës dhe drita e hënës merr frymë.
 
 👆 **Rrëshqit lart për vaktet** – kur qielli mbush ekranin, rrëshqit lart dhe vaktet e sotme dalin nga poshtë; rrëshqit poshtë (ose prek qiellin, ose kthehu mbrapa) dhe fshihen përsëri.
 
@@ -114,4 +114,4 @@ APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/andr
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 
 ### Përditësimi
-Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v17`) që pajisjet ta marrin versionin e ri.
+Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v18`) që pajisjet ta marrin versionin e ri.
