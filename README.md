@@ -15,14 +15,23 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 <br>
 
-<img src="docs/screenshots/sot.jpg" width="200" alt="Namazi i ardhshëm me numërim mbrapsht">&nbsp;
-<img src="docs/screenshots/keshillat.jpg" width="200" alt="Vaktet e fshehura, me dy këshilla për sot">&nbsp;
-<img src="docs/screenshots/qielli.jpg" width="200" alt="Qielli në gjithë ekranin">&nbsp;
-<img src="docs/screenshots/cilesimet.jpg" width="200" alt="Cilësimet në pamjen e errët">
+<img src="docs/screenshots/sot.jpg" width="160" alt="Namazi i ardhshëm me numërim mbrapsht">&nbsp;
+<img src="docs/screenshots/qielli.jpg" width="160" alt="Qielli i gjallë në gjithë ekranin, me yje që vezullojnë">&nbsp;
+<img src="docs/screenshots/vaktet-lart.jpg" width="160" alt="Vaktet e sotme, të rrëshqitura lart mbi qiell">&nbsp;
+<img src="docs/screenshots/keshillat.jpg" width="160" alt="Vaktet e fshehura, me dy këshilla për sot">&nbsp;
+<img src="docs/screenshots/cilesimet.jpg" width="160" alt="Cilësimet në pamjen e errët">
 
 </div>
 
 ---
+
+## Të reja në versionin 1.1
+
+✨ **Qielli merr jetë** – në gjithë ekranin yjet vezullojnë secili në ritmin e vet, herë pas here bie një yll, dielli lëshon rreze të buta që rrotullohen ngadalë, retë lundrojnë nëpër qiell gjatë ditës dhe drita e hënës merr frymë.
+
+👆 **Rrëshqit lart për vaktet** – kur qielli mbush ekranin, rrëshqit lart dhe vaktet e sotme dalin nga poshtë; rrëshqit poshtë (ose prek qiellin, ose kthehu mbrapa) dhe fshihen përsëri.
+
+⚡ **Më i shpejtë dhe më i butë** – qielli lëviz me ritmin e ekranit, ndërrimet mes pamjeve kalojnë butë, butonat reagojnë menjëherë nën gisht, dhe aplikacioni harxhon më pak bateri.
 
 ## Pse Vaktet?
 
@@ -30,11 +39,11 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 ⏳ **Sa minuta kanë mbetur?** – Namazi i ardhshëm dhe numërimi mbrapsht i madh shihen menjëherë, pa kërkuar nëpër tabela.
 
-🌅 **Një qiell i gjallë** – karta merr ngjyrat e kohës: natë me yje te Jacia, agim te Sabahu, mesditë te Dreka, ar te Ikindia, muzg te Akshami. Dielli e hëna lëvizin nëpër qiell gjatë ditës.
+🌅 **Një qiell i gjallë** – karta merr ngjyrat e kohës: natë me yje te Jacia, agim te Sabahu, mesditë te Dreka, ar te Ikindia, muzg te Akshami. Dielli e hëna lëvizin nëpër qiell gjatë ditës; në gjithë ekranin yjet vezullojnë, bien yje, dielli lëshon rreze dhe retë lundrojnë.
 
 ⛔ **Kohët e ndaluara** – në lindje, zenit e perëndim të diellit karta bëhet e kuqe dhe të paralajmëron.
 
-🧘 **Vetëm thelbi** – me *Fshih vaktet* mbetet vetëm koha e mbetur, me dy këshilla të reja çdo ditë (për jetën dhe si musliman). Fshihi edhe këshillat dhe qielli mbush gjithë ekranin.
+🧘 **Vetëm thelbi** – me *Fshih vaktet* mbetet vetëm koha e mbetur, me dy këshilla të reja çdo ditë (për jetën dhe si musliman). Fshihi edhe këshillat dhe qielli mbush gjithë ekranin – rrëshqit lart kur të duhen vaktet.
 
 ⏰ **Alarmi për sabah** – të sugjeron orën e alarmit 15, 30, 45 ose 60 minuta para lindjes së diellit.
 
@@ -105,4 +114,4 @@ APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/andr
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 
 ### Përditësimi
-Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v15`) që pajisjet ta marrin versionin e ri.
+Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v17`) që pajisjet ta marrin versionin e ri.

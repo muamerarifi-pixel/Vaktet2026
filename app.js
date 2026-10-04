@@ -172,6 +172,7 @@
       !$("nextCard").hidden && window.matchMedia("(max-width: 899px)").matches;
   }
   function updateChrome() {
+    wakeSky();
     const dark = state.theme === "dark" || (state.theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     let c = dark ? "#000000" : "#EEF1EE";
     const top = SKY_TOP[document.body.dataset.phase];
@@ -280,8 +281,9 @@
     let next = null;
     if (isToday) next = rows.find((r) => r.prayer && r.instant > now) || null;
 
-    const list = $("times");
-    list.innerHTML = "";
+    // the list, and the same rows in the sheet that is swiped up over the full-screen sky
+    const list = $("times"), sheetList = $("skyTimes");
+    const items = [], sheetItems = [];
     rows.forEach((r) => {
       const li = document.createElement("li");
       if (isToday && r.instant <= now) li.classList.add("is-past");
@@ -289,8 +291,12 @@
       const n = document.createElement("span"); n.className = "t-name"; n.textContent = r.name;
       const v = document.createElement("span"); v.className = "t-time"; v.textContent = fmtTime(r.local);
       li.append(n, v);
-      list.appendChild(li);
+      items.push(li);
+      sheetItems.push(li.cloneNode(true));
     });
+    list.replaceChildren(...items);
+    sheetList.replaceChildren(...sheetItems);
+    $("skySheetCity").textContent = state.city.name;
 
     $("alarmCard").hidden = true;
     $("focusBtn").hidden = !isToday;
@@ -591,6 +597,236 @@
     $("countdown").innerHTML = text.split(":").map((p) => '<span class="cd-n">' + p + "</span>").join('<span class="cd-sep">:</span>');
   }
 
+  // ---------- Smooth changes ----------
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  // Hiding the times, the full-screen sky, the tabs and another day cross-fade (where the browser can).
+  function smoothly(change) {
+    if (!document.startViewTransition || reduceMotion.matches || document.hidden) { change(); return; }
+    document.startViewTransition(change);
+  }
+
+  // ---------- The prayer-times sheet of the full-screen sky ----------
+  // Swipe up (or tap the hint) to show the day's times; swipe down, tap the sky, Escape or Back to hide them.
+  const sheet = { v: 0, drag: null, history: false };
+
+  function setReveal(v) {
+    sheet.v = Math.min(1, Math.max(0, v));
+    const b = document.body;
+    b.style.setProperty("--reveal", sheet.v.toFixed(4));
+    b.classList.toggle("sheet-visible", sheet.v > 0);
+    b.classList.toggle("sheet-open", sheet.v >= 0.5);
+    $("swipeHint").setAttribute("aria-expanded", String(sheet.v >= 0.5));
+  }
+
+  let settleTimer = 0;
+  function settleSheet(open) {
+    const b = document.body;
+    if (!reduceMotion.matches) {
+      b.classList.add("sheet-settling");
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => {
+        b.classList.remove("sheet-settling");
+        if (!open) b.classList.remove("sheet-visible");
+      }, 440);
+    }
+    setReveal(open ? 1 : 0);
+    if (!open && !reduceMotion.matches) b.classList.add("sheet-visible"); // keep it painted while it slides away
+    // Back closes the sheet instead of leaving the app
+    if (open && !sheet.history) { history.pushState({ vaktetSheet: true }, ""); sheet.history = true; }
+    if (!open && sheet.history) { sheet.history = false; if (history.state && history.state.vaktetSheet) history.back(); }
+  }
+
+  function sheetHeight() { return $("skySheet").offsetHeight + 90 || 420; }
+
+  function bindSheet() {
+    $("swipeHint").addEventListener("click", () => settleSheet(true));
+    window.addEventListener("popstate", () => {
+      if (sheet.history) { sheet.history = false; if (sheet.v > 0) settleSheet(false); }
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sheet.v > 0) settleSheet(false); });
+
+    document.addEventListener("pointerdown", (e) => {
+      if (!isFullSky() || e.button > 0) return;
+      if (e.target.closest && e.target.closest(".top, .tabs, dialog")) return;
+      sheet.drag = { id: e.pointerId, y0: e.clientY, v0: sheet.v, last: e.clientY, t: e.timeStamp, vy: 0, moving: false, target: e.target };
+    });
+    document.addEventListener("pointermove", (e) => {
+      const d = sheet.drag;
+      if (!d || e.pointerId !== d.id) return;
+      const dy = e.clientY - d.y0;
+      if (!d.moving) {
+        if (Math.abs(dy) < 8) return;
+        d.moving = true;
+        document.body.classList.remove("sheet-settling");
+        document.body.classList.add("sheet-visible");
+      }
+      const dt = Math.max(1, e.timeStamp - d.t);
+      d.vy = 0.8 * ((e.clientY - d.last) / dt) + 0.2 * d.vy; // px per ms, smoothed
+      d.last = e.clientY; d.t = e.timeStamp;
+      setReveal(d.v0 - dy / sheetHeight());
+    });
+    const end = (e) => {
+      const d = sheet.drag;
+      if (!d || e.pointerId !== d.id) return;
+      sheet.drag = null;
+      if (d.moving) {
+        const open = Math.abs(d.vy) > 0.3 ? d.vy < 0 : sheet.v > 0.4;
+        settleSheet(open);
+        // a drag is not a tap
+        const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+        window.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+      } else if (sheet.v > 0 && !(d.target.closest && d.target.closest(".sky-sheet, button, select, a"))) {
+        settleSheet(false); // a tap on the sky closes it
+      }
+    };
+    document.addEventListener("pointerup", end);
+    document.addEventListener("pointercancel", end);
+  }
+
+  // Leaving the full-screen sky closes the sheet, so it starts closed next time.
+  function resetSheetIfHidden() {
+    if (sheet.v > 0 && !isFullSky()) {
+      setReveal(0);
+      document.body.classList.remove("sheet-visible", "sheet-settling");
+      if (sheet.history) { sheet.history = false; if (history.state && history.state.vaktetSheet) history.back(); }
+    }
+  }
+
+  // ---------- The living sky (full screen) ----------
+  // Stars that twinkle on their own beats, now and then a shooting star, soft turning sun rays, drifting clouds.
+  const PAL = {
+    night: { stars: 1, sun: [255, 236, 196], tint: null, clouds: 0 },
+    dawn: { stars: .5, sun: [255, 196, 156], tint: [255, 170, 160], clouds: .12 },
+    morning: { stars: 0, sun: [255, 242, 206], tint: [255, 255, 255], clouds: .28 },
+    noon: { stars: 0, sun: [255, 251, 230], tint: [255, 255, 255], clouds: .28 },
+    afternoon: { stars: 0, sun: [255, 206, 128], tint: [255, 232, 196], clouds: .22 },
+    dusk: { stars: .65, sun: [255, 206, 128], tint: [255, 150, 140], clouds: .12 }
+  };
+  function seeded(seed) {
+    let a = seed >>> 0;
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const FIELD = (() => {
+    const r = seeded(1447);
+    return Array.from({ length: 140 }, (_, i) => {
+      const bright = i % 11 === 0;
+      return { x: r(), y: Math.pow(r(), 1.35), r: bright ? 2.2 + r() * .8 : 1.1 + r() * 1.1, period: 2.2 + r() * 4.5, phase: r() * Math.PI * 2, depth: bright ? .35 : .45 + r() * .5 };
+    });
+  })();
+  const CLOUDS = [[.14, 1, 150, .1], [.3, .75, 115, .62], [.44, .55, 95, .35]];
+  const PUFFS = [[-.55, .1, .34], [-.22, -.08, .46], [.16, -.16, .52], [.5, .02, .4], [.02, .14, .44]];
+  const wave = (t, period, phase) => .5 + .5 * Math.sin(t / period * Math.PI * 2 + (phase || 0));
+  const rgba = (c, a) => "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
+
+  const live = { raf: 0, t0: performance.now(), w: 0, h: 0, dpr: 1 };
+  function drawSky(now) {
+    live.raf = 0;
+    if (!isFullSky() || document.hidden || reduceMotion.matches) { document.body.classList.remove("sky-is-live"); return; }
+    document.body.classList.add("sky-is-live");
+    const cv = $("skyLive");
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (w !== live.w || h !== live.h || dpr !== live.dpr) {
+      live.w = w; live.h = h; live.dpr = dpr;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const t = (now - live.t0) / 1000;
+    const pal = PAL[document.body.dataset.phase] || PAL.night;
+
+    // clouds
+    if (pal.clouds > 0) {
+      CLOUDS.forEach(([cy, scale, crossing, offset]) => {
+        const cw = w * .55 * scale, span = w + 2 * cw;
+        const cx = ((offset + t / crossing) % 1) * span - cw, y = cy * h * .7;
+        const a = pal.clouds * (.75 + .25 * scale);
+        PUFFS.forEach(([dx, dy, r]) => {
+          const x = cx + dx * cw, yy = y + dy * cw, rad = r * cw;
+          const g = ctx.createRadialGradient(x, yy, 0, x, yy, rad);
+          g.addColorStop(0, rgba(pal.tint, a)); g.addColorStop(.45, rgba(pal.tint, a * .55)); g.addColorStop(1, rgba(pal.tint, 0));
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(x, yy, rad, 0, Math.PI * 2); ctx.fill();
+        });
+      });
+    }
+
+    // stars
+    if (pal.stars > 0) {
+      const boxH = h * .66;
+      FIELD.forEach((s) => {
+        const fade = s.y <= .55 ? 1 : 1 - (s.y - .55) / .45;
+        const tw = 1 - s.depth * wave(t, s.period, s.phase);
+        const a = Math.min(1, pal.stars * tw * fade);
+        if (a <= .02) return;
+        const x = s.x * w, y = s.y * boxH;
+        ctx.fillStyle = rgba([255, 255, 255], a);
+        ctx.beginPath(); ctx.arc(x, y, s.r / 2, 0, Math.PI * 2); ctx.fill();
+        if (s.r > 2.1) {
+          ctx.fillStyle = rgba([255, 255, 255], a * .16);
+          ctx.beginPath(); ctx.arc(x, y, s.r * 1.8, 0, Math.PI * 2); ctx.fill();
+          const len = s.r * (2.2 + 2.2 * tw);
+          ctx.strokeStyle = rgba([255, 255, 255], a * .55); ctx.lineWidth = .7;
+          ctx.beginPath(); ctx.moveTo(x - len, y); ctx.lineTo(x + len, y); ctx.moveTo(x, y - len); ctx.lineTo(x, y + len); ctx.stroke();
+        }
+      });
+      // now and then a star falls
+      const every = 7, lasts = 1.1, n = Math.floor(t / every), local = t - n * every;
+      const r = seeded(n * 7919 + 13);
+      if (pal.stars >= .5 && local <= lasts && r() >= .35) {
+        const sx = (.25 + r() * .7) * w, sy = (.04 + r() * .28) * h;
+        const ang = (150 + r() * 25) * Math.PI / 180, dx = Math.cos(ang), dy = Math.sin(ang);
+        const travel = w * (.35 + r() * .2);
+        const p = 1 - Math.pow(1 - local / lasts, 3);
+        const hx = sx + dx * travel * p, hy = sy + dy * travel * p;
+        const tl = 70 + 60 * Math.sin(Math.PI * p);
+        const alpha = Math.sin(Math.PI * local / lasts) * pal.stars;
+        const g = ctx.createLinearGradient(hx - dx * tl, hy - dy * tl, hx, hy);
+        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, rgba([255, 255, 255], alpha * .9));
+        ctx.strokeStyle = g; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(hx - dx * tl, hy - dy * tl); ctx.lineTo(hx, hy); ctx.stroke();
+        ctx.fillStyle = rgba([255, 255, 255], alpha);
+        ctx.beginPath(); ctx.arc(hx, hy, 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // a few faint sun rays, turning slowly (they rise with the sun when the sheet opens)
+    const card = $("nextCard");
+    if (card.dataset.orb === "sun") {
+      const cx = parseFloat(card.style.getPropertyValue("--ox")) * w;
+      const cy = (parseFloat(card.style.getPropertyValue("--oyz")) * h) - sheet.v * .2 * window.innerHeight;
+      if (isFinite(cx) && isFinite(cy)) {
+        const reach = Math.min(w, h) * .95;
+        const strength = document.body.dataset.phase === "noon" ? .06 : .08;
+        const beams = (count, turn, width, alpha) => {
+          ctx.beginPath();
+          for (let i = 0; i < count; i++) {
+            const a = turn + i * Math.PI * 2 / count, half = width * (i % 2 ? .55 : 1);
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + reach * Math.cos(a - half), cy + reach * Math.sin(a - half));
+            ctx.lineTo(cx + reach * Math.cos(a + half), cy + reach * Math.sin(a + half));
+            ctx.closePath();
+          }
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
+          g.addColorStop(0, rgba(pal.sun, alpha)); g.addColorStop(.25, rgba(pal.sun, alpha * .3)); g.addColorStop(.8, rgba(pal.sun, 0));
+          ctx.fillStyle = g; ctx.fill();
+        };
+        ctx.globalCompositeOperation = "screen";
+        beams(8, t * .02, .07, strength * (.7 + .3 * wave(t, 10)));
+        beams(6, -t * .013 + .5, .05, strength * .6 * (.7 + .3 * wave(t, 13, 1.3)));
+        ctx.globalCompositeOperation = "source-over";
+      }
+    }
+    live.raf = requestAnimationFrame(drawSky);
+  }
+  function wakeSky() {
+    resetSheetIfHidden();
+    if (!live.raf && isFullSky() && !document.hidden && !reduceMotion.matches) live.raf = requestAnimationFrame(drawSky);
+  }
+
   // ---------- Events ----------
   function bind() {
     $("city").addEventListener("change", (e) => {
@@ -608,13 +844,13 @@
       const c = state.cursor; state.cursor = c.m === 12 ? { y: c.y + 1, m: 1 } : { y: c.y, m: c.m + 1 }; renderMonth();
     });
     $("tipsToggle").addEventListener("click", () => {
-      state.tipsOn = !state.tipsOn; store.set("tips", state.tipsOn ? "1" : "0"); applyTipsVisibility();
+      smoothly(() => { state.tipsOn = !state.tipsOn; store.set("tips", state.tipsOn ? "1" : "0"); applyTipsVisibility(); });
     });
     $("focusBtn").addEventListener("click", () => {
-      state.focus = !state.focus; store.set("focus", state.focus ? "1" : "0"); applyFocus();
+      smoothly(() => { state.focus = !state.focus; store.set("focus", state.focus ? "1" : "0"); applyFocus(); });
     });
-    $("tabToday").addEventListener("click", () => setView("today"));
-    $("tabMonth").addEventListener("click", () => setView("month"));
+    $("tabToday").addEventListener("click", () => { if (state.view !== "today") smoothly(() => setView("today")); });
+    $("tabMonth").addEventListener("click", () => { if (state.view !== "month") smoothly(() => setView("month")); });
 
     const dlg = $("settings");
     $("settingsBtn").addEventListener("click", () => {
@@ -641,7 +877,8 @@
       else if (e.key === "ArrowRight") select(addDays(state.selected, 1));
     });
 
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) { offsetCache.clear(); tick(); renderToday(); } });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) { offsetCache.clear(); tick(); renderToday(); wakeSky(); } });
+    window.addEventListener("resize", wakeSky);
 
     let deferredPrompt = null;
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -663,6 +900,7 @@
   renderCities();
   setView("today");
   bind();
+  bindSheet();
   renderAll();
   setInterval(tick, 1000);
 

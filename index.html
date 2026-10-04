@@ -83,6 +83,7 @@
         <div class="sky" aria-hidden="true">
           <div class="sky-stars"></div>
           <div class="sky-haze"></div>
+          <canvas class="sky-live" id="skyLive"></canvas>
           <div class="sky-orb"></div>
           <svg class="sky-hills" viewBox="0 0 400 60" preserveAspectRatio="none"><path class="hill-far" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-near" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/></svg>
           <div class="sky-veil"></div>
@@ -102,6 +103,11 @@
           <div class="dayline-now" id="daylineNow"></div>
         </div>
       </div>
+
+      <button type="button" class="swipe-hint" id="swipeHint" aria-controls="skySheet" aria-expanded="false">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Rrëshqit lart për vaktet</span>
+      </button>
 
       <div class="below-card">
         <button type="button" class="focus-btn" id="focusBtn" aria-pressed="false">
@@ -162,6 +168,12 @@
       <p class="table-note">Kolona e drekës tregon hyrjen e kohës. Dreka falet në 12:00 në dimër dhe në 13:00 në verë.</p>
     </section>
   </main>
+
+  <section class="sky-sheet" id="skySheet" aria-label="Vaktet e sotme">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sky-sheet-head"><span>Vaktet e sotme</span><span id="skySheetCity"></span></div>
+    <ol id="skyTimes"></ol>
+  </section>
 
   <nav class="tabs" aria-label="Pamja">
     <button class="tab" id="tabToday" aria-pressed="true">

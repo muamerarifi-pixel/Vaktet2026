@@ -450,7 +450,16 @@ class _FullScreen extends StatelessWidget {
                       maxHeight: 80,
                       child: Padding(
                         padding: const EdgeInsets.only(top: 12),
-                        child: _CountdownLabel(text: card.countdownLabel, full: true),
+                        child: reveal == null
+                            ? _CountdownLabel(text: card.countdownLabel, full: true)
+                            : FadeTransition(
+                                // it would peek out above the prayer-times sheet on short screens
+                                opacity: Tween(
+                                  begin: 1.0,
+                                  end: 0.0,
+                                ).animate(CurvedAnimation(parent: reveal!, curve: const Interval(0, .6))),
+                                child: _CountdownLabel(text: card.countdownLabel, full: true),
+                              ),
                       ),
                     ),
                   ),
