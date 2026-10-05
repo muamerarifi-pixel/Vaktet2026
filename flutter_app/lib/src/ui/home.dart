@@ -178,7 +178,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final model = c.model;
     final clock = MediaQuery.disableAnimationsOf(context) || !widget.skyMotion ? null : _sky;
     // on a phone, today is the sky itself; the times and the tips are swiped up over it
-    final fullSky = !wide && c.view == HomeView.today && c.isToday;
+    final fullSky = !wide && c.view == HomeView.today;
     _syncTilt(fullSky && c.tilt && clock != null && _resumed);
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
@@ -311,22 +311,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         onVerticalDragStart: _startSheetDrag,
         onVerticalDragUpdate: _dragSheet,
         onVerticalDragEnd: _endSheetDrag,
+        // swipe left for the next day, right for the day before: its sky, moon, sun and season at this hour
+        onHorizontalDragEnd: (d) {
+          if (_sheet.value > 0) return;
+          final vx = d.velocity.pixelsPerSecond.dx;
+          if (vx.abs() < 250) return;
+          HapticFeedback.selectionClick();
+          c.stepDay(vx < 0 ? 1 : -1);
+        },
         onTap: () {
           if (_sheet.value > 0) _settleSheet(false);
         },
         child: Stack(
           fit: StackFit.expand,
           children: [
-            NextCard(
-              model: c.model,
-              now: c.now,
-              mode: SkyMode.full,
-              clock: clock,
-              countdownWeight: c.countdownWeight,
-              reveal: _sheet,
-              parallax: c.tilt && clock != null ? _tilt : null,
+            // another day: its sky fades in over the last one
+            FadeSwap(
+              value: c.selected.epochDay,
+              duration: const Duration(milliseconds: 280),
+              expand: true,
+              child: NextCard(
+                model: c.model,
+                now: c.viewNow,
+                mode: SkyMode.full,
+                clock: clock,
+                countdownWeight: c.countdownWeight,
+                reveal: _sheet,
+                parallax: c.tilt && clock != null ? _tilt : null,
+              ),
             ),
-            PrayerPulse(target: c.model.card?.target, now: c.now, enabled: clock != null),
+            PrayerPulse(target: c.model.card?.target, now: c.now, enabled: clock != null && c.isToday),
             Column(
               children: [
                 header,
@@ -342,6 +356,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                               opacity: fadeOut,
                               child: DateRow(controller: c, onSky: true),
                             ),
+                            if (!c.isToday)
+                              FadeTransition(
+                                opacity: fadeOut,
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: PillButton(label: 'Kthehu te sot', onTap: c.selectToday, onSky: true),
+                                  ),
+                                ),
+                              ),
                             const Spacer(),
                             FadeTransition(
                               opacity: fadeOut,

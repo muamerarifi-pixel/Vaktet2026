@@ -29,8 +29,8 @@ class TodayPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DateRow(controller: c, bottomGap: model.isToday ? 14 : 8),
-        if (!model.isToday) ...[
+        DateRow(controller: c, bottomGap: c.isToday ? 14 : 8),
+        if (!c.isToday) ...[
           Center(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -38,11 +38,11 @@ class TodayPanel extends StatelessWidget {
             ),
           ),
         ],
-        if (model.isToday) ...[
-          NextCard(model: model, now: c.now, mode: SkyMode.card, clock: clock, countdownWeight: c.countdownWeight),
+        ...[
+          NextCard(model: model, now: c.viewNow, mode: SkyMode.card, clock: clock, countdownWeight: c.countdownWeight),
           if (model.alarm != null) AlarmCard(alarm: model.alarm!),
         ],
-        TimesList(model: model, now: c.now),
+        TimesList(model: model, now: c.viewNow),
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -52,7 +52,7 @@ class TodayPanel extends StatelessWidget {
             style: vt(13.5, 500, color: context.colors.muted),
           ),
         ),
-        if (model.isToday) TipsSection(controller: c),
+        TipsSection(controller: c),
       ],
     );
   }
@@ -122,7 +122,7 @@ class TipsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tips = tipsFor(controller.today);
+    final tips = tipsFor(controller.selected);
     return Padding(
       padding: EdgeInsets.only(top: onSky ? 10 : 18),
       child: Column(
@@ -131,7 +131,7 @@ class TipsSection extends StatelessWidget {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: onSky ? 12 : 4),
             child: Text(
-              'DY KËSHILLA PËR SOT',
+              controller.isToday ? 'DY KËSHILLA PËR SOT' : 'DY KËSHILLA PËR KËTË DITË',
               style: onSky
                   ? vt(12.5, 800, color: const Color(0xC7FFFFFF), ls: .08, height: 1.4)
                   : vt(13, 800, ls: .06, height: 1.5, color: context.colors.muted),
@@ -350,7 +350,7 @@ class SkyTimesSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     final model = c.model;
-    final now = c.now;
+    final now = c.viewNow;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
@@ -376,7 +376,10 @@ class SkyTimesSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(
               children: [
-                Text('VAKTET E SOTME', style: vt(12.5, 800, color: const Color(0xC7FFFFFF), ls: .08, height: 1.4)),
+                Text(
+                  c.isToday ? 'VAKTET E SOTME' : 'VAKTET E DITËS',
+                  style: vt(12.5, 800, color: const Color(0xC7FFFFFF), ls: .08, height: 1.4),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

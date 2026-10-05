@@ -107,8 +107,16 @@ class AppController extends ChangeNotifier {
 
   bool get isToday => selected == today;
 
+  /// The moment shown: now, or — while another day is shown — the same time of day on that day, so its sky,
+  /// sun, moon and season can be seen as they will be (or were) at this hour.
+  int get viewNow =>
+      now +
+      (selected.epochDay - today.epochDay) * msPerDay +
+      (kosovoOffsetForDay(today) - kosovoOffsetForDay(selected)) * msPerMinute;
+
   void _recompute() {
-    model = computeToday(now: now, today: today, selected: selected, city: city, alarmOffset: alarmOffset);
+    final at = viewNow;
+    model = computeToday(now: at, today: selected, selected: selected, city: city, alarmOffset: alarmOffset);
   }
 
   // ---------- Clock ----------

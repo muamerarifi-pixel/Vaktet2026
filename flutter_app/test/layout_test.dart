@@ -45,13 +45,15 @@ void main() {
               await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
               await tester.pump(const Duration(milliseconds: 50));
               expect(tester.takeException(), isNull, reason: '${entry.key} $mode dark=$dark');
-              if (mode == 'today' && size.width < 900) {
+              if (size.width < 900) {
                 // the prayer times swiped up over the sky
                 await tester.pumpAndSettle();
                 await tester.tap(find.bySemanticsLabel('Shfaq vaktet e sotme'), warnIfMissed: false);
                 await tester.pumpAndSettle();
-                expect(find.text('VAKTET E SOTME'), findsOneWidget, reason: '${entry.key} sheet dark=$dark');
+                expect(find.textContaining('VAKTET E '), findsOneWidget, reason: '${entry.key} sheet dark=$dark');
                 expect(tester.takeException(), isNull, reason: '${entry.key} sheet dark=$dark');
+                await tester.binding.handlePopRoute(); // close it again
+                await tester.pumpAndSettle();
               }
             }
           }

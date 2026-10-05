@@ -7,6 +7,7 @@ import 'glass.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
 import 'text.dart';
+import 'widgets.dart';
 
 const Color _white = Color(0xFFFFFFFF);
 
@@ -140,13 +141,10 @@ class _NameAndTime extends StatelessWidget {
       ),
     );
     // when a prayer time comes, the next one's name and time fade in
-    return AnimatedSwitcher(
-      duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 900),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      layoutBuilder: (current, previous) => Stack(alignment: Alignment.center, children: [...previous, ?current]),
+    return FadeSwap(
+      value: '${card.name} ${card.time}',
+      duration: const Duration(milliseconds: 900),
       child: SizedBox(
-        key: ValueKey('${card.name} ${card.time}'),
         width: double.infinity,
         child: Wrap(
           alignment: center ? WrapAlignment.center : WrapAlignment.spaceBetween,
