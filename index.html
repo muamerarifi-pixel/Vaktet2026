@@ -93,9 +93,10 @@
           <div class="sky-moon" id="skyMoon" hidden>
             <svg viewBox="0 0 40 40"><circle class="moon-dark" cx="20" cy="20" r="14"/><g><path class="moon-lit" id="moonLit" d=""/></g></svg>
           </div>
-          <svg class="sky-hills" viewBox="0 0 400 60" preserveAspectRatio="none"><path class="hill-far" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-near" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/></svg>
+          <svg class="sky-hills" viewBox="0 0 400 60" preserveAspectRatio="none"><defs><linearGradient id="snowFar" gradientUnits="userSpaceOnUse" x1="0" y1="8" x2="0" y2="30"><stop offset="0" stop-color="#F2F6FA"/><stop offset="1" stop-color="#F2F6FA" stop-opacity="0"/></linearGradient><linearGradient id="snowNear" gradientUnits="userSpaceOnUse" x1="0" y1="28" x2="0" y2="50"><stop offset="0" stop-color="#F2F6FA"/><stop offset="1" stop-color="#F2F6FA" stop-opacity="0"/></linearGradient></defs><path class="hill-far" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-snow" fill="url(#snowFar)" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-near" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/><path class="hill-snow" fill="url(#snowNear)" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/></svg>
           <canvas class="sky-front" id="skyFront"></canvas>
           <div class="sky-veil"></div>
+          <div class="sky-pulse" id="skyPulse"></div>
         </div>
         <div class="next-head">
           <p class="next-intro"><svg class="forbid-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 12.4 12.4 3.6" stroke="currentColor" stroke-width="1.6"/></svg><span id="nextIntro">Namazi i ardhshëm</span></p>
@@ -169,14 +170,14 @@
 
   <section class="sky-sheet" id="skySheet" aria-label="Vaktet e sotme">
     <div class="grab" aria-hidden="true"></div>
-    <div class="sky-sheet-head"><span>Vaktet e sotme</span><span id="skySheetCity"></span></div>
+    <div class="sky-sheet-head"><span id="skySheetTitle">Vaktet e sotme</span><span id="skySheetCity"></span></div>
     <ol id="skyTimes"></ol>
     <div class="sky-alarm" id="skyAlarm" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 9.5V13l2.5 1.5M4.5 5 7 3M19.5 5 17 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <div><p class="sky-alarm-title">Alarmi për sabah</p><p class="sky-alarm-sub" id="skyAlarmSub"></p></div>
       <span class="sky-alarm-time" id="skyAlarmTime"></span>
     </div>
-    <h2 class="sky-tips-title">Dy këshilla për sot</h2>
+    <h2 class="sky-tips-title" id="skyTipsTitle">Dy këshilla për sot</h2>
     <div class="sky-tips" id="skyTips"></div>
   </section>
 
@@ -260,6 +261,15 @@
           <label><input type="radio" name="countdownWeight" value="500"><span style="font-weight:500">Normale</span></label>
           <label><input type="radio" name="countdownWeight" value="700"><span style="font-weight:700">E trashë</span></label>
           <label><input type="radio" name="countdownWeight" value="900"><span style="font-weight:900">Shumë</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Lëvizja e qiellit</legend>
+        <p class="hint">Kur e anon telefonin, yjet, hëna dhe kodrat lëvizin pak, si të shikoje nga dritarja.</p>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="tilt" value="1"><span>Me lëvizje</span></label>
+          <label><input type="radio" name="tilt" value="0"><span>Pa lëvizje</span></label>
         </div>
       </fieldset>
 

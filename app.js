@@ -141,6 +141,7 @@
     alarmOffset: parseInt(store.get("alarm", "30"), 10) || 30,
     font: ["figtree", "nunito", "lora", "mono"].includes(store.get("font", "figtree")) ? store.get("font", "figtree") : "figtree",
     fontScale: [0.9, 1, 1.12, 1.25].includes(parseFloat(store.get("fontScale", "1"))) ? parseFloat(store.get("fontScale", "1")) : 1,
+    tilt: store.get("tilt", "1") === "1",
     countdownWeight: [300, 500, 700, 900].includes(parseInt(store.get("countdownWeight", "900"), 10)) ? parseInt(store.get("countdownWeight", "900"), 10) : 900,
     today: kosovoToday(),
     selected: null,
@@ -198,7 +199,7 @@
 
   // On a phone, today is the sky itself: the times, the alarm and the tips are swiped up over it.
   function applyFocus() {
-    const on = phone.matches && sameDay(state.selected, state.today);
+    const on = phone.matches;
     document.body.classList.toggle("is-focus", on);
     document.body.classList.toggle("no-tips", on);
     updateChrome();
@@ -228,13 +229,13 @@
     return [{ tag: "Për jetën", text: tipAt(T.h, pair * 3 + 1, 11) }, { tag: "Për jetën", text: tipAt(T.h, pair * 3 + 2, 11) }];
   }
   function renderTips() {
-    const key = state.today.y + "-" + state.today.m + "-" + state.today.d;
+    const key = state.selected.y + "-" + state.selected.m + "-" + state.selected.d;
     ["tipsList", "skyTips"].forEach((id) => {
       const box = $(id);
       if (box.dataset.day === key) return;
       box.dataset.day = key;
       box.innerHTML = "";
-      tipsFor(state.today).forEach((t) => {
+      tipsFor(state.selected).forEach((t) => {
         const a = document.createElement("article"); a.className = "tip" + (t.tag === "Si musliman" ? " is-muslim" : "");
         const g = document.createElement("span"); g.className = "tip-tag"; g.textContent = t.tag;
         const p = document.createElement("p"); p.textContent = t.text;
@@ -272,26 +273,34 @@
     return c.name + ": " + n + " minut" + (n === 1 ? "ë" : "a") + " " + (c.off < 0 ? "më herët" : "më vonë") + " se kohët bazë të Takvimit.";
   }
 
+  // The moment shown: now, or — while another day is shown — the same time of day on that day, so its sky,
+  // sun, moon and season can be seen as they will be (or were) at this hour.
+  function viewNow() {
+    const sel = state.selected, today = state.today;
+    return Date.now() + (utcOf(sel) - utcOf(today)) + (tzOffset(today) - tzOffset(sel)) * 60000;
+  }
+
   function renderToday() {
     const day = state.selected;
     const isToday = sameDay(day, state.today);
     $("dateText").textContent = longDate(day);
     $("hijriText").textContent = hijriText(day, state.hijriAdj) || String.fromCharCode(160);
     $("backToday").hidden = isToday;
-    $("nextCard").hidden = !isToday;
+    $("nextCard").hidden = false;
     $("cityNote").textContent = cityNote();
+    $("skySheetTitle").textContent = isToday ? "Vaktet e sotme" : "Vaktet e ditës";
+    $("skyTipsTitle").textContent = $("tipsTitle").textContent = isToday ? "Dy këshilla për sot" : "Dy këshilla për këtë ditë";
 
     const rows = dayRows(day, state.city);
-    const now = Date.now();
-    let next = null;
-    if (isToday) next = rows.find((r) => r.prayer && r.instant > now) || null;
+    const now = viewNow();
+    const next = rows.find((r) => r.prayer && r.instant > now) || null;
 
     // the list, and the same rows in the sheet that is swiped up over the full-screen sky
     const list = $("times"), sheetList = $("skyTimes");
     const items = [], sheetItems = [];
     rows.forEach((r) => {
       const li = document.createElement("li");
-      if (isToday && r.instant <= now) li.classList.add("is-past");
+      if (r.instant <= now) li.classList.add("is-past");
       if (r === next) { li.classList.add("is-next"); li.setAttribute("aria-current", "time"); }
       const n = document.createElement("span"); n.className = "t-name"; n.textContent = r.name;
       const v = document.createElement("span"); v.className = "t-time"; v.textContent = fmtTime(r.local);
@@ -305,19 +314,22 @@
 
     $("alarmCard").hidden = true;
     $("skyAlarm").hidden = true;
-    $("tips").hidden = !isToday;
+    $("tips").hidden = false;
     applyFocus();
     renderTips();
-    if (isToday) {
-      renderNextCard(day, rows, next, now);
-      renderAlarm(day, rows, now);
-      renderDayline(rows);
-      tick();
-    } else {
-      state.nextInstant = null;
-      state.altInstant = null;
-      state.changeAt = null;
-    }
+    renderNextCard(day, rows, next, now);
+    renderAlarm(day, rows, now);
+    renderDayline(rows);
+    tick();
+  }
+
+  // A quiet sign that a prayer time has come: a soft ring of light spreads across the sky.
+  function pulse() {
+    if (reduceMotion.matches || document.hidden || !sameDay(state.selected, state.today)) return;
+    const el = $("skyPulse");
+    el.classList.remove("is-on");
+    void el.offsetWidth; // restart the animation
+    el.classList.add("is-on");
   }
 
   // Prohibited times: 15 min after sunrise, 10 min before dhuhr begins, 15 min before sunset (Akshami).
@@ -357,30 +369,28 @@
   }
 
   // The sun travels from sunrise to sunset along an arc; the moon from sunset to the next sunrise.
+  // The sun rises from behind the hills on the left and sets behind them on the right; the moon keeps its own hours.
   function updateOrb(now) {
     const rows = state.skyRows;
     if (!rows) return;
-    const card = $("nextCard");
-    const rise = rowOf(rows, "sunrise").instant, set = rowOf(rows, "maghrib").instant;
-    let orb = "sun", p;
-    if (now >= rise && now <= set) {
-      p = (now - rise) / (set - rise);
-    } else {
-      orb = "moon";
-      const from = now > set ? set : set - DAY_MS;
-      const to = now > set ? rise + DAY_MS : rise;
-      p = (now - from) / (to - from);
+    const card = $("nextCard"), g = skyGeometry();
+    state.scene = skyScene(rows, now);
+    applySkyColours(rows, now);
+    const p = state.scene.sunProgress;
+    let orb = "none";
+    if (p >= -.06 && p <= 1.06) {
+      const a = arcAt(p, g), vis = aboveHills(a.y, g, 14);
+      if (vis > 0) {
+        orb = "sun";
+        card.style.setProperty("--ox", a.x.toFixed(4));
+        card.style.setProperty("--oy", a.y.toFixed(4));
+        card.style.setProperty("--oyz", a.y.toFixed(4));
+        card.querySelector(".sky-orb").style.opacity = vis.toFixed(3);
+      }
     }
-    p = Math.min(1, Math.max(0, p));
+    if (orb === "none") card.querySelector(".sky-orb").style.opacity = "0";
     if (card.dataset.orb !== orb) card.dataset.orb = orb;
     updateMoon(rows, now);
-    state.scene = skyScene(rows, now);
-    card.style.setProperty("--ox", (0.12 + 0.76 * p).toFixed(4));
-    card.style.setProperty("--oy", (0.34 - 0.24 * Math.sin(Math.PI * p)).toFixed(4));
-    // the taller centred card (prayer list hidden) gets a flatter arc in its own band of sky above the text
-    card.style.setProperty("--oyf", (0.16 - 0.08 * Math.sin(Math.PI * p)).toFixed(4));
-    // the full-screen sky: a wide arc between the header and the prayer name
-    card.style.setProperty("--oyz", (0.3 - 0.1 * Math.sin(Math.PI * p)).toFixed(4));
   }
 
   // ---------- The real Moon, and a scene for every hour ----------
@@ -405,7 +415,7 @@
     while (now - transit > lunarDay / 2) transit += lunarDay;
     const p = (now - (transit - halfArc)) / (2 * halfArc);
     const pc = Math.min(1, Math.max(0, p)), s = Math.sin(Math.PI * pc);
-    return { up: p > 0 && p < 1, x: .12 + .76 * pc, y: .34 - .24 * s, yFull: .3 - .12 * s, k: ph.illumination, waxing: ph.waxing };
+    return { up: p > 0 && p < 1, p, x: .12 + .76 * pc, y: .34 - .24 * s, yFull: .3 - .12 * s, k: ph.illumination, waxing: ph.waxing };
   }
   // The lit part of the Moon in a 40 × 40 box: the bright edge a half circle, the shadow's edge a half ellipse.
   function moonPath(k, waxing) {
@@ -415,28 +425,140 @@
     return "M" + pts.map((q) => q[0].toFixed(2) + " " + q[1].toFixed(2)).join("L") + "Z";
   }
   let lastMoon = "";
+  // Where the hills meet the sky, and a point on the arc the sun and the moon travel (fractions of the card):
+  // p 0 = rising, 1 = setting; outside that range they are behind the hills. The arc climbs quickly out of the
+  // hills and then stays high, and low in the sky it keeps near the edges, clear of the countdown.
+  function skyGeometry() {
+    const card = $("nextCard"), h = card.clientHeight || window.innerHeight, full = isFullSky();
+    const hh = full ? Math.min(.2 * h, 170) : Math.min(.26 * h, 64);
+    return { h, full, horizon: 1 - hh * .45 / h, peak: full ? .2 : .1 };
+  }
+  function arcAt(p, g) {
+    const sn = Math.sin(Math.PI * p), rise = sn <= 0 ? sn : Math.pow(sn, .45);
+    return { x: .5 - .42 * Math.cos(Math.PI * p), y: g.horizon - (g.horizon - g.peak) * rise };
+  }
+  // how much of a disc of radius r px at height y shows above the hills (1 above, 0 once behind them)
+  const aboveHills = (y, g, r) => Math.min(1, Math.max(0, 1 - ((y - g.horizon) * g.h + r) / (3 * r)));
+
+  // The Moon where it really is, in its real phase: it rises from behind the hills on the left and sets behind
+  // them on the right; by day a pale ghost; on new-moon nights only its faint outline, low in the west.
   function updateMoon(rows, now) {
-    // At night the Moon is always there: where it really is while it is up, resting high in the sky while it is
-    // below the horizon, and only its faint outline at new moon. By day, only while it is really up.
-    const m = moonAt(rows, now), el = $("skyMoon"), card = $("nextCard");
-    const night = card.dataset.orb !== "sun", isNew = m.k < .015;
+    const m = moonAt(rows, now), el = $("skyMoon"), card = $("nextCard"), g = skyGeometry();
+    const sunP = state.scene ? state.scene.sunProgress : .5;
+    const night = sunP < 0 || sunP > 1, isNew = m.k < .015;
     state.moon = m;
-    const visible = night || (m.up && !isNew);
-    el.hidden = !visible;
-    if (!visible) return;
+    let x, y, vis;
+    if (isNew) {
+      vis = night ? 1 : 0;
+      x = .86; y = g.horizon - (g.full ? 46 : 20) / g.h;
+    } else if (m.p >= -.06 && m.p <= 1.06) {
+      const a = arcAt(m.p, g);
+      x = a.x; y = a.y; vis = aboveHills(y, g, g.full ? 24 : 14);
+    } else vis = 0;
+    el.hidden = vis <= 0;
+    if (el.hidden) return;
+    el.style.opacity = vis.toFixed(3);
     el.classList.toggle("is-new", isNew);
-    card.style.setProperty("--mx", (m.up ? m.x : .72).toFixed(4));
-    card.style.setProperty("--my", (m.up ? m.y : .2).toFixed(4));
-    card.style.setProperty("--myz", (m.up ? m.yFull : .17).toFixed(4));
+    card.style.setProperty("--mx", x.toFixed(4));
+    card.style.setProperty("--my", y.toFixed(4));
+    card.style.setProperty("--myz", y.toFixed(4));
     card.style.setProperty("--moon-glow", (.55 + .45 * m.k).toFixed(3));
     card.style.setProperty("--earthshine", (.1 * (1 - m.k)).toFixed(3));
-    el.classList.toggle("is-day", card.dataset.orb === "sun");
+    el.classList.toggle("is-day", !night);
     const key = Math.round(m.k * 200) + (m.waxing ? "w" : "n");
     if (key !== lastMoon) {
       lastMoon = key;
       $("moonLit").setAttribute("d", moonPath(m.k, m.waxing));
       $("moonLit").parentNode.setAttribute("transform", "rotate(" + (m.waxing ? -12 : 12) + " 20 20)");
     }
+  }
+
+  // ---------- The colours of the sky, melting from one prayer time into the next ----------
+  const PALETTES = {
+    night: { colors: ["#060A1C", "#11173A", "#232A5E"], stops: [0, .48, 1], glow: "#3A3F96", hazeA: [118, 92, 214, .42], hazeB: [36, 80, 176, .42], sun: [255, 236, 196], stars: 1, hill: [2, 4, 16, .62] },
+    dawn: { colors: ["#121844", "#3E3A82", "#B5687E", "#EC9C78"], stops: [0, .42, .8, 1], glow: "#B4698C", hazeA: [255, 152, 140, .5], hazeB: [116, 88, 206, .42], sun: [255, 196, 156], stars: .5, hill: [28, 14, 44, .55] },
+    morning: { colors: ["#154F96", "#2E78C0", "#D7A77E"], stops: [0, .52, 1], glow: "#3F86CC", hazeA: [255, 214, 160, .5], hazeB: [120, 190, 255, .45], sun: [255, 242, 206], stars: 0, hill: [10, 36, 74, .45] },
+    noon: { colors: ["#0B3F7E", "#1C64AC", "#4E95D2"], stops: [0, .52, 1], glow: "#2A78C4", hazeA: [176, 222, 255, .42], hazeB: [36, 112, 204, .5], sun: [255, 251, 230], stars: 0, hill: [6, 30, 66, .48] },
+    afternoon: { colors: ["#1A3560", "#7E4F5C", "#D0864B"], stops: [0, .54, 1], glow: "#CC8048", hazeA: [255, 186, 104, .5], hazeB: [150, 84, 128, .42], sun: [255, 206, 128], stars: 0, hill: [40, 18, 18, .5] },
+    dusk: { colors: ["#0F1032", "#432152", "#A6434F", "#DC7452"], stops: [0, .48, .84, 1], glow: "#A8456A", hazeA: [255, 118, 104, .45], hazeB: [108, 58, 172, .45], sun: [255, 206, 128], stars: .65, hill: [16, 6, 22, .6] }
+  };
+  const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const mixArr = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  function sampleGradient(pal, x) {
+    const c = pal.colors.map(hexRgb), st = pal.stops;
+    if (x <= st[0]) return c[0];
+    for (let i = 0; i < st.length - 1; i++) if (x <= st[i + 1]) return mixArr(c[i], c[i + 1], (x - st[i]) / (st[i + 1] - st[i]));
+    return c[c.length - 1];
+  }
+  // each prayer time's sky melts into the next over up to 45 minutes either side of the change
+  function skyBlend(rows, now) {
+    const at = (k) => rowOf(rows, k).instant;
+    const marks = [at("isha") - DAY_MS, at("imsak"), at("sunrise"), at("dhuhr"), at("asr"), at("maghrib"), at("isha"), at("imsak") + DAY_MS];
+    const phases = ["night", "dawn", "morning", "noon", "afternoon", "dusk", "night"];
+    let i = 0;
+    while (i < phases.length - 1 && now >= marks[i + 1]) i++;
+    const width = (k) => Math.min(45 * 60000, .45 * (marks[k + 1] - marks[k]));
+    if (i > 0 && phases[i - 1] !== phases[i]) {
+      const w = Math.min(width(i - 1), width(i)), d = now - marks[i];
+      if (d < w) return { from: phases[i - 1], to: phases[i], t: smooth01(.5 + d / (2 * w)) };
+    }
+    if (i < phases.length - 1 && phases[i + 1] !== phases[i]) {
+      const w = Math.min(width(i), width(i + 1)), d = marks[i + 1] - now;
+      if (d < w) return { from: phases[i], to: phases[i + 1], t: smooth01(.5 - d / (2 * w)) };
+    }
+    return { from: phases[i], to: phases[i], t: 0 };
+  }
+  function blendPalette(b) {
+    const A = PALETTES[b.from], B = PALETTES[b.to], t = b.from === b.to ? 0 : b.t;
+    const stops = [0, .2, .4, .6, .8, 1];
+    return {
+      colors: stops.map((x) => mixArr(sampleGradient(A, x), sampleGradient(B, x), t)), stops,
+      glow: mixArr(hexRgb(A.glow), hexRgb(B.glow), t), hazeA: mixArr(A.hazeA, B.hazeA, t), hazeB: mixArr(A.hazeB, B.hazeB, t),
+      sun: mixArr(A.sun, B.sun, t), stars: A.stars + (B.stars - A.stars) * t, hill: mixArr(A.hill, B.hill, t)
+    };
+  }
+
+  // ---------- Seasons on the hills ----------
+  // (day of the year, colour): snowy winter, green spring, golden summer, orange-brown autumn
+  const SEASONS = [[15, [93, 110, 128]], [105, [63, 143, 82]], [196, [201, 162, 74]], [288, [176, 96, 44]]];
+  const dayOfYear = (day) => Math.round((utcOf(day) - Date.UTC(day.y, 0, 1)) / DAY_MS) + 1;
+  function seasonColor(day) {
+    const d0 = dayOfYear(day), d = d0 < SEASONS[0][0] ? d0 + 365 : d0;
+    for (let i = 0; i < SEASONS.length; i++) {
+      const [a, ca] = SEASONS[i], [b0, cb] = SEASONS[(i + 1) % SEASONS.length], b = i + 1 < SEASONS.length ? b0 : b0 + 365;
+      if (d >= a && d < b) return mixArr(ca, cb, smooth01((d - a) / (b - a)));
+    }
+    return SEASONS[0][1];
+  }
+  function snowOn(day) {
+    let d = dayOfYear(day) - 15;
+    if (d > 182) d -= 365;
+    if (d < -182) d += 365;
+    return smooth01((60 - Math.abs(d)) / 25);
+  }
+
+  // Sets the blended sky, the season's hills and the snow as CSS variables (only when they change).
+  let lastSkyKey = "";
+  function applySkyColours(rows, now) {
+    const b = skyBlend(rows, now), pal = blendPalette(b);
+    state.pal = pal;
+    const day = state.selected, daylight = 1 - pal.stars * .85, snow = snowOn(day);
+    let hill = mixArr(pal.hill.slice(0, 3), seasonColor(day), .12 + .5 * daylight);
+    hill = mixArr(hill, [220, 228, 236], .25 * snow * daylight);
+    const rgb = (c) => "rgb(" + c.map(Math.round).join(",") + ")";
+    const rgba = (c) => "rgba(" + c.slice(0, 3).map(Math.round).join(",") + "," + c[3].toFixed(3) + ")";
+    const vars = {
+      "--sky": "linear-gradient(180deg, " + pal.colors.map((c, i) => rgb(c) + " " + Math.round(pal.stops[i] * 100) + "%").join(", ") + ")",
+      "--glow": rgb(pal.glow), "--haze-a": rgba(pal.hazeA), "--haze-b": rgba(pal.hazeB),
+      "--sun": pal.sun.map(Math.round).join(", "), "--stars": pal.stars.toFixed(3),
+      "--hill": "rgba(" + hill.map(Math.round).join(",") + "," + pal.hill[3].toFixed(3) + ")",
+      "--snow": (snow * (.3 + .5 * daylight)).toFixed(3)
+    };
+    const key = JSON.stringify(vars);
+    if (key === lastSkyKey) return;
+    lastSkyKey = key;
+    const st = document.body.style;
+    Object.entries(vars).forEach(([k, v]) => st.setProperty(k, v));
   }
 
   // Temporal hours: sunrise is hour 6, sunset 18, the middle of the night 0, so every scene keeps to the sun
@@ -463,6 +585,18 @@
     [255, 255, 255, .07], [255, 244, 214, .06], [255, 230, 176, .07], [255, 212, 140, .09], [255, 184, 106, .11], [255, 142, 87, .13],
     [229, 92, 120, .13], [138, 77, 158, .13], [74, 62, 142, .13], [46, 47, 122, .14], [35, 39, 105, .15], [27, 32, 94, .16]
   ];
+  // clouds through the day: [temporal hour, cover, thin, sunset colours]
+  const CLOUD_KEYS = [[4.6, 0, 1, 1], [5.6, .3, 1, 1], [6.6, .35, 1, .7], [8, .35, .9, 0], [11, .55, .4, 0], [13, .85, 0, 0],
+    [16, .9, 0, 0], [17.2, .75, .2, .8], [18.3, .5, .5, 1], [19.2, 0, 1, 1]];
+  function cloudsAt(h) {
+    if (h <= CLOUD_KEYS[0][0] || h >= CLOUD_KEYS[CLOUD_KEYS.length - 1][0]) return [0, 1, 1];
+    for (let i = 0; i < CLOUD_KEYS.length - 1; i++) {
+      const A = CLOUD_KEYS[i], B = CLOUD_KEYS[i + 1];
+      if (h >= A[0] && h < B[0]) { const f = smooth01((h - A[0]) / (B[0] - A[0])); return [1, 2, 3].map((j) => A[j] + (B[j] - A[j]) * f); }
+    }
+    return [0, 1, 1];
+  }
+
   function skyScene(rows, now) {
     const h = temporalHour(rows, now), i = Math.floor(h) % 24, f = h - Math.floor(h);
     const A = HOUR_TINTS[i], B = HOUR_TINTS[(i + 1) % 24];
@@ -473,9 +607,12 @@
       const late = 1 - .8 * smooth01(h / 3.2), early = .45 * windowAt(h, 3.6, 4.6, 5.6, 6.6);
       lights = Math.max(late * (h < 5.5 ? 1 : smooth01((6.6 - h) / 1.1)), early);
     }
-    const summer = state.today.m >= 6 && state.today.m <= 8;
+    const summer = state.selected.m >= 6 && state.selected.m <= 8;
+    const rise = rowOf(rows, "sunrise").instant, set = rowOf(rows, "maghrib").instant;
+    const [cover, thin, sunset] = cloudsAt(h);
     return {
-      hour: h, tint,
+      hour: h, tint, sunProgress: (now - rise) / (set - rise),
+      cloudCover: cover, cloudThin: thin, cloudSunset: sunset,
       milkyWay: windowAt(h, 20.2, 22.5, 3.2, 4.6),
       lights: Math.round(lights * 40) / 40,
       brightStar: Math.max(windowAt(h, 4.4, 5, 5.6, 6.1), windowAt(h, 18.1, 18.6, 19.2, 19.9)),
@@ -609,7 +746,7 @@
   function renderDayline(times) {
     const ticks = $("daylineTicks");
     ticks.innerHTML = "";
-    const now = Date.now();
+    const now = viewNow();
     times.forEach((t) => {
       const s = document.createElement("span");
       s.style.left = (t.local / 1440 * 100).toFixed(2) + "%";
@@ -620,13 +757,13 @@
   }
 
   function positionNow() {
-    const day = state.today;
+    const day = state.selected, now = viewNow();
     const midnight = utcOf(day) - tzOffset(day) * 60000;
-    const frac = Math.min(1, Math.max(0, (Date.now() - midnight) / DAY_MS));
+    const frac = Math.min(1, Math.max(0, (now - midnight) / DAY_MS));
     const pct = (frac * 100).toFixed(2) + "%";
     $("daylineFill").style.width = pct;
     $("daylineNow").style.left = pct;
-    updateOrb(Date.now());
+    updateOrb(now);
   }
 
   function renderMonth() {
@@ -692,8 +829,12 @@
       return;
     }
     if (state.nextInstant === null) return;
-    const now = Date.now();
-    if ((state.changeAt && now >= state.changeAt) || state.nextInstant - now <= 0) { renderToday(); return; }
+    const now = viewNow();
+    if ((state.changeAt && now >= state.changeAt) || state.nextInstant - now <= 0) {
+      if (state.nextInstant - now <= 0 && now - state.nextInstant < 5000) pulse();
+      renderToday();
+      return;
+    }
     setCount(state.nextInstant - now);
     if (state.altInstant) $("nextAltCount").textContent = fmtCount(state.altInstant - now);
     positionNow();
@@ -770,13 +911,16 @@
       // a sheet taller than the screen scrolls under the finger instead (tap the sky or Back to close it)
       const sh = $("skySheet");
       if (sheet.v > 0 && e.target.closest && e.target.closest(".sky-sheet") && sh.scrollHeight > sh.clientHeight + 2) return;
-      sheet.drag = { id: e.pointerId, y0: e.clientY, v0: sheet.v, last: e.clientY, t: e.timeStamp, vy: 0, moving: false, target: e.target };
+      sheet.drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, v0: sheet.v, last: e.clientY, t: e.timeStamp, t0: e.timeStamp, vy: 0, moving: false, side: false, target: e.target };
     });
     document.addEventListener("pointermove", (e) => {
       const d = sheet.drag;
       if (!d || e.pointerId !== d.id) return;
-      const dy = e.clientY - d.y0;
+      const dy = e.clientY - d.y0, dx = e.clientX - d.x0;
+      if (d.side) return;
       if (!d.moving) {
+        // a sideways swipe changes the day (only while the times are hidden)
+        if (sheet.v === 0 && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.3) { d.side = true; return; }
         if (Math.abs(dy) < 8) return;
         d.moving = true;
         document.body.classList.remove("sheet-settling");
@@ -791,6 +935,15 @@
       const d = sheet.drag;
       if (!d || e.pointerId !== d.id) return;
       sheet.drag = null;
+      if (d.side) {
+        // swipe left for the next day, right for the day before: its sky, moon, sun and season at this hour
+        const dx = e.clientX - d.x0, fast = Math.abs(dx) / Math.max(1, e.timeStamp - d.t0) > .25;
+        if (Math.abs(dx) > 60 || (fast && Math.abs(dx) > 30)) smoothly(() => select(addDays(state.selected, dx < 0 ? 1 : -1)));
+        const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+        window.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+        return;
+      }
       if (d.moving) {
         const open = Math.abs(d.vy) > 0.3 ? d.vy < 0 : sheet.v > 0.4;
         settleSheet(open);
@@ -878,7 +1031,7 @@
     } catch (e) { /* no canvas: no windows */ }
     return out;
   })();
-  const CLOUDS = [[.14, 1, 150, .1], [.3, .75, 115, .62], [.44, .55, 95, .35]];
+  const CLOUDS = [[.14, 1, 150, .1], [.3, .75, 115, .62], [.44, .55, 95, .35], [.22, .85, 170, .85], [.38, .65, 130, .22]];
   const PUFFS = [[-.55, .1, .34], [-.22, -.08, .46], [.16, -.16, .52], [.5, .02, .4], [.02, .14, .44]];
   const wave = (t, period, phase) => .5 + .5 * Math.sin(t / period * Math.PI * 2 + (phase || 0));
   const rgba = (c, a) => "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
@@ -905,10 +1058,28 @@
     const ctx = sizeCanvas(cv, w, h, dpr);
     ctx.clearRect(0, 0, w, h);
     const t = (now - live.t0) / 1000;
-    const pal = PAL[document.body.dataset.phase] || PAL.night;
+    const pal = { stars: state.pal ? state.pal.stars : (PAL[document.body.dataset.phase] || PAL.night).stars, sun: state.pal ? state.pal.sun.map(Math.round) : [255, 236, 196] };
     const sc = state.scene || { tint: [0, 0, 0, 0], starBoost: 0, milkyWay: 0, brightStar: 0, birds: 0, plane: 0, nightPlane: 0, fireflies: 0, lights: 0, mist: 0, hour: 12 };
     const moon = state.moon && state.moon.up ? state.moon : null;
     const day = $("nextCard").dataset.orb === "sun";
+    const g0 = skyGeometry(), horizonY = g0.horizon * h;
+
+    // a warm glow along the hills while the sun rises or sets, a pale one where the moon is about to rise
+    const glow = (x, strength, c, width, height) => {
+      if (strength <= .01) return;
+      ctx.save(); ctx.translate(x * w, horizonY); ctx.scale(1, (h * height) / (w * width));
+      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, w * width);
+      gr.addColorStop(0, rgba(c, strength)); gr.addColorStop(.4, rgba(c, strength * .35)); gr.addColorStop(1, rgba(c, 0));
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, w * width, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    };
+    const sp = sc.sunProgress === undefined ? .5 : sc.sunProgress;
+    const edge = Math.min(Math.abs(sp), Math.abs(sp - 1));
+    if (edge < .12) glow(.5 - .42 * Math.cos(Math.PI * Math.min(1.05, Math.max(-.05, sp))), .42 * (1 - edge / .12), [255, 154, 92], .75, .2);
+    const mm = state.moon;
+    if (mm && mm.k >= .015 && mm.p > -.2 && mm.p < -.02 && (sp < -.04 || sp > 1.04)) {
+      glow(.08, .22 * smooth01((mm.p + .2) / .14) * (.4 + .6 * mm.k), [230, 236, 255], .45, .14);
+    }
 
     // the colour of the hour
     if (sc.tint[3] > 0) {
@@ -936,19 +1107,33 @@
       });
     }
 
-    // clouds
-    if (pal.clouds > 0) {
-      CLOUDS.forEach(([cy, scale, crossing, offset]) => {
-        const cw = w * .55 * scale, span = w + 2 * cw;
+    // clouds that change with the hour: thin wisps in the morning, fuller in the afternoon, lit pink and gold
+    // at sunrise and sunset, none at night
+    const cover = sc.cloudCover || 0;
+    if (cover > .01) {
+      const thin = sc.cloudThin, sunset = sc.cloudSunset, strength = .3 * (.55 + .45 * cover);
+      const tint = mixArr([255, 255, 255], [255, 176, 154], sunset).map(Math.round), rim = mixArr([255, 255, 255], [255, 208, 138], sunset).map(Math.round);
+      const shown = cover * CLOUDS.length;
+      CLOUDS.forEach(([cy, scale0, crossing, offset], i) => {
+        const fade = Math.min(1, Math.max(0, shown - i));
+        if (fade <= 0) return;
+        const scale = scale0 * (.75 + .45 * cover), cw = w * .55 * scale, span = w + 2 * cw;
         const cx = ((offset + t / crossing) % 1) * span - cw, y = cy * h * .7;
-        const a = pal.clouds * (.75 + .25 * scale);
+        const a = strength * (.75 + .25 * scale0) * fade;
+        ctx.save(); ctx.translate(cx, y); ctx.scale(1 + .3 * thin, 1 - .55 * thin); ctx.translate(-cx, -y);
         PUFFS.forEach(([dx, dy, r]) => {
           const x = cx + dx * cw, yy = y + dy * cw, rad = r * cw;
+          if (sunset > .05) {
+            const ry = yy + rad * .18, gr = ctx.createRadialGradient(x, ry, 0, x, ry, rad);
+            gr.addColorStop(0, rgba(rim, a * .8 * sunset)); gr.addColorStop(1, rgba(rim, 0));
+            ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, ry, rad, 0, Math.PI * 2); ctx.fill();
+          }
           const g = ctx.createRadialGradient(x, yy, 0, x, yy, rad);
-          g.addColorStop(0, rgba(pal.tint, a)); g.addColorStop(.45, rgba(pal.tint, a * .55)); g.addColorStop(1, rgba(pal.tint, 0));
+          g.addColorStop(0, rgba(tint, a)); g.addColorStop(.45, rgba(tint, a * .55)); g.addColorStop(1, rgba(tint, 0));
           ctx.fillStyle = g;
           ctx.beginPath(); ctx.arc(x, yy, rad, 0, Math.PI * 2); ctx.fill();
         });
+        ctx.restore();
       });
     }
 
@@ -1129,7 +1314,41 @@
       });
     }
   }
+  // ---------- Tilt: the sky gets depth when the phone is tilted ----------
+  // Keeps only the change of the phone's angle: tilting moves the sky a little, holding still lets it drift back.
+  const tilt = { on: false, base: null, x: 0, y: 0, asked: false };
+  function onMotion(e) {
+    const a = e.accelerationIncludingGravity;
+    if (!a || a.x === null) return;
+    const raw = [a.x, a.y];
+    tilt.base = tilt.base ? [tilt.base[0] + (raw[0] - tilt.base[0]) * .02, tilt.base[1] + (raw[1] - tilt.base[1]) * .02] : raw;
+    const clamp = (v) => Math.max(-10, Math.min(10, v));
+    const tx = clamp(-(raw[0] - tilt.base[0]) * 2.2), ty = clamp((raw[1] - tilt.base[1]) * 2.2);
+    tilt.x += (tx - tilt.x) * .18; tilt.y += (ty - tilt.y) * .18;
+    const card = $("nextCard");
+    card.style.setProperty("--tx", tilt.x.toFixed(2));
+    card.style.setProperty("--ty", tilt.y.toFixed(2));
+  }
+  function syncTilt() {
+    const want = state.tilt && isFullSky() && !document.hidden && !reduceMotion.matches && "DeviceMotionEvent" in window;
+    if (want === tilt.on) return;
+    tilt.on = want;
+    if (want) window.addEventListener("devicemotion", onMotion);
+    else {
+      window.removeEventListener("devicemotion", onMotion);
+      tilt.base = null; tilt.x = tilt.y = 0;
+      $("nextCard").style.setProperty("--tx", "0"); $("nextCard").style.setProperty("--ty", "0");
+    }
+  }
+  // iPhone asks for permission once, on a tap
+  function askTiltPermission() {
+    if (tilt.asked || !state.tilt || typeof DeviceMotionEvent === "undefined" || typeof DeviceMotionEvent.requestPermission !== "function") return;
+    tilt.asked = true;
+    DeviceMotionEvent.requestPermission().catch(() => {});
+  }
+
   function wakeSky() {
+    syncTilt();
     resetSheetIfHidden();
     if (!live.raf && isFullSky() && !document.hidden && !reduceMotion.matches) live.raf = requestAnimationFrame(drawSky);
   }
@@ -1161,6 +1380,7 @@
       document.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === state.font; });
       document.querySelectorAll('input[name="fontScale"]').forEach((r) => { r.checked = parseFloat(r.value) === state.fontScale; });
       document.querySelectorAll('input[name="countdownWeight"]').forEach((r) => { r.checked = parseInt(r.value, 10) === state.countdownWeight; });
+      document.querySelectorAll('input[name="tilt"]').forEach((r) => { r.checked = (r.value === "1") === state.tilt; });
       if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
     });
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
@@ -1182,6 +1402,12 @@
     document.querySelectorAll('input[name="countdownWeight"]').forEach((r) => r.addEventListener("change", () => {
       state.countdownWeight = parseInt(r.value, 10); store.set("countdownWeight", r.value); applyLook();
     }));
+    document.querySelectorAll('input[name="tilt"]').forEach((r) => r.addEventListener("change", () => {
+      state.tilt = r.value === "1"; store.set("tilt", r.value);
+      if (state.tilt) { tilt.asked = false; askTiltPermission(); }
+      syncTilt();
+    }));
+    document.addEventListener("click", askTiltPermission, { once: true });
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
 
     document.addEventListener("keydown", (e) => {
@@ -1190,7 +1416,7 @@
       else if (e.key === "ArrowRight") select(addDays(state.selected, 1));
     });
 
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) { offsetCache.clear(); tick(); renderToday(); wakeSky(); } });
+    document.addEventListener("visibilitychange", () => { syncTilt(); if (!document.hidden) { offsetCache.clear(); tick(); renderToday(); wakeSky(); } });
     window.addEventListener("resize", wakeSky);
     phone.addEventListener?.("change", applyFocus);
 
