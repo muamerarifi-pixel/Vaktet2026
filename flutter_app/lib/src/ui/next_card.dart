@@ -6,7 +6,6 @@ import 'glass.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
 import 'text.dart';
-import 'widgets.dart';
 
 const Color _white = Color(0xFFFFFFFF);
 
@@ -56,34 +55,11 @@ class NextCard extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final content = switch (mode) {
       SkyMode.card => _Normal(model: model, card: card, now: now, vw: width, weight: countdownWeight),
-      SkyMode.focus => _Centered(card: card, now: now, vw: width, weight: countdownWeight),
       SkyMode.full => _FullScreen(card: card, now: now, vw: width, weight: countdownWeight, reveal: reveal),
     };
-    // Hiding or showing the prayer times: the card changes height smoothly while its content cross-fades.
-    final animated = mode == SkyMode.full
-        ? content
-        : AnimatedSize(
-            duration: motion(context),
-            curve: Curves.easeInOutCubic,
-            alignment: Alignment.topCenter,
-            child: AnimatedSwitcher(
-              duration: motion(context),
-              switchInCurve: const Interval(.3, 1, curve: Curves.easeOut),
-              switchOutCurve: const Interval(.5, 1, curve: Curves.easeIn),
-              // the old content does not hold the card open; the card takes the new content's height
-              layoutBuilder: (current, previous) => Stack(
-                alignment: Alignment.topCenter,
-                children: [
-                  for (final p in previous) Positioned(left: 0, right: 0, top: 0, child: p),
-                  ?current,
-                ],
-              ),
-              child: KeyedSubtree(key: ValueKey(mode), child: content),
-            ),
-          );
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, child: animated),
+      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, child: content),
     );
   }
 }
@@ -353,45 +329,6 @@ class _DaylinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DaylinePainter old) => old.now != now || old.fraction != fraction || old.rows != rows;
-}
-
-// ---------- Centred card (prayer list hidden) ----------
-
-class _Centered extends StatelessWidget {
-  const _Centered({required this.card, required this.now, required this.vw, required this.weight});
-
-  final NextCardModel card;
-  final int now;
-  final double vw;
-  final int weight;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 52, 18, 30),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          // `min(104px, 19cqi)`: the digits fill the card's width
-          final size = (box.maxWidth * .19).clamp(0.0, 104.0);
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _Intro(card: card, center: true),
-              const SizedBox(height: 6),
-              _NameAndTime(card: card, vw: vw, center: true),
-              const SizedBox(height: 14),
-              _CountdownNumber(text: fmtCount(card.target - now), size: size, weight: weight, center: true),
-              const SizedBox(height: 6),
-              _CountdownLabel(text: card.countdownLabel),
-              SizedBox(height: card.altText != null ? 14 : 4),
-              if (card.altText != null) _Alt(card: card, now: now, center: true),
-            ],
-          );
-        },
-      ),
-    );
-  }
 }
 
 // ---------- Full-screen sky ----------

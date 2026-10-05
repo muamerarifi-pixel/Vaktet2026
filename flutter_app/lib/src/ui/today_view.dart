@@ -26,7 +26,6 @@ class TodayPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     final model = c.model;
-    final focusOn = c.focusOn;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -40,37 +39,20 @@ class TodayPanel extends StatelessWidget {
           ),
         ],
         if (model.isToday) ...[
-          NextCard(
-            model: model,
-            now: c.now,
-            mode: focusOn ? SkyMode.focus : SkyMode.card,
-            clock: clock,
-            countdownWeight: c.countdownWeight,
-          ),
-          BelowCard(controller: c),
-          Reveal(
-            visible: !focusOn && model.alarm != null,
-            child: model.alarm == null ? const SizedBox.shrink() : AlarmCard(alarm: model.alarm!),
-          ),
+          NextCard(model: model, now: c.now, mode: SkyMode.card, clock: clock, countdownWeight: c.countdownWeight),
+          if (model.alarm != null) AlarmCard(alarm: model.alarm!),
         ],
-        Reveal(
-          visible: !focusOn,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TimesList(model: model, now: c.now),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  cityNote(c.city),
-                  textAlign: TextAlign.center,
-                  style: vt(13.5, 500, color: context.colors.muted),
-                ),
-              ),
-            ],
+        TimesList(model: model, now: c.now),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            cityNote(c.city),
+            textAlign: TextAlign.center,
+            style: vt(13.5, 500, color: context.colors.muted),
           ),
         ),
+        if (model.isToday) TipsSection(controller: c),
       ],
     );
   }
@@ -129,103 +111,69 @@ class DateRow extends StatelessWidget {
   }
 }
 
-/// The "hide the prayer times" button, and (while they are hidden) the day's tips.
-class BelowCard extends StatelessWidget {
-  const BelowCard({super.key, required this.controller, this.onSky = false});
-
-  final AppController controller;
-  final bool onSky;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = controller;
-    if (!c.isToday) return const SizedBox.shrink();
-    final focusOn = c.focusOn;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(height: onSky ? 0 : 10),
-        PillButton(
-          label: c.focus ? 'Shfaq vaktet' : 'Fshih vaktet',
-          icon: c.focus ? VIcon.show : VIcon.hide,
-          onTap: c.toggleFocus,
-          onSky: onSky,
-          fontSize: 15,
-          expand: true,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-        ),
-        Reveal(
-          visible: focusOn,
-          child: TipsSection(controller: c, onSky: onSky),
-        ),
-      ],
-    );
-  }
-}
-
+/// The day's two tips.
 class TipsSection extends StatelessWidget {
   const TipsSection({super.key, required this.controller, this.onSky = false});
 
   final AppController controller;
+
+  /// Inside the dark prayer-times sheet of the full-screen sky.
   final bool onSky;
 
   @override
   Widget build(BuildContext context) {
-    final c = controller;
-    final colors = context.colors;
-    final tips = tipsFor(c.today);
+    final tips = tipsFor(controller.today);
     return Padding(
-      padding: EdgeInsets.only(top: onSky ? 12 : 18),
+      padding: EdgeInsets.only(top: onSky ? 10 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    'DY KËSHILLA PËR SOT',
-                    style: vt(
-                      13,
-                      800,
-                      ls: .06,
-                      height: 1.5,
-                      color: onSky ? const Color(0xD1FFFFFF) : colors.muted,
-                      opacity: onSky ? null : (c.tipsOn ? 1 : .6),
-                      shadows: onSky
-                          ? const [Shadow(color: Color(0x59000000), blurRadius: 8, offset: Offset(0, 1))]
-                          : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                PillButton(
-                  label: c.tipsOn ? 'Fshih' : 'Shfaq',
-                  onTap: c.toggleTips,
-                  onSky: onSky,
-                  fontSize: 13.5,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                  semanticsLabel: c.tipsOn ? 'Fshih këshillat' : 'Shfaq këshillat',
-                ),
-              ],
+            padding: EdgeInsets.symmetric(horizontal: onSky ? 12 : 4),
+            child: Text(
+              'DY KËSHILLA PËR SOT',
+              style: onSky
+                  ? vt(12.5, 800, color: const Color(0xC7FFFFFF), ls: .08, height: 1.4)
+                  : vt(13, 800, ls: .06, height: 1.5, color: context.colors.muted),
             ),
           ),
-          Reveal(
-            visible: c.tipsOn,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 10),
-                for (var i = 0; i < tips.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 10),
-                  _TipCard(tip: tips[i]),
-                ],
-              ],
-            ),
-          ),
+          SizedBox(height: onSky ? 6 : 10),
+          for (var i = 0; i < tips.length; i++) ...[
+            if (i > 0) SizedBox(height: onSky ? 6 : 10),
+            onSky ? _SkyTipCard(tip: tips[i]) : _TipCard(tip: tips[i]),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// A tip on the dark sheet of the full-screen sky.
+class _SkyTipCard extends StatelessWidget {
+  const _SkyTipCard({required this.tip});
+
+  final Tip tip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
+      decoration: BoxDecoration(
+        color: const Color(0x14FFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x1FFFFFFF)),
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '${tip.tag}  ',
+              style: vt(12.5, 850, color: tip.muslim ? const Color(0xFFB9E6C9) : const Color(0xFFBFD3FF), height: 1.4),
+            ),
+            TextSpan(text: tip.text),
+          ],
+        ),
+        style: vt(14.5, 600, color: const Color(0xEBFFFFFF), height: 1.4),
       ),
     );
   }
@@ -444,6 +392,9 @@ class SkyTimesSheet extends StatelessWidget {
           ),
           for (final row in model.rows)
             _SkyTimeRow(row: row, isNext: identical(row, model.nextRow), isPast: model.isPast(row, now)),
+          if (model.alarm != null) _SkyAlarmRow(alarm: model.alarm!),
+          TipsSection(controller: c, onSky: true),
+          const SizedBox(height: 4),
         ],
       ),
     );
@@ -483,6 +434,43 @@ class _SkyTimeRow extends StatelessWidget {
             Text(fmtTime(row.local), style: vt(17.5, weight, color: color, ls: .01, height: 1.4)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The suggested Sabah alarm, as one line of the sheet.
+class _SkyAlarmRow extends StatelessWidget {
+  const _SkyAlarmRow({required this.alarm});
+
+  final AlarmModel alarm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0x14FFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x1FFFFFFF)),
+      ),
+      child: Row(
+        children: [
+          SvgIcon(VIcon.alarm, size: 20, color: const Color(0xE6FFFFFF)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Alarmi për sabah', style: vt(14.5, 800, color: _white, height: 1.35)),
+                Text(alarm.sub, style: vt(12.5, 550, color: const Color(0xB3FFFFFF), height: 1.3)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(alarm.time, style: vt(20, 880, color: _white, height: 1.3)),
+        ],
       ),
     );
   }

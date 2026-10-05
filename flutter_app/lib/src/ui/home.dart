@@ -37,6 +37,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   late final AnimationController _sheet = AnimationController(vsync: this);
   final GlobalKey _sheetKey = GlobalKey();
 
+  /// Each change of layout gets a key of its own, so going back to a layout that is still fading out
+  /// (a quick tap back and forth) never puts two pages with the same key on the screen.
+  String? _layout;
+  int _switches = 0;
+
   @override
   void initState() {
     super.initState();
@@ -148,7 +153,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final colors = context.colors;
     final model = c.model;
     final clock = MediaQuery.disableAnimationsOf(context) || !widget.skyMotion ? null : _sky;
-    final fullSky = !wide && c.view == HomeView.today && c.focusOn && !c.tipsOn;
+    // on a phone, today is the sky itself; the times and the tips are swiped up over it
+    final fullSky = !wide && c.view == HomeView.today && c.isToday;
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -236,20 +242,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       value: overlay,
       child: Scaffold(
         backgroundColor: colors.bg,
-        // going to (or leaving) the full-screen sky, or to another tab: the new page fades in while it grows into place
+        // going to (or leaving) the full-screen sky, or to another tab: a short, light cross-fade
         body: AnimatedSwitcher(
-          duration: motion(context),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween(begin: fullSky ? .94 : 1.04, end: 1.0).animate(animation),
-              child: child,
-            ),
-          ),
+          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
           child: Stack(
-            key: ValueKey(layout),
+            key: ValueKey(_switchKey(layout)),
             fit: StackFit.expand,
             children: [
               if (!fullSky) PageGlow(phase: model.phase),
@@ -259,6 +258,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         ),
       ),
     );
+  }
+
+  String _switchKey(String layout) {
+    if (layout != _layout) {
+      _layout = layout;
+      _switches++;
+    }
+    return '$layout-$_switches';
   }
 
   /// The sky fills the screen with only the countdown; the day's times are swiped up from the bottom, and
@@ -312,11 +319,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                             FadeTransition(
                               opacity: fadeOut,
                               child: SwipeHint(onTap: () => _settleSheet(true), clock: clock),
-                            ),
-                            const SizedBox(height: 6),
-                            FadeTransition(
-                              opacity: fadeOut,
-                              child: BelowCard(controller: c, onSky: true),
                             ),
                           ],
                         ),

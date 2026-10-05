@@ -10,6 +10,9 @@ import '../data/vaktet_base.dart';
 import 'cities.dart';
 import 'day.dart';
 import 'format.dart';
+import 'sky_scene.dart';
+
+export 'sky_scene.dart' show MoonState, SkyScene;
 
 enum PrayerKey { imsak, sabah, sunrise, dhuhr, dreka, asr, maghrib, isha }
 
@@ -307,6 +310,7 @@ class TodayModel {
     required this.alarm,
     required this.phase,
     required this.orb,
+    required this.scene,
     required this.dayFraction,
   });
 
@@ -320,6 +324,9 @@ class TodayModel {
   final AlarmModel? alarm;
   final SkyPhase phase;
   final OrbState orb;
+
+  /// The Moon and the scenes of the current hour.
+  final SkyScene scene;
 
   /// How far through today we are, 0–1 (for the line under the card).
   final double dayFraction;
@@ -358,6 +365,7 @@ TodayModel computeToday({
         : null,
     phase: skyPhase(todayRows, now),
     orb: orbAt(todayRows, now),
+    scene: skySceneAt(todayRows, now, today),
     dayFraction: ((now - midnight) / msPerDay).clamp(0.0, 1.0),
   );
 }

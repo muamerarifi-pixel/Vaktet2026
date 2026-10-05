@@ -32,21 +32,20 @@ void main() {
 
         for (final dark in [false, true]) {
           for (final entry in instants.entries) {
-            for (final mode in ['list', 'focus', 'full']) {
+            for (final mode in ['today', 'other day']) {
               SharedPreferences.setMockInitialValues({
                 'city': 'dragash', // the longest city name
                 'theme': dark ? 'dark' : 'light',
-                'focus': mode != 'list',
-                'tips': mode == 'focus',
               });
               final controller = AppController(
                 prefs: await SharedPreferences.getInstance(),
                 clock: () => entry.value.millisecondsSinceEpoch,
               );
+              if (mode == 'other day') controller.select(controller.today.addDays(1));
               await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
               await tester.pump(const Duration(milliseconds: 50));
               expect(tester.takeException(), isNull, reason: '${entry.key} $mode dark=$dark');
-              if (mode == 'full' && size.width < 900) {
+              if (mode == 'today' && size.width < 900) {
                 // the prayer times swiped up over the sky
                 await tester.pumpAndSettle();
                 await tester.tap(find.bySemanticsLabel('Shfaq vaktet e sotme'), warnIfMissed: false);
@@ -60,18 +59,13 @@ void main() {
 
         // every font at the largest text size, in every mode
         for (final font in FontChoice.values) {
-          for (final mode in ['list', 'focus', 'full']) {
-            SharedPreferences.setMockInitialValues({
-              'city': 'dragash',
-              'font': font.name,
-              'fontScale': 1.25,
-              'focus': mode != 'list',
-              'tips': mode == 'focus',
-            });
+          for (final mode in ['today', 'other day']) {
+            SharedPreferences.setMockInitialValues({'city': 'dragash', 'font': font.name, 'fontScale': 1.25});
             final controller = AppController(
               prefs: await SharedPreferences.getInstance(),
               clock: () => instants['forbidden']!.millisecondsSinceEpoch,
             );
+            if (mode == 'other day') controller.select(controller.today.addDays(1));
             await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
             await tester.pump(const Duration(milliseconds: 50));
             expect(tester.takeException(), isNull, reason: '${font.name} ×1.25 $mode');

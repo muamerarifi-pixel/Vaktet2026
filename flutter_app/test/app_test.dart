@@ -1,10 +1,9 @@
-// Drives the real screens: changing the day, the city, the settings, hiding the prayer times.
+// Drives the real screens: changing the day, the city, the settings, the prayer times swiped up over the sky.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/state/app_controller.dart';
-import 'package:vaktet/src/ui/widgets.dart';
 
 import 'test_fonts.dart';
 
@@ -35,10 +34,11 @@ Future<void> _close(WidgetTester tester) async {
 
 Finder _label(String text) => find.bySemanticsLabel(text);
 
-/// Lets a show/hide animation finish.
-Future<void> _animate(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(kMotion + const Duration(milliseconds: 50));
+/// Swipes the day's prayer times up over the full-screen sky.
+Future<void> _openSheet(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Rrëshqit lart për vaktet'));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -82,6 +82,8 @@ void main() {
     await _open(tester, at: DateTime.utc(2026, 10, 3, 19).millisecondsSinceEpoch);
     expect(find.text('NESËR'), findsOneWidget);
     expect(find.text('Imsaku'), findsWidgets);
+    expect(find.text('Alarmi për sabah'), findsNothing); // in the sheet, under the times
+    await _openSheet(tester);
     expect(find.text('Alarmi për sabah'), findsOneWidget);
     expect(find.textContaining('Nesër, 30 min para lindjes së diellit'), findsOneWidget);
     await _close(tester);
@@ -121,12 +123,15 @@ void main() {
   testWidgets('changing the city moves the times and is remembered', (tester) async {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
+    await _openSheet(tester);
     expect(find.text('04:53'), findsOneWidget);
-    await tester.tap(find.text('Kosovë'));
+    await tester.tap(find.text('Kosovë').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Prishtinë').last);
     await tester.pumpAndSettle();
     expect(find.text('04:52'), findsOneWidget); // one minute earlier
+    c.stepDay(1);
+    await tester.pumpAndSettle();
     expect(find.text('Prishtinë: 1 minutë më herët se kohët bazë të Takvimit.'), findsOneWidget);
     expect(c.city.id, 'prishtine');
     expect((await SharedPreferences.getInstance()).getString('city'), 'prishtine');
@@ -134,45 +139,30 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('hide the prayer times: only the card and the tips are left, then the sky fills the screen', (
-    tester,
-  ) async {
+  testWidgets('today is the sky alone; the times, the alarm and the day\'s tips are swiped up', (tester) async {
     final handle = tester.ensureSemantics();
-    final c = await _open(tester);
-    expect(find.text('Imsaku'), findsOneWidget);
-    await tester.tap(find.text('Fshih vaktet'));
-    await tester.pump();
-    // the list slides away
-    expect(find.text('Imsaku'), findsOneWidget);
-    await _animate(tester);
-    expect(c.focusOn, isTrue);
-    expect(find.text('Imsaku'), findsNothing);
-    expect(find.text('Shfaq vaktet'), findsOneWidget);
+    // 21:00 in Kosovo, after Jacia: the alarm for tomorrow is suggested
+    await _open(tester, at: DateTime.utc(2026, 10, 3, 19).millisecondsSinceEpoch);
+    // no buttons to hide or show anything: just the sky, the countdown and the hint
+    expect(find.text('Fshih vaktet'), findsNothing);
+    expect(find.text('Shfaq vaktet'), findsNothing);
+    expect(find.text('Shfaq'), findsNothing);
+    expect(find.text('DY KËSHILLA PËR SOT'), findsNothing);
+    expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
+    await _openSheet(tester);
+    expect(find.text('VAKTET E SOTME'), findsOneWidget);
+    expect(find.text('Imsaku'), findsWidgets);
+    expect(find.text('Alarmi për sabah'), findsOneWidget);
     expect(find.text('DY KËSHILLA PËR SOT'), findsOneWidget);
-    expect(find.text('Për jetën'), findsOneWidget);
-    expect(find.text('Si musliman'), findsOneWidget);
-    // hide the tips too: the full-screen sky
-    await tester.tap(_label('Fshih këshillat'));
-    await _animate(tester);
-    expect(c.tipsOn, isFalse);
-    expect(find.text('Për jetën'), findsNothing);
-    expect(find.text('Shfaq'), findsOneWidget);
-    expect(find.textContaining('01:14:00', findRichText: true), findsOneWidget);
-    // both choices are remembered
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('focus'), isTrue);
-    expect(prefs.getBool('tips'), isFalse);
-    // bring everything back
-    await tester.tap(find.text('Shfaq vaktet'));
-    await _animate(tester);
-    expect(find.text('Imsaku'), findsOneWidget);
+    expect(find.textContaining('Për jetën', findRichText: true), findsWidgets);
+    expect(tester.takeException(), isNull);
     handle.dispose();
     await _close(tester);
   });
 
   testWidgets('full-screen sky: swipe up shows the prayer times, swipe down hides them', (tester) async {
     final handle = tester.ensureSemantics();
-    await _open(tester, prefs: {'focus': true, 'tips': false});
+    await _open(tester);
     await tester.pumpAndSettle();
     expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
     expect(find.text('Imsaku'), findsNothing);
@@ -209,15 +199,11 @@ void main() {
   });
 
   testWidgets('the settings are restored when the app starts again', (tester) async {
-    final c = await _open(
-      tester,
-      prefs: {'city': 'peje', 'theme': 'dark', 'hijri': 1, 'alarm': 45, 'focus': true, 'tips': false},
-    );
+    final c = await _open(tester, prefs: {'city': 'peje', 'theme': 'dark', 'hijri': 1, 'alarm': 45});
     expect(c.city.id, 'peje');
     expect(c.theme, ThemeChoice.dark);
     expect(c.hijriAdj, 1);
     expect(c.alarmOffset, 45);
-    expect(c.focus && !c.tipsOn, isTrue);
     expect(find.text('23 Rebiul Ahir 1448 h.'), findsOneWidget); // Hijri date moved by +1
     await _close(tester);
   });
