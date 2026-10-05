@@ -7,7 +7,7 @@
 ### Kohët e namazit për Kosovën – të sakta, të bukura, pa reklama dhe pa internet
 
 Kohët zyrtare nga **Takvimi i Bashkësisë Islame të Kosovës**, për 18 qytete,<br>
-me një qiell të gjallë që ndryshon me çdo vakt.
+me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe me stinët.
 
 [![Shkarko për Android](https://img.shields.io/badge/Shkarko_për_Android-APK-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest)
 &nbsp;
@@ -15,15 +15,28 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 <br>
 
-<img src="docs/screenshots/sot.jpg" width="160" alt="Namazi i ardhshëm me numërim mbrapsht">&nbsp;
-<img src="docs/screenshots/qielli.jpg" width="160" alt="Qielli i gjallë në gjithë ekranin, me yje që vezullojnë">&nbsp;
-<img src="docs/screenshots/vaktet-lart.jpg" width="160" alt="Vaktet e sotme, të rrëshqitura lart mbi qiell">&nbsp;
-<img src="docs/screenshots/keshillat.jpg" width="160" alt="Vaktet e fshehura, me dy këshilla për sot">&nbsp;
-<img src="docs/screenshots/cilesimet.jpg" width="160" alt="Cilësimet në pamjen e errët">
+<img src="docs/screenshots/v1.3/10_night_milky_way_2300.jpg" width="160" alt="Nata me Kashtën e Kumtrit dhe yje që vezullojnë">&nbsp;
+<img src="docs/screenshots/v1.3/12_full_moon_2200.jpg" width="160" alt="Hëna e plotë në fazën e saj të vërtetë">&nbsp;
+<img src="docs/screenshots/v1.3/06_golden_hour_1640.jpg" width="160" alt="Ora e artë para perëndimit">&nbsp;
+<img src="docs/screenshots/v1.3/13_winter_snow_1230.jpg" width="160" alt="Dimri, me borë në kodra">&nbsp;
+<img src="docs/screenshots/v1.3/16_swipe_up_sheet.jpg" width="160" alt="Vaktet, alarmi dhe dy këshillat e ditës, të rrëshqitura lart">
 
 </div>
 
 ---
+
+## Një ditë në qiellin e Vaktet
+
+<div align="center">
+<table>
+<tr><td align="center"><img src="docs/screenshots/v1.3/01_dawn_0505.jpg" width="200" alt="Agimi · 05:05"><br><sub>Agimi · 05:05</sub></td><td align="center"><img src="docs/screenshots/v1.3/02_sunrise_0650.jpg" width="200" alt="Lindja e diellit · 06:50"><br><sub>Lindja e diellit · 06:50</sub></td><td align="center"><img src="docs/screenshots/v1.3/03_morning_mist_0740.jpg" width="200" alt="Mjegull e zogj · 07:40"><br><sub>Mjegull e zogj · 07:40</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.3/04_late_morning_1030.jpg" width="200" alt="Paradite · 10:30"><br><sub>Paradite · 10:30</sub></td><td align="center"><img src="docs/screenshots/v1.3/05_afternoon_clouds_1400.jpg" width="200" alt="Re pasdite · 14:00"><br><sub>Re pasdite · 14:00</sub></td><td align="center"><img src="docs/screenshots/v1.3/06_golden_hour_1640.jpg" width="200" alt="Ora e artë · 16:40"><br><sub>Ora e artë · 16:40</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.3/07_forbidden_sunset_1808.jpg" width="200" alt="Kohë e ndaluar · 18:08"><br><sub>Kohë e ndaluar · 18:08</sub></td><td align="center"><img src="docs/screenshots/v1.3/08_dusk_1840.jpg" width="200" alt="Muzgu · 18:40"><br><sub>Muzgu · 18:40</sub></td><td align="center"><img src="docs/screenshots/v1.3/09_evening_lights_1930.jpg" width="200" alt="Dritat e fshatrave · 19:30"><br><sub>Dritat e fshatrave · 19:30</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.3/10_night_milky_way_2300.jpg" width="200" alt="Kashta e Kumtrit · 23:00"><br><sub>Kashta e Kumtrit · 23:00</sub></td><td align="center"><img src="docs/screenshots/v1.3/11_moon_rising_0330.jpg" width="200" alt="Hëna lind · 03:30"><br><sub>Hëna lind · 03:30</sub></td><td align="center"><img src="docs/screenshots/v1.3/12_full_moon_2200.jpg" width="200" alt="Hëna e plotë · 22:00"><br><sub>Hëna e plotë · 22:00</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.3/13_winter_snow_1230.jpg" width="200" alt="Dimër me borë"><br><sub>Dimër me borë</sub></td><td align="center"><img src="docs/screenshots/v1.3/14_spring_green_0900.jpg" width="200" alt="Pranverë e gjelbër"><br><sub>Pranverë e gjelbër</sub></td><td align="center"><img src="docs/screenshots/v1.3/15_summer_fireflies_2130.jpg" width="200" alt="Verë me xixëllonja"><br><sub>Verë me xixëllonja</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.3/16_swipe_up_sheet.jpg" width="200" alt="Vaktet e ditës"><br><sub>Vaktet e ditës</sub></td><td align="center"><img src="docs/screenshots/v1.3/17_month_view.jpg" width="200" alt="Tabela e muajit"><br><sub>Tabela e muajit</sub></td><td align="center"><img src="docs/screenshots/v1.3/18_settings.jpg" width="200" alt="Cilësimet"><br><sub>Cilësimet</sub></td></tr>
+</table>
+</div>
 
 ## Të reja në versionin 1.3 (Android)
 
@@ -38,6 +51,10 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 ☁️ **Re sipas orës** – të holla në mëngjes, më të plota pasdite, me skaje rozë e ari në perëndim.
 
 🍂 **Stinët në kodra** – të gjelbra në pranverë, të arta në verë, portokalli-kafe në vjeshtë dhe me borë në dimër (sipas kalendarit, jo motit).
+
+👈 **Rrëshqit majtas e djathtas nëpër ditë** – çdo ditë shfaqet me qiellin e vet në këtë orë: faza e hënës, dielli, retë dhe stina. Rrëshqit lart për vaktet dhe këshillat e asaj dite; „Kthehu te sot" të kthen menjëherë.
+
+🌙 **Logo e re** – hilal e yll, simetrike, në gjelbër smeraldi mbi blu të thellë.
 
 ## Të reja në versionin 1.2
 
@@ -87,6 +104,8 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 1. Hap faqen e [versionit të fundit](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest) dhe shkarko skedarin `.apk`.
 2. Hape në telefon. Nëse të pyet, lejo instalimin nga ky burim (një herë).
 3. Gati – Vaktet është në ekranin kryesor.
+
+Nëse një version i ri nuk instalohet mbi të vjetrin („App not installed”), çinstalo një herë versionin e vjetër dhe instalo të riun.
 
 **iPhone, laptop ose çdo pajisje tjetër**
 1. Hap [vaktet-kosove-1.vercel.app](https://vaktet-kosove-1.vercel.app).
