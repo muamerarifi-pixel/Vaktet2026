@@ -416,14 +416,18 @@
   }
   let lastMoon = "";
   function updateMoon(rows, now) {
-    const m = moonAt(rows, now), el = $("skyMoon");
-    const visible = m.up && m.k >= .015;
+    // At night the Moon is always there: where it really is while it is up, resting high in the sky while it is
+    // below the horizon, and only its faint outline at new moon. By day, only while it is really up.
+    const m = moonAt(rows, now), el = $("skyMoon"), card = $("nextCard");
+    const night = card.dataset.orb !== "sun", isNew = m.k < .015;
+    state.moon = m;
+    const visible = night || (m.up && !isNew);
     el.hidden = !visible;
     if (!visible) return;
-    const card = $("nextCard");
-    card.style.setProperty("--mx", m.x.toFixed(4));
-    card.style.setProperty("--my", m.y.toFixed(4));
-    card.style.setProperty("--myz", m.yFull.toFixed(4));
+    el.classList.toggle("is-new", isNew);
+    card.style.setProperty("--mx", (m.up ? m.x : .72).toFixed(4));
+    card.style.setProperty("--my", (m.up ? m.y : .2).toFixed(4));
+    card.style.setProperty("--myz", (m.up ? m.yFull : .17).toFixed(4));
     card.style.setProperty("--moon-glow", (.55 + .45 * m.k).toFixed(3));
     card.style.setProperty("--earthshine", (.1 * (1 - m.k)).toFixed(3));
     el.classList.toggle("is-day", card.dataset.orb === "sun");
@@ -433,7 +437,6 @@
       $("moonLit").setAttribute("d", moonPath(m.k, m.waxing));
       $("moonLit").parentNode.setAttribute("transform", "rotate(" + (m.waxing ? -12 : 12) + " 20 20)");
     }
-    state.moon = m;
   }
 
   // Temporal hours: sunrise is hour 6, sunset 18, the middle of the night 0, so every scene keeps to the sun

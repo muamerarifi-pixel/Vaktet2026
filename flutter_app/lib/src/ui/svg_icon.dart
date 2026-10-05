@@ -165,7 +165,11 @@ class VIcon {
       Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r)));
 
   // The web app's icons, with the same paths.
-  static final brand = VIcon.filled(32, ['M20.5 5.5a11 11 0 1 0 6 19.2A12.5 12.5 0 0 1 20.5 5.5Z']);
+  // the logo: a crescent opening upwards with a star above it (the same as the app icon)
+  static final brand = VIcon.filled(32, [
+    'M6.816 12.293A10 10 0 1 0 25.184 12.293A9.2 9.2 0 0 1 6.816 12.293Z',
+    'M16 5.75Q16.8 8.95 20 9.75Q16.8 10.55 16 13.75Q15.2 10.55 12 9.75Q15.2 8.95 16 5.75Z',
+  ]);
   static final settings = VIcon.stroked(24, 1.7, [
     circle(12, 12, 3),
     'M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z',

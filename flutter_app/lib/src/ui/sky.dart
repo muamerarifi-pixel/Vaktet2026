@@ -542,19 +542,40 @@ class SkyPainter extends CustomPainter {
     );
   }
 
-  /// The Moon where it really is, in its real phase: lit on the right while it grows, on the left while it wanes,
-  /// with the faint earthshine on its dark part at night. By day it is a pale ghost.
+  /// The Moon in its real phase: lit on the right while it grows, on the left while it wanes, with the faint
+  /// earthshine on its dark part. At night it is always there: where it really is while it is up, and resting high
+  /// in the sky while it is below the horizon. At new moon only its faint outline shows. By day it is a pale ghost,
+  /// and only while it is really up.
   void _paintMoon(Canvas canvas, Size size, double t) {
     final moon = scene.moon;
-    if (!moon.up) return;
-    final k = moon.illumination;
-    if (k < .015) return; // new moon: nothing to see
-    final w = size.width, h = size.height;
     final night = !orb.sun;
-    final y = _full ? moon.yFull : moon.y;
-    final c = Offset(moon.x * w, (y - .2 * (lift?.value ?? 0)) * h);
+    if (!moon.up && !night) return;
+    final k = moon.illumination;
+    final w = size.width, h = size.height;
+    final x = moon.up ? moon.x : .72;
+    final y = moon.up ? (_full ? moon.yFull : moon.y) : (_full ? .17 : .2);
+    final c = Offset(x * w, (y - .2 * (lift?.value ?? 0)) * h);
     final r = _full ? 17.0 : 13.0;
     final light = _k(const Color(0xFFF6F1DE));
+    if (k < .015) {
+      if (!night) return;
+      // new moon: the dark disc, just caught by a little light
+      canvas.drawCircle(
+        c,
+        r * 4,
+        Paint()..shader = ui.Gradient.radial(c, r * 4, [light.withValues(alpha: .06), light.withValues(alpha: 0)]),
+      );
+      canvas.drawCircle(c, r, Paint()..color = _k(const Color(0xFF9AA6C8)).withValues(alpha: .12));
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .8
+          ..color = light.withValues(alpha: .35),
+      );
+      return;
+    }
     final alpha = night ? 1.0 : .62;
 
     if (night) {

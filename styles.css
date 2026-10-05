@@ -413,6 +413,10 @@ body::before {
 .sky-moon.is-day { background: none; }
 .sky-moon.is-day .moon-lit { fill: rgba(246, 241, 222, .62); }
 .sky-moon.is-day .moon-dark { fill: none; }
+/* new moon: the dark disc, just caught by a little light */
+.sky-moon.is-new { background: radial-gradient(circle closest-side, rgba(243, 238, 218, .06), rgba(243, 238, 218, 0) 45%); }
+.sky-moon.is-new .moon-lit { display: none; }
+.sky-moon.is-new .moon-dark { fill: rgba(154, 166, 200, .12); stroke: rgba(246, 241, 222, .35); stroke-width: .8; }
 .sky-hills {
   position: absolute;
   left: 0;
