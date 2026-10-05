@@ -38,7 +38,7 @@ me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe 
 </table>
 </div>
 
-## Të reja në versionin 1.3 (Android)
+## Të reja në versionin 1.3 (Android dhe web)
 
 🌅 **Qielli ndryshon butë** – ngjyrat nuk kërcejnë më te çdo vakt, por shkrihen minutë pas minute: agimi skuqet ngadalë, muzgu zbehet në blu.
 
@@ -159,4 +159,4 @@ APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/andr
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 
 ### Përditësimi
-Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v21`) që pajisjet ta marrin versionin e ri.
+Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v22`) që pajisjet ta marrin versionin e ri.

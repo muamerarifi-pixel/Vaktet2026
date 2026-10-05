@@ -1104,3 +1104,32 @@ dialog::backdrop { background: rgba(8, 14, 12, .45); }
 }
 @keyframes vt-slide-out { to { opacity: 0; transform: translateY(16px); } }
 @keyframes vt-slide-in { from { opacity: 0; transform: translateY(16px); } }
+
+/* Snow on the hills in winter (app.js sets --snow) */
+.sky-hills .hill-snow { opacity: var(--snow, 0); }
+
+/* A soft ring of light across the sky when a prayer time comes */
+.sky-pulse { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; overflow: hidden; }
+.sky-pulse::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 200vmax; height: 200vmax; margin: -100vmax 0 0 -100vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side, transparent 68%, rgba(255, 244, 220, .32) 80%, transparent 84%);
+  transform: scale(.06);
+}
+.sky-pulse.is-on { animation: pulse-fade 2.6s ease-in both; }
+.sky-pulse.is-on::before { animation: pulse-ring 2.6s cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes pulse-fade { 0% { opacity: 1; background: rgba(255, 248, 230, 0); } 20% { background: rgba(255, 248, 230, .08); } 100% { opacity: 0; background: rgba(255, 248, 230, 0); } }
+@keyframes pulse-ring { to { transform: scale(1); } }
+
+/* Tilting the phone: each depth moves its own amount (app.js sets --tx / --ty in pixels) */
+@media (max-width: 899px) {
+  body.is-focus.no-tips[data-view="today"] .sky-haze { translate: calc(var(--tx, 0) * .2px) calc(var(--ty, 0) * .2px); }
+  body.is-focus.no-tips[data-view="today"] .sky-live { transform: translate(calc(var(--tx, 0) * .45px), calc(var(--ty, 0) * .45px)); }
+  body.is-focus.no-tips[data-view="today"] .sky-orb,
+  body.is-focus.no-tips[data-view="today"] .sky-moon { transform: translate(calc(var(--tx, 0) * .55px), calc(var(--ty, 0) * .55px)); }
+  body.is-focus.no-tips[data-view="today"] .sky-hills,
+  body.is-focus.no-tips[data-view="today"] .sky-front {
+    left: -14px; width: calc(100% + 28px);
+    transform: translate(calc(var(--tx, 0) * 1px), calc(var(--ty, 0) * 1px));
+  }
+}
