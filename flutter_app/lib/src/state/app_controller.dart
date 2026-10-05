@@ -45,6 +45,7 @@ class AppController extends ChangeNotifier {
     hijriAdj = adj.clamp(-2, 2);
     final alarm = prefs.getInt(_kAlarm) ?? 30;
     alarmOffset = alarmChoices.contains(alarm) ? alarm : 30;
+    tilt = prefs.getBool(_kTilt) ?? true;
     now = _clock();
     today = kosovoToday(now);
     selected = today;
@@ -60,6 +61,7 @@ class AppController extends ChangeNotifier {
   static const _kFont = 'font';
   static const _kFontScale = 'fontScale';
   static const _kCountWeight = 'countdownWeight';
+  static const _kTilt = 'tilt';
 
   static const List<int> alarmChoices = [15, 30, 45, 60];
 
@@ -86,6 +88,9 @@ class AppController extends ChangeNotifier {
   Look get _look => (theme: theme, font: font, fontScale: fontScale);
   late int hijriAdj;
   late int alarmOffset;
+
+  /// The sky moves a little when the phone is tilted.
+  late bool tilt;
 
   HomeView view = HomeView.today;
 
@@ -200,6 +205,12 @@ class AppController extends ChangeNotifier {
   void setAlarmOffset(int v) {
     alarmOffset = v;
     _prefs.setInt(_kAlarm, v);
+    _changed();
+  }
+
+  void setTilt(bool on) {
+    tilt = on;
+    _prefs.setBool(_kTilt, on);
     _changed();
   }
 

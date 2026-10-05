@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 import '../state/app_controller.dart';
 import 'colors.dart';
 import 'month_view.dart';
 import 'next_card.dart';
+import 'pulse.dart';
 import 'settings.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
@@ -19,12 +21,15 @@ const double _wideBreakpoint = 900;
 const double _maxContentWidth = 1120;
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.controller, this.skyMotion = true});
+  const HomePage({super.key, required this.controller, this.skyMotion = true, this.tiltEvents});
 
   final AppController controller;
 
   /// Whether the sky moves (tests turn it off, so the screen can settle).
   final bool skyMotion;
+
+  /// The accelerometer (tests pass their own).
+  final Stream<Offset> Function()? tiltEvents;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -32,6 +37,21 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver, TickerProviderStateMixin {
   late final SkyClock _sky = SkyClock(this);
+
+  /// The phone's tilt, for the depth of the full-screen sky (only listened to while that sky is showing).
+  late final SkyTilt _tilt = SkyTilt(
+    widget.tiltEvents ??
+        () => accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval).map((e) => Offset(e.x, e.y)),
+  );
+  bool _resumed = true;
+
+  void _syncTilt(bool want) {
+    if (want == _tilt.running) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      want ? _tilt.start() : _tilt.stop();
+    });
+  }
 
   /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
   late final AnimationController _sheet = AnimationController(vsync: this);
@@ -64,6 +84,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.stop();
     _sky.dispose();
+    _tilt.dispose();
     _sheet.dispose();
     super.dispose();
   }
@@ -72,11 +93,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _resumed = true;
       widget.controller.start();
       if (widget.skyMotion) _sky.start();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _resumed = false;
       widget.controller.stop();
       _sky.stop();
+      _tilt.stop();
     }
   }
 
@@ -155,6 +179,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final clock = MediaQuery.disableAnimationsOf(context) || !widget.skyMotion ? null : _sky;
     // on a phone, today is the sky itself; the times and the tips are swiped up over it
     final fullSky = !wide && c.view == HomeView.today && c.isToday;
+    _syncTilt(fullSky && c.tilt && clock != null && _resumed);
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -299,7 +324,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
               clock: clock,
               countdownWeight: c.countdownWeight,
               reveal: _sheet,
+              parallax: c.tilt && clock != null ? _tilt : null,
             ),
+            PrayerPulse(target: c.model.card?.target, now: c.now, enabled: clock != null),
             Column(
               children: [
                 header,

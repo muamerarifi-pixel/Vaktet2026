@@ -127,6 +127,15 @@ class _Sheet extends StatelessWidget {
                 weightOf: (w) => w.toDouble(),
               ),
             ),
+            _Field(
+              title: 'Lëvizja e qiellit',
+              hint: 'Kur e anon telefonin, yjet, hëna dhe kodrat lëvizin pak, si të shikoje nga dritarja.',
+              child: Segmented<bool>(
+                options: const [('Me lëvizje', true), ('Pa lëvizje', false)],
+                value: c.tilt,
+                onChanged: c.setTilt,
+              ),
+            ),
             Container(
               margin: const EdgeInsets.only(top: 18),
               padding: const EdgeInsets.only(top: 14),

@@ -25,6 +25,20 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 ---
 
+## Të reja në versionin 1.3 (Android)
+
+🌅 **Qielli ndryshon butë** – ngjyrat nuk kërcejnë më te çdo vakt, por shkrihen minutë pas minute: agimi skuqet ngadalë, muzgu zbehet në blu.
+
+🌄 **Dielli dhe hëna lindin e perëndojnë pas kodrave** – me dritë të ngrohtë në horizont në lindje e perëndim, dhe një shkëlqim të zbehtë aty ku do të lindë hëna.
+
+✨ **Një moment i qetë në çdo vakt** – kur numërimi arrin zero, një valë e butë drite përshkon qiellin dhe emri i vaktit të ardhshëm shfaqet ngadalë. Pa zë, pa dritare.
+
+📱 **Thellësi kur e anon telefonin** – yjet, hëna dhe kodrat lëvizin pak secili sipas largësisë (mund ta fikësh te Cilësimet → Lëvizja e qiellit).
+
+☁️ **Re sipas orës** – të holla në mëngjes, më të plota pasdite, me skaje rozë e ari në perëndim.
+
+🍂 **Stinët në kodra** – të gjelbra në pranverë, të arta në verë, portokalli-kafe në vjeshtë dhe me borë në dimër (sipas kalendarit, jo motit).
+
 ## Të reja në versionin 1.2
 
 🌙 **Hëna e vërtetë** – hëna shfaqet në fazën e saj të sotme (hilal, gjysmë, e plotë…) dhe aty ku është vërtet në qiell: hëna e plotë lind me perëndimin e diellit, hëna në rënie del pas mesnate, ndonjëherë shihet edhe ditën.
