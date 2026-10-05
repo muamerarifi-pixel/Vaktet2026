@@ -25,6 +25,18 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 ---
 
+## Të reja në versionin 1.2
+
+🌙 **Hëna e vërtetë** – hëna shfaqet në fazën e saj të sotme (hilal, gjysmë, e plotë…) dhe aty ku është vërtet në qiell: hëna e plotë lind me perëndimin e diellit, hëna në rënie del pas mesnate, ndonjëherë shihet edhe ditën.
+
+✨ **Yje që vezullojnë më shumë** – çdo yll merr frymë në ritmin e vet, më të ndriturit lëshojnë një xixë të vogël, dhe në mes të natës dalin edhe më shumë yje e bien më shpesh yje.
+
+🕰️ **Një qiell për çdo orë** – 24 pamje sipas diellit, jo sipas orës së murit, prandaj vlejnë në çdo stinë: mjegull në lugina pas lindjes, zogj që dalin në mëngjes e kthehen në mbrëmje, aeroplanë ditën, dritat e fshatrave që ndizen në muzg e shuhen një nga një pas mesnate, ylli i mëngjesit e i mbrëmjes, Kashta e Kumtrit në thellësi të natës dhe xixëllonja në mbrëmjet e verës.
+
+🧘 **Më pak butona, më shumë qetësi** – sot është vetëm qielli dhe numërimi. Rrëshqit lart dhe dalin vaktet, alarmi për sabah dhe dy këshillat e ditës, të gjitha në një vend.
+
+⚡ **Më i lehtë** – qielli vizatohet me më pak punë dhe ndërrimet mes pamjeve janë më të shkurtra, prandaj aplikacioni rrjedh më butë dhe harxhon më pak bateri.
+
 ## Të reja në versionin 1.1
 
 ✨ **Qielli merr jetë** – në gjithë ekranin yje të vegjël e të butë vezullojnë lehtë, secili në ritmin e vet, herë pas here bie një yll, dielli lëshon rreze të buta që rrotullohen ngadalë, retë lundrojnë nëpër qiell gjatë ditës dhe drita e hënës merr frymë.
@@ -43,7 +55,7 @@ me një qiell të gjallë që ndryshon me çdo vakt.
 
 ⛔ **Kohët e ndaluara** – në lindje, zenit e perëndim të diellit karta bëhet e kuqe dhe të paralajmëron.
 
-🧘 **Vetëm thelbi** – me *Fshih vaktet* mbetet vetëm koha e mbetur, me dy këshilla të reja çdo ditë (për jetën dhe si musliman). Fshihi edhe këshillat dhe qielli mbush gjithë ekranin – rrëshqit lart kur të duhen vaktet.
+🧘 **Vetëm thelbi** – në telefon qielli mbush gjithë ekranin me kohën e mbetur; rrëshqit lart për vaktet e sotme dhe dy këshilla të reja çdo ditë (për jetën dhe si musliman).
 
 ⏰ **Alarmi për sabah** – të sugjeron orën e alarmit 15, 30, 45 ose 60 minuta para lindjes së diellit.
 
@@ -114,4 +126,4 @@ APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/andr
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 
 ### Përditësimi
-Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v18`) që pajisjet ta marrin versionin e ri.
+Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v20`) që pajisjet ta marrin versionin e ri.

@@ -45,8 +45,6 @@ class AppController extends ChangeNotifier {
     hijriAdj = adj.clamp(-2, 2);
     final alarm = prefs.getInt(_kAlarm) ?? 30;
     alarmOffset = alarmChoices.contains(alarm) ? alarm : 30;
-    focus = prefs.getBool(_kFocus) ?? false;
-    tipsOn = prefs.getBool(_kTips) ?? true;
     now = _clock();
     today = kosovoToday(now);
     selected = today;
@@ -59,8 +57,6 @@ class AppController extends ChangeNotifier {
   static const _kTheme = 'theme';
   static const _kHijri = 'hijri';
   static const _kAlarm = 'alarm';
-  static const _kFocus = 'focus';
-  static const _kTips = 'tips';
   static const _kFont = 'font';
   static const _kFontScale = 'fontScale';
   static const _kCountWeight = 'countdownWeight';
@@ -91,10 +87,6 @@ class AppController extends ChangeNotifier {
   late int hijriAdj;
   late int alarmOffset;
 
-  /// "Hide the prayer times" — only the card (and the tips) is left.
-  late bool focus;
-  late bool tipsOn;
-
   HomeView view = HomeView.today;
 
   /// Epoch milliseconds of the last tick.
@@ -109,9 +101,6 @@ class AppController extends ChangeNotifier {
   late TodayModel model;
 
   bool get isToday => selected == today;
-
-  /// The prayer list is hidden (only possible while looking at today).
-  bool get focusOn => focus && isToday;
 
   void _recompute() {
     model = computeToday(now: now, today: today, selected: selected, city: city, alarmOffset: alarmOffset);
@@ -211,18 +200,6 @@ class AppController extends ChangeNotifier {
   void setAlarmOffset(int v) {
     alarmOffset = v;
     _prefs.setInt(_kAlarm, v);
-    _changed();
-  }
-
-  void toggleFocus() {
-    focus = !focus;
-    _prefs.setBool(_kFocus, focus);
-    _changed();
-  }
-
-  void toggleTips() {
-    tipsOn = !tipsOn;
-    _prefs.setBool(_kTips, tipsOn);
     _changed();
   }
 

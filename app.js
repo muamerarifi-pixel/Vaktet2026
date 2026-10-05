@@ -139,8 +139,6 @@
     theme: store.get("theme", "auto"),
     hijriAdj: parseInt(store.get("hijri", "0"), 10) || 0,
     alarmOffset: parseInt(store.get("alarm", "30"), 10) || 30,
-    focus: store.get("focus", "0") === "1",
-    tipsOn: store.get("tips", "1") === "1",
     font: ["figtree", "nunito", "lora", "mono"].includes(store.get("font", "figtree")) ? store.get("font", "figtree") : "figtree",
     fontScale: [0.9, 1, 1.12, 1.25].includes(parseFloat(store.get("fontScale", "1"))) ? parseFloat(store.get("fontScale", "1")) : 1,
     countdownWeight: [300, 500, 700, 900].includes(parseInt(store.get("countdownWeight", "900"), 10)) ? parseInt(store.get("countdownWeight", "900"), 10) : 900,
@@ -177,10 +175,11 @@
     const c = [n >> 16, (n >> 8) & 255, n & 255].map((v, i) => Math.round((v * (1 - a) + rgb[i] * a) * shade));
     return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
   }
+  const phone = window.matchMedia("(max-width: 899px)");
   function isFullSky() {
     const b = document.body;
     return b.classList.contains("is-focus") && b.classList.contains("no-tips") && b.dataset.view === "today" &&
-      !$("nextCard").hidden && window.matchMedia("(max-width: 899px)").matches;
+      !$("nextCard").hidden && phone.matches;
   }
   function updateChrome() {
     wakeSky();
@@ -197,16 +196,15 @@
     document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", c));
   }
 
-  // Focus mode: hide the prayer list and keep only the countdown (today only).
+  // On a phone, today is the sky itself: the times, the alarm and the tips are swiped up over it.
   function applyFocus() {
-    const on = state.focus && sameDay(state.selected, state.today);
+    const on = phone.matches && sameDay(state.selected, state.today);
     document.body.classList.toggle("is-focus", on);
-    $("focusBtn").setAttribute("aria-pressed", String(state.focus));
-    $("focusLabel").textContent = state.focus ? "Shfaq vaktet" : "Fshih vaktet";
+    document.body.classList.toggle("no-tips", on);
     updateChrome();
   }
 
-  // Daily tips, shown only while the prayer list is hidden. Two per day, never the same day to day:
+  // Daily tips. Two per day, never the same day to day:
   // even days get one life tip + one tip as a Muslim, odd days two life tips.
   // Each list is gone through in a shuffled order before any tip comes back.
   function shuffled(n, seed) {
@@ -229,24 +227,20 @@
     if (((d % 2) + 2) % 2 === 0) return [{ tag: "Për jetën", text: tipAt(T.h, pair * 3, 11) }, { tag: "Si musliman", text: tipAt(T.m, pair, 29) }];
     return [{ tag: "Për jetën", text: tipAt(T.h, pair * 3 + 1, 11) }, { tag: "Për jetën", text: tipAt(T.h, pair * 3 + 2, 11) }];
   }
-  function applyTipsVisibility() {
-    document.body.classList.toggle("no-tips", !state.tipsOn);
-    $("tipsToggle").textContent = state.tipsOn ? "Fshih" : "Shfaq";
-    $("tipsToggle").setAttribute("aria-expanded", String(state.tipsOn));
-    updateChrome();
-  }
   function renderTips() {
-    const box = $("tipsList");
     const key = state.today.y + "-" + state.today.m + "-" + state.today.d;
-    if (box.dataset.day === key) return;
-    box.dataset.day = key;
-    box.innerHTML = "";
-    tipsFor(state.today).forEach((t) => {
-      const a = document.createElement("article"); a.className = "tip" + (t.tag === "Si musliman" ? " is-muslim" : "");
-      const g = document.createElement("span"); g.className = "tip-tag"; g.textContent = t.tag;
-      const p = document.createElement("p"); p.textContent = t.text;
-      a.append(g, p);
-      box.appendChild(a);
+    ["tipsList", "skyTips"].forEach((id) => {
+      const box = $(id);
+      if (box.dataset.day === key) return;
+      box.dataset.day = key;
+      box.innerHTML = "";
+      tipsFor(state.today).forEach((t) => {
+        const a = document.createElement("article"); a.className = "tip" + (t.tag === "Si musliman" ? " is-muslim" : "");
+        const g = document.createElement("span"); g.className = "tip-tag"; g.textContent = t.tag;
+        const p = document.createElement("p"); p.textContent = t.text;
+        a.append(g, p);
+        box.appendChild(a);
+      });
     });
   }
 
@@ -310,7 +304,8 @@
     $("skySheetCity").textContent = state.city.name;
 
     $("alarmCard").hidden = true;
-    $("focusBtn").hidden = !isToday;
+    $("skyAlarm").hidden = true;
+    $("tips").hidden = !isToday;
     applyFocus();
     renderTips();
     if (isToday) {
@@ -378,12 +373,116 @@
     }
     p = Math.min(1, Math.max(0, p));
     if (card.dataset.orb !== orb) card.dataset.orb = orb;
+    updateMoon(rows, now);
+    state.scene = skyScene(rows, now);
     card.style.setProperty("--ox", (0.12 + 0.76 * p).toFixed(4));
     card.style.setProperty("--oy", (0.34 - 0.24 * Math.sin(Math.PI * p)).toFixed(4));
     // the taller centred card (prayer list hidden) gets a flatter arc in its own band of sky above the text
     card.style.setProperty("--oyf", (0.16 - 0.08 * Math.sin(Math.PI * p)).toFixed(4));
     // the full-screen sky: a wide arc between the header and the prayer name
     card.style.setProperty("--oyz", (0.3 - 0.1 * Math.sin(Math.PI * p)).toFixed(4));
+  }
+
+  // ---------- The real Moon, and a scene for every hour ----------
+  // The Moon's phase from its mean orbit with the main corrections (Meeus, Astronomical Algorithms, ch. 48).
+  function moonPhase(ms) {
+    const T = (ms / DAY_MS + 2440587.5 - 2451545) / 36525;
+    const rad = (d) => d * Math.PI / 180;
+    const mod = (x) => ((x % 360) + 360) % 360;
+    const D = mod(297.8501921 + 445267.1114034 * T), M = mod(357.5291092 + 35999.0502909 * T), Mp = mod(134.9633964 + 477198.8675055 * T);
+    const i = 180 - D - 6.289 * Math.sin(rad(Mp)) + 2.1 * Math.sin(rad(M)) - 1.274 * Math.sin(rad(2 * D - Mp)) -
+      .658 * Math.sin(rad(2 * D)) - .214 * Math.sin(rad(2 * Mp)) - .11 * Math.sin(rad(D));
+    return { illumination: (1 + Math.cos(rad(i))) / 2, waxing: D < 180, elongation: D };
+  }
+  // The Moon crosses the sky in about 12 h, reaching its highest point one lunar day per orbit after the Sun:
+  // with the Sun at new moon, rising at sunset at full moon, rising around midnight at last quarter.
+  function moonAt(rows, now) {
+    const ph = moonPhase(now);
+    const noon = rowOf(rows, "dhuhr").instant - 5 * 60000;
+    const lunarDay = 24 * 3600000 + 50 * 60000, halfArc = 6.2 * 3600000;
+    let transit = noon + ph.elongation / 360 * lunarDay;
+    while (transit - now > lunarDay / 2) transit -= lunarDay;
+    while (now - transit > lunarDay / 2) transit += lunarDay;
+    const p = (now - (transit - halfArc)) / (2 * halfArc);
+    const pc = Math.min(1, Math.max(0, p)), s = Math.sin(Math.PI * pc);
+    return { up: p > 0 && p < 1, x: .12 + .76 * pc, y: .34 - .24 * s, yFull: .3 - .12 * s, k: ph.illumination, waxing: ph.waxing };
+  }
+  // The lit part of the Moon in a 40 × 40 box: the bright edge a half circle, the shadow's edge a half ellipse.
+  function moonPath(k, waxing) {
+    const side = waxing ? 1 : -1, bulge = 1 - 2 * k, r = 14, c = 20, pts = [];
+    for (let i = 0; i <= 24; i++) { const a = -Math.PI / 2 + Math.PI * i / 24; pts.push([c + side * r * Math.cos(a), c + r * Math.sin(a)]); }
+    for (let i = 24; i >= 0; i--) { const a = -Math.PI / 2 + Math.PI * i / 24; pts.push([c + side * r * Math.cos(a) * bulge, c + r * Math.sin(a)]); }
+    return "M" + pts.map((q) => q[0].toFixed(2) + " " + q[1].toFixed(2)).join("L") + "Z";
+  }
+  let lastMoon = "";
+  function updateMoon(rows, now) {
+    const m = moonAt(rows, now), el = $("skyMoon");
+    const visible = m.up && m.k >= .015;
+    el.hidden = !visible;
+    if (!visible) return;
+    const card = $("nextCard");
+    card.style.setProperty("--mx", m.x.toFixed(4));
+    card.style.setProperty("--my", m.y.toFixed(4));
+    card.style.setProperty("--myz", m.yFull.toFixed(4));
+    card.style.setProperty("--moon-glow", (.55 + .45 * m.k).toFixed(3));
+    card.style.setProperty("--earthshine", (.1 * (1 - m.k)).toFixed(3));
+    el.classList.toggle("is-day", card.dataset.orb === "sun");
+    const key = Math.round(m.k * 200) + (m.waxing ? "w" : "n");
+    if (key !== lastMoon) {
+      lastMoon = key;
+      $("moonLit").setAttribute("d", moonPath(m.k, m.waxing));
+      $("moonLit").parentNode.setAttribute("transform", "rotate(" + (m.waxing ? -12 : 12) + " 20 20)");
+    }
+    state.moon = m;
+  }
+
+  // Temporal hours: sunrise is hour 6, sunset 18, the middle of the night 0, so every scene keeps to the sun
+  // in every season and every year.
+  function temporalHour(rows, now) {
+    const rise = rowOf(rows, "sunrise").instant, set = rowOf(rows, "maghrib").instant;
+    if (now >= rise && now < set) return 6 + 12 * (now - rise) / (set - rise);
+    const from = now >= set ? set : set - DAY_MS, to = now >= set ? rise + DAY_MS : rise;
+    const h = 18 + 12 * (now - from) / (to - from);
+    return h >= 24 ? h - 24 : h;
+  }
+  const smooth01 = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+  function windowAt(h, a, b, c, d) {
+    if (a > d) { const u = (x) => (x < a ? x + 24 : x); h = u(h); b = u(b); c = u(c); d += 24; }
+    if (h <= a || h >= d) return 0;
+    if (h < b) return smooth01((h - a) / (b - a));
+    if (h <= c) return 1;
+    return smooth01((d - h) / (d - c));
+  }
+  // the colour each hour lays over the sky: [r, g, b, strength], index = temporal hour
+  const HOUR_TINTS = [
+    [21, 26, 82, .16], [18, 24, 72, .17], [20, 27, 76, .15], [29, 35, 88, .12], [58, 47, 110, .10], [138, 79, 134, .10],
+    [255, 148, 102, .12], [255, 192, 138, .10], [255, 226, 181, .06], [200, 230, 255, .06], [181, 220, 255, .06], [230, 244, 255, .06],
+    [255, 255, 255, .07], [255, 244, 214, .06], [255, 230, 176, .07], [255, 212, 140, .09], [255, 184, 106, .11], [255, 142, 87, .13],
+    [229, 92, 120, .13], [138, 77, 158, .13], [74, 62, 142, .13], [46, 47, 122, .14], [35, 39, 105, .15], [27, 32, 94, .16]
+  ];
+  function skyScene(rows, now) {
+    const h = temporalHour(rows, now), i = Math.floor(h) % 24, f = h - Math.floor(h);
+    const A = HOUR_TINTS[i], B = HOUR_TINTS[(i + 1) % 24];
+    const tint = [0, 1, 2, 3].map((j) => A[j] + (B[j] - A[j]) * f);
+    let lights = 0;
+    if (h >= 18) lights = smooth01((h - 18.4) / 1.2);
+    else if (h < 6.6) {
+      const late = 1 - .8 * smooth01(h / 3.2), early = .45 * windowAt(h, 3.6, 4.6, 5.6, 6.6);
+      lights = Math.max(late * (h < 5.5 ? 1 : smooth01((6.6 - h) / 1.1)), early);
+    }
+    const summer = state.today.m >= 6 && state.today.m <= 8;
+    return {
+      hour: h, tint,
+      milkyWay: windowAt(h, 20.2, 22.5, 3.2, 4.6),
+      lights: Math.round(lights * 40) / 40,
+      brightStar: Math.max(windowAt(h, 4.4, 5, 5.6, 6.1), windowAt(h, 18.1, 18.6, 19.2, 19.9)),
+      mist: windowAt(h, 5.6, 6.3, 7.2, 8.6),
+      birds: Math.max(windowAt(h, 6.3, 6.8, 8.2, 9), windowAt(h, 16.4, 16.9, 17.6, 18.2)),
+      plane: windowAt(h, 9, 9.6, 15.4, 16),
+      nightPlane: windowAt(h, 19, 19.6, 23, 23.6),
+      fireflies: summer ? windowAt(h, 18.6, 19.2, 21.6, 22.4) : 0,
+      starBoost: windowAt(h, 19.5, 22.5, 2.5, 5.2)
+    };
   }
 
   function renderNextCard(day, rows, next, now) {
@@ -452,6 +551,9 @@
     $("alarmTime").textContent = fmtTime(alarm.local);
     $("alarmSub").textContent = when + ", " + off + " min para lindjes së diellit (" + fmtTime(alarm.sunrise) + ")";
     $("alarmCard").hidden = false;
+    $("skyAlarmTime").textContent = $("alarmTime").textContent;
+    $("skyAlarmSub").textContent = $("alarmSub").textContent;
+    $("skyAlarm").hidden = false;
   }
 
   function setAlt(text, instant) {
@@ -660,6 +762,11 @@
     document.addEventListener("pointerdown", (e) => {
       if (!isFullSky() || e.button > 0) return;
       if (e.target.closest && e.target.closest(".top, .tabs, dialog")) return;
+      // a swipe from the bottom edge is the phone's home gesture, not a request for the times
+      if (sheet.v === 0 && e.clientY > window.innerHeight - 56) return;
+      // a sheet taller than the screen scrolls under the finger instead (tap the sky or Back to close it)
+      const sh = $("skySheet");
+      if (sheet.v > 0 && e.target.closest && e.target.closest(".sky-sheet") && sh.scrollHeight > sh.clientHeight + 2) return;
       sheet.drag = { id: e.pointerId, y0: e.clientY, v0: sheet.v, last: e.clientY, t: e.timeStamp, vy: 0, moving: false, target: e.target };
     });
     document.addEventListener("pointermove", (e) => {
@@ -719,43 +826,112 @@
     let a = seed >>> 0;
     return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   }
-  // mostly tiny and faint, a handful a little brighter, some faintly blue or warm, each twinkling gently
+  // mostly tiny and faint, a handful a little brighter, some faintly blue or warm, each twinkling on its own beat;
+  // the last 90 come out only deep in the night
+  const BASE_STARS = 170;
   const FIELD = (() => {
     const r = seeded(1447);
     const tints = [[255, 255, 255], [255, 255, 255], [220, 230, 255], [255, 241, 222]];
-    return Array.from({ length: 170 }, () => {
-      const y = Math.pow(r(), 1.35), lucky = r() < .06;
+    return Array.from({ length: BASE_STARS + 90 }, (_, i) => {
+      const y = Math.pow(r(), 1.35), lucky = i < BASE_STARS && r() < .07;
       return {
         x: r(), y,
-        r: lucky ? .75 + r() * .3 : .35 + r() * .4,
-        bright: lucky ? .75 + r() * .25 : .18 + Math.pow(r(), 2) * .5,
+        r: lucky ? .8 + r() * .35 : .35 + r() * .4,
+        bright: lucky ? .8 + r() * .2 : .22 + Math.pow(r(), 2) * .5,
         tint: tints[Math.floor(r() * tints.length)],
-        period: 3 + r() * 6, phase: r() * Math.PI * 2, depth: .12 + r() * .3
+        period: 1.4 + r() * 3.6, phase: r() * Math.PI * 2, depth: .4 + r() * .5
       };
     });
+  })();
+  // the dust of the Milky Way: along the band, across it, size, brightness
+  const DUST = (() => {
+    const r = seeded(786);
+    return Array.from({ length: 260 }, () => [r(), (r() + r() + r() - 1.5) / 1.5, .25 + r() * .35, .25 + r() * .55]);
+  })();
+  const FIREFLIES = (() => {
+    const r = seeded(613);
+    return Array.from({ length: 16 }, () => [r(), .74 + r() * .2, .5 + r(), r() * Math.PI * 2]);
+  })();
+  // windows of the villages on the hills, in the hills' own 400 × 60 space
+  const WINDOWS = (() => {
+    const out = [];
+    try {
+      const ctx = document.createElement("canvas").getContext("2d");
+      const near = new Path2D("M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z");
+      const far = new Path2D("M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z");
+      const r = seeded(1912);
+      [[70, 8], [150, 7], [232, 10], [290, 9], [356, 7]].forEach(([vx, count]) => {
+        let made = 0, tries = 0;
+        while (made < count && tries++ < 200) {
+          const x = vx + (r() - .5) * 40, y = 14 + r() * 28;
+          const inNear = ctx.isPointInPath(near, x, y), inFar = ctx.isPointInPath(far, x, y);
+          const onNear = inNear && !ctx.isPointInPath(near, x, y - 5);
+          const onFar = !inNear && inFar && !ctx.isPointInPath(far, x, y - 6);
+          if (!onNear && !onFar) continue;
+          out.push([x, y, r(), r()]);
+          made++;
+        }
+      });
+    } catch (e) { /* no canvas: no windows */ }
+    return out;
   })();
   const CLOUDS = [[.14, 1, 150, .1], [.3, .75, 115, .62], [.44, .55, 95, .35]];
   const PUFFS = [[-.55, .1, .34], [-.22, -.08, .46], [.16, -.16, .52], [.5, .02, .4], [.02, .14, .44]];
   const wave = (t, period, phase) => .5 + .5 * Math.sin(t / period * Math.PI * 2 + (phase || 0));
   const rgba = (c, a) => "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
 
-  const live = { raf: 0, t0: performance.now(), w: 0, h: 0, dpr: 1 };
+  // The sky moves slowly, so about 30 pictures a second look just as smooth, for a fraction of the work.
+  const live = { raf: 0, t0: performance.now(), w: 0, h: 0, dpr: 1, last: 0, frontKey: "" };
+  function sizeCanvas(cv, w, h, dpr) {
+    const W = Math.round(w * dpr), H = Math.round(h * dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return ctx;
+  }
   function drawSky(now) {
     live.raf = 0;
     if (!isFullSky() || document.hidden || reduceMotion.matches) { document.body.classList.remove("sky-is-live"); return; }
+    if (now - live.last < 31) { live.raf = requestAnimationFrame(drawSky); return; }
+    live.last = now;
     document.body.classList.add("sky-is-live");
     const cv = $("skyLive");
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = cv.clientWidth, h = cv.clientHeight;
-    if (w !== live.w || h !== live.h || dpr !== live.dpr) {
-      live.w = w; live.h = h; live.dpr = dpr;
-      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-    }
-    const ctx = cv.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    live.w = w; live.h = h; live.dpr = dpr;
+    const ctx = sizeCanvas(cv, w, h, dpr);
     ctx.clearRect(0, 0, w, h);
     const t = (now - live.t0) / 1000;
     const pal = PAL[document.body.dataset.phase] || PAL.night;
+    const sc = state.scene || { tint: [0, 0, 0, 0], starBoost: 0, milkyWay: 0, brightStar: 0, birds: 0, plane: 0, nightPlane: 0, fireflies: 0, lights: 0, mist: 0, hour: 12 };
+    const moon = state.moon && state.moon.up ? state.moon : null;
+    const day = $("nextCard").dataset.orb === "sun";
+
+    // the colour of the hour
+    if (sc.tint[3] > 0) {
+      const g = ctx.createLinearGradient(0, 0, 0, h), c = sc.tint.slice(0, 3).map(Math.round), k = sc.tint[3];
+      g.addColorStop(0, rgba(c, k * .55)); g.addColorStop(.6, rgba(c, k)); g.addColorStop(1, rgba(c, k * .7));
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    }
+
+    // the Milky Way, deep in the night
+    const mw = sc.milkyWay * pal.stars * (moon ? 1 - .6 * moon.k : 1);
+    if (mw > .02) {
+      const fx = -.1 * w, fy = .52 * h, tx = 1.1 * w, ty = .02 * h;
+      const len = Math.hypot(tx - fx, ty - fy), ux = (tx - fx) / len, uy = (ty - fy) / len, half = Math.min(w, h) * .16;
+      ctx.save(); ctx.translate(fx, fy); ctx.rotate(Math.atan2(uy, ux));
+      const g = ctx.createLinearGradient(0, -half, 0, half);
+      g.addColorStop(0, "rgba(200,210,255,0)"); g.addColorStop(.3, rgba([200, 210, 255], .07 * mw));
+      g.addColorStop(.5, rgba([235, 228, 255], .1 * mw)); g.addColorStop(.7, rgba([200, 210, 255], .07 * mw)); g.addColorStop(1, "rgba(200,210,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, -half, len, 2 * half);
+      ctx.restore();
+      DUST.forEach(([along, across, r, b]) => {
+        const x = fx + ux * along * len - uy * across * half * .9, y = fy + uy * along * len + ux * across * half * .9;
+        if (y > h * .62) return;
+        ctx.fillStyle = rgba([234, 239, 255], b * .5 * mw);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      });
+    }
 
     // clouds
     if (pal.clouds > 0) {
@@ -773,23 +949,34 @@
       });
     }
 
-    // stars
+    // stars: a sharper twinkle, a tiny glint on the bright ones, and more of them deep in the night
     if (pal.stars > 0) {
-      const boxH = h * .66;
-      FIELD.forEach((s) => {
+      const boxH = h * .66, boost = sc.starBoost, wash = moon ? 1 - .35 * moon.k : 1;
+      const count = BASE_STARS + Math.round((FIELD.length - BASE_STARS) * boost);
+      ctx.lineWidth = .6; ctx.lineCap = "round";
+      for (let i = 0; i < count; i++) {
+        const s = FIELD[i];
         const fade = s.y <= .55 ? 1 : 1 - (s.y - .55) / .45;
-        const a = Math.min(1, pal.stars * s.bright * (1 - s.depth * wave(t, s.period, s.phase)) * fade);
-        if (a <= .02) return;
+        const wv = wave(t, s.period, s.phase);
+        const extra = i >= BASE_STARS ? boost : 1;
+        const a = Math.min(1, pal.stars * s.bright * (1 - s.depth * wv * wv) * fade * extra * (s.bright > .7 ? 1 : wash) * (1 + .2 * boost));
+        if (a <= .02) continue;
         const x = s.x * w, y = s.y * boxH;
-        if (s.r > .7) { // the brighter ones have the faintest halo
-          ctx.fillStyle = rgba(s.tint, a * .07);
-          ctx.beginPath(); ctx.arc(x, y, s.r * 3, 0, Math.PI * 2); ctx.fill();
+        if (s.r > .7) {
+          ctx.fillStyle = rgba(s.tint, a * .12);
+          ctx.beginPath(); ctx.arc(x, y, s.r * 3.4, 0, Math.PI * 2); ctx.fill();
+          const flash = Math.pow(1 - wv, 6);
+          if (flash > .05) {
+            const l = s.r * (2.5 + 4 * flash);
+            ctx.strokeStyle = rgba(s.tint, a * .55 * flash);
+            ctx.beginPath(); ctx.moveTo(x - l, y); ctx.lineTo(x + l, y); ctx.moveTo(x, y - l); ctx.lineTo(x, y + l); ctx.stroke();
+          }
         }
         ctx.fillStyle = rgba(s.tint, a);
         ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2); ctx.fill();
-      });
-      // now and then a star falls
-      const every = 11, lasts = .9, n = Math.floor(t / every), local = t - n * every;
+      }
+      // now and then a star falls (more often deep in the night)
+      const every = boost > .5 ? 7 : 11, lasts = .9, n = Math.floor(t / every), local = t - n * every;
       const r = seeded(n * 7919 + 13);
       if (pal.stars >= .5 && local <= lasts && r() >= .5) {
         const sx = (.25 + r() * .7) * w, sy = (.04 + r() * .28) * h;
@@ -805,6 +992,82 @@
         ctx.beginPath(); ctx.moveTo(hx - dx * tl, hy - dy * tl); ctx.lineTo(hx, hy); ctx.stroke();
       }
     }
+
+    // the morning star in the east before sunrise, the evening star in the west after sunset
+    if (sc.brightStar > .02) {
+      const bx = (sc.hour < 12 ? .1 : .9) * w, by = h * .7, pulse = .85 + .15 * wave(t, 2.6), k = sc.brightStar;
+      ctx.fillStyle = rgba([255, 248, 236], .1 * k * pulse); ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI * 2); ctx.fill();
+      const l = 6 + 3 * pulse;
+      ctx.strokeStyle = rgba([255, 248, 236], .5 * k * pulse); ctx.lineWidth = .8;
+      ctx.beginPath(); ctx.moveTo(bx - l, by); ctx.lineTo(bx + l, by); ctx.moveTo(bx, by - l); ctx.lineTo(bx, by + l); ctx.stroke();
+      ctx.fillStyle = rgba([255, 248, 236], k); ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // a small flock: out in the morning, home in the evening
+    if (sc.birds > .02) {
+      const every = 46, crossing = 30, n = Math.floor(t / every), local = t - n * every;
+      if (local <= crossing) {
+        const r = seeded(n * 4513 + 7), morning = sc.hour < 12, p = local / crossing;
+        const x = (morning ? -.15 + 1.3 * p : 1.15 - 1.3 * p) * w;
+        const y = (.2 + r() * .25) * h + Math.sin(p * Math.PI * 2) * 6;
+        ctx.strokeStyle = rgba(day ? [30, 36, 56] : [14, 15, 30], .55 * sc.birds); ctx.lineWidth = 1.3; ctx.lineCap = "round";
+        const count = 4 + Math.floor(r() * 4), back = morning ? -1 : 1;
+        for (let i = 0; i < count; i++) {
+          const row = Math.floor((i + 1) / 2), side = i % 2 ? -1 : 1;
+          const cx = x + back * row * 14, cy = y + side * row * 9 + r() * 3;
+          const span = 5 + r() * 1.5, lift = 2.5 * Math.sin(t * 9 + i * 1.3);
+          ctx.beginPath();
+          ctx.moveTo(cx - span, cy - lift);
+          ctx.quadraticCurveTo(cx - span * .4, cy - lift * .3 - 1.2, cx, cy);
+          ctx.quadraticCurveTo(cx + span * .4, cy - lift * .3 - 1.2, cx + span, cy - lift);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // a plane high in the day sky, leaving a thin trail
+    if (sc.plane > .02) {
+      const every = 80, crossing = 55, n = Math.floor(t / every), local = t - n * every, r = seeded(n * 2861 + 3);
+      if (local <= crossing + 12 && r() >= .35) {
+        const ltr = r() < .5, y0 = (.08 + r() * .22) * h, y1 = y0 + (r() - .5) * .12 * h;
+        const at = (q) => [(ltr ? -.05 + 1.1 * q : 1.05 - 1.1 * q) * w, y0 + (y1 - y0) * q];
+        const p = Math.min(1, local / crossing), hd = at(p), tl = at(Math.max(0, p - .35));
+        const fade = local > crossing ? 1 - (local - crossing) / 12 : 1;
+        const g = ctx.createLinearGradient(tl[0], tl[1], hd[0], hd[1]);
+        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, rgba([255, 255, 255], .35 * sc.plane * fade));
+        ctx.strokeStyle = g; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(tl[0], tl[1]); ctx.lineTo(hd[0], hd[1]); ctx.stroke();
+        if (local <= crossing) { ctx.fillStyle = rgba([255, 255, 255], .8 * sc.plane); ctx.beginPath(); ctx.arc(hd[0], hd[1], 1.3, 0, Math.PI * 2); ctx.fill(); }
+      }
+    }
+
+    // a plane's lights blinking across the evening sky
+    if (sc.nightPlane > .02) {
+      const every = 95, crossing = 70, n = Math.floor(t / every), local = t - n * every, r = seeded(n * 1733 + 11);
+      if (local <= crossing && r() >= .4) {
+        const ltr = r() < .5, p = local / crossing, y = (.1 + r() * .25) * h + p * 20;
+        const x = (ltr ? -.05 + 1.1 * p : 1.05 - 1.1 * p) * w, k = sc.nightPlane, blink = (t * 1.1) % 1;
+        ctx.fillStyle = rgba([255, 255, 255], .55 * k); ctx.beginPath(); ctx.arc(x, y, .9, 0, Math.PI * 2); ctx.fill();
+        const col = blink < .12 ? [255, 100, 100] : blink > .5 && blink < .58 ? [255, 255, 255] : null;
+        if (col) {
+          ctx.fillStyle = rgba(col, .25 * k); ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = rgba(col, .95 * k); ctx.beginPath(); ctx.arc(x, y, 1.3, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    // fireflies on summer evenings
+    if (sc.fireflies > .02) {
+      FIREFLIES.forEach(([fx, fy, sp, ph]) => {
+        const x = (fx + .04 * Math.sin(t * .3 * sp + ph)) * w, y = fy * h + 12 * Math.sin(t * .45 * sp + ph * 2);
+        const on = Math.pow(Math.max(0, Math.sin(t * 1.3 * sp + ph)), 3) * sc.fireflies;
+        if (on < .03) return;
+        ctx.fillStyle = rgba([232, 255, 138], .18 * on); ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = rgba([232, 255, 138], .9 * on); ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+
+    drawFront(sc, w, h, dpr);
 
     // a few faint sun rays, turning slowly (they rise with the sun when the sheet opens)
     const card = $("nextCard");
@@ -835,6 +1098,34 @@
     }
     live.raf = requestAnimationFrame(drawSky);
   }
+  // In front of the hills: valley mist after sunrise, and the lit windows of the villages (on at dusk,
+  // going out one by one after midnight, a few again for the Sabah prayer). Redrawn only when they change.
+  function drawFront(sc, w, h, dpr) {
+    const key = [w, h, dpr, sc.lights, Math.round(sc.mist * 40)].join(",");
+    if (key === live.frontKey) return;
+    live.frontKey = key;
+    const ctx = sizeCanvas($("skyFront"), w, h, dpr);
+    ctx.clearRect(0, 0, w, h);
+    const hh = Math.min(.2 * h, 170), top = h - hh, sx = w / 400, sy = hh / 60;
+    if (sc.mist > .02) {
+      [[.2, 30, .32, 1], [.62, 26, .4, .8], [.95, 32, .28, .9]].forEach(([cx, cy, rx, a]) => {
+        const x = cx * w, y = top + cy * sy, R = rx * w;
+        ctx.save(); ctx.translate(x, y); ctx.scale(1, (11 * sy) / R);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+        g.addColorStop(0, rgba([244, 241, 248], .34 * a * sc.mist)); g.addColorStop(1, "rgba(244,241,248,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+    }
+    if (sc.lights > .02) {
+      WINDOWS.forEach(([x, y, warmth, order]) => {
+        if (order > sc.lights) return;
+        const c = [255, Math.round(210 + 32 * warmth), Math.round(122 + 88 * warmth)];
+        ctx.fillStyle = rgba(c, .16); ctx.beginPath(); ctx.arc(x * sx, top + y * sy, 3.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = rgba(c, .9); ctx.beginPath(); ctx.arc(x * sx, top + y * sy, .95, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+  }
   function wakeSky() {
     resetSheetIfHidden();
     if (!live.raf && isFullSky() && !document.hidden && !reduceMotion.matches) live.raf = requestAnimationFrame(drawSky);
@@ -855,12 +1146,6 @@
     });
     $("nextMonth").addEventListener("click", () => {
       const c = state.cursor; state.cursor = c.m === 12 ? { y: c.y + 1, m: 1 } : { y: c.y, m: c.m + 1 }; renderMonth();
-    });
-    $("tipsToggle").addEventListener("click", () => {
-      smoothly(() => { state.tipsOn = !state.tipsOn; store.set("tips", state.tipsOn ? "1" : "0"); applyTipsVisibility(); });
-    });
-    $("focusBtn").addEventListener("click", () => {
-      smoothly(() => { state.focus = !state.focus; store.set("focus", state.focus ? "1" : "0"); applyFocus(); });
     });
     $("tabToday").addEventListener("click", () => { if (state.view !== "today") smoothly(() => setView("today")); });
     $("tabMonth").addEventListener("click", () => { if (state.view !== "month") smoothly(() => setView("month")); });
@@ -904,6 +1189,7 @@
 
     document.addEventListener("visibilitychange", () => { if (!document.hidden) { offsetCache.clear(); tick(); renderToday(); wakeSky(); } });
     window.addEventListener("resize", wakeSky);
+    phone.addEventListener?.("change", applyFocus);
 
     let deferredPrompt = null;
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -921,7 +1207,6 @@
   // ---------- Start ----------
   applyTheme();
   applyLook();
-  applyTipsVisibility();
   lockPortrait();
   renderCities();
   setView("today");

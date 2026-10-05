@@ -46,8 +46,8 @@
     (function () {
       try {
         var b = document.body;
-        if (localStorage.getItem("vaktet:focus") === "1") b.classList.add("is-focus");
-        if (localStorage.getItem("vaktet:tips") === "0") b.classList.add("no-tips");
+        // on a phone, today opens straight onto the full-screen sky
+        if (window.matchMedia("(max-width: 899px)").matches) b.classList.add("is-focus", "no-tips");
       } catch (e) { /* ignore */ }
     })();
   </script>
@@ -90,7 +90,11 @@
           <div class="sky-haze"></div>
           <canvas class="sky-live" id="skyLive"></canvas>
           <div class="sky-orb"></div>
+          <div class="sky-moon" id="skyMoon" hidden>
+            <svg viewBox="0 0 40 40"><circle class="moon-dark" cx="20" cy="20" r="14"/><g><path class="moon-lit" id="moonLit" d=""/></g></svg>
+          </div>
           <svg class="sky-hills" viewBox="0 0 400 60" preserveAspectRatio="none"><path class="hill-far" d="M0 34C30 27 58 30 92 22c30-7 52 2 84 6 34 4 58-17 96-19 30-2 48 12 76 13 22 1 36-6 52-8V60H0Z"/><path class="hill-near" d="M0 46c36-7 66-2 104-9 40-7 70 6 112 5 40-1 64-12 102-12 34 0 58 8 82 6V60H0Z"/></svg>
+          <canvas class="sky-front" id="skyFront"></canvas>
           <div class="sky-veil"></div>
         </div>
         <div class="next-head">
@@ -114,22 +118,6 @@
         <span>Rrëshqit lart për vaktet</span>
       </button>
 
-      <div class="below-card">
-        <button type="button" class="focus-btn" id="focusBtn" aria-pressed="false">
-          <svg class="ico-hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c5.5 0 9 5.5 9 7 0 .7-.8 2.2-2.2 3.7M6.5 6.6C4.3 8 3 10.9 3 12c0 1.5 3.5 7 9 7 1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <svg class="ico-show" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c0-1.5 3.5-7 9-7s9 5.5 9 7-3.5 7-9 7-9-5.5-9-7Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
-          <span id="focusLabel">Fshih vaktet</span>
-        </button>
-
-        <section class="tips" id="tips" aria-labelledby="tipsTitle">
-          <div class="tips-head">
-            <h2 class="tips-title" id="tipsTitle">Dy këshilla për sot</h2>
-            <button type="button" class="tips-toggle" id="tipsToggle" aria-controls="tipsList" aria-expanded="true">Fshih</button>
-          </div>
-          <div id="tipsList"></div>
-        </section>
-      </div>
-
       <div class="alarm" id="alarmCard" hidden>
         <svg class="alarm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 9.5V13l2.5 1.5M4.5 5 7 3M19.5 5 17 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div class="alarm-body">
@@ -141,6 +129,11 @@
 
       <ol class="times" id="times"></ol>
       <p class="city-note" id="cityNote"></p>
+
+      <section class="tips" id="tips" aria-labelledby="tipsTitle">
+        <h2 class="tips-title" id="tipsTitle">Dy këshilla për sot</h2>
+        <div id="tipsList"></div>
+      </section>
     </section>
 
     <section class="panel month" id="monthView" aria-labelledby="monthTitle">
@@ -178,6 +171,13 @@
     <div class="grab" aria-hidden="true"></div>
     <div class="sky-sheet-head"><span>Vaktet e sotme</span><span id="skySheetCity"></span></div>
     <ol id="skyTimes"></ol>
+    <div class="sky-alarm" id="skyAlarm" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 9.5V13l2.5 1.5M4.5 5 7 3M19.5 5 17 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><p class="sky-alarm-title">Alarmi për sabah</p><p class="sky-alarm-sub" id="skyAlarmSub"></p></div>
+      <span class="sky-alarm-time" id="skyAlarmTime"></span>
+    </div>
+    <h2 class="sky-tips-title">Dy këshilla për sot</h2>
+    <div class="sky-tips" id="skyTips"></div>
   </section>
 
   <nav class="tabs" aria-label="Pamja">
