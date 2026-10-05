@@ -126,4 +126,4 @@ APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/andr
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 
 ### Përditësimi
-Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v18`) që pajisjet ta marrin versionin e ri.
+Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v20`) që pajisjet ta marrin versionin e ri.
