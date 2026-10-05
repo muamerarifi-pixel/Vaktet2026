@@ -340,3 +340,46 @@ class Reveal extends StatelessWidget {
     );
   }
 }
+
+/// Cross-fades to a new [child] whenever [value] changes. Every change gets a key of its own, so going quickly
+/// back to a value that is still fading out never puts two children with the same key on the screen.
+class FadeSwap extends StatefulWidget {
+  const FadeSwap({super.key, required this.value, required this.duration, required this.child, this.expand = false});
+
+  final Object value;
+  final Duration duration;
+  final Widget child;
+
+  /// The children fill the space (a full-screen sky) instead of being centred.
+  final bool expand;
+
+  @override
+  State<FadeSwap> createState() => _FadeSwapState();
+}
+
+class _FadeSwapState extends State<FadeSwap> {
+  late Object _value = widget.value;
+  int _changes = 0;
+
+  @override
+  void didUpdateWidget(FadeSwap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != _value) {
+      _value = widget.value;
+      _changes++;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : widget.duration,
+    switchInCurve: Curves.easeOut,
+    switchOutCurve: Curves.easeIn,
+    layoutBuilder: (current, previous) => Stack(
+      fit: widget.expand ? StackFit.expand : StackFit.loose,
+      alignment: Alignment.center,
+      children: [...previous, ?current],
+    ),
+    child: KeyedSubtree(key: ValueKey(_changes), child: widget.child),
+  );
+}

@@ -1,4 +1,6 @@
 // The real Moon and the hours of the sky.
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vaktet/src/logic/cities.dart';
 import 'package:vaktet/src/logic/day.dart';
@@ -80,7 +82,7 @@ void main() {
       expect(summer.fireflies, greaterThan(0));
     });
 
-    test('the scene only changes a few hundred times a day (the sky is not repainted every second)', () {
+    test('the scene changes only about once every 15 seconds (the sky is not repainted every second)', () {
       const day = Day(2026, 10, 5);
       var changes = 0;
       SkyScene? last;
@@ -89,7 +91,67 @@ void main() {
         if (s != last) changes++;
         last = s;
       }
-      expect(changes, lessThan(4000));
+      expect(changes, lessThan(6000));
+    });
+  });
+
+  group('The sky through the day', () {
+    final rows = dayRows(const Day(2026, 10, 5), cityById(null));
+    int at(PrayerKey k) => rowOf(rows, k).instant;
+
+    test('the colours melt from one prayer time into the next instead of jumping', () {
+      // right at sunset: half afternoon, half dusk
+      final atSunset = skyBlendAt(rows, at(PrayerKey.maghrib));
+      expect(atSunset.from, SkyPhase.afternoon);
+      expect(atSunset.to, SkyPhase.dusk);
+      expect(atSunset.t, closeTo(.5, .02));
+      // minute by minute, never a jump
+      var last = -1.0;
+      for (
+        var t = at(PrayerKey.maghrib) - 40 * msPerMinute;
+        t <= at(PrayerKey.maghrib) + 40 * msPerMinute;
+        t += msPerMinute
+      ) {
+        final b = skyBlendAt(rows, t);
+        final dusk = b.to == SkyPhase.dusk ? b.t : (b.from == SkyPhase.dusk ? 1 - b.t : 0.0);
+        expect(dusk, greaterThanOrEqualTo(last));
+        expect(dusk - math.max(last, 0), lessThan(.06));
+        last = dusk;
+      }
+      // the middle of the afternoon is one sky
+      final mid = skyBlendAt(rows, (at(PrayerKey.asr) + at(PrayerKey.maghrib)) ~/ 2);
+      expect(mid.from, SkyPhase.afternoon);
+      expect(mid.t, 0);
+    });
+
+    test('the sun rises and sets behind the hills', () {
+      expect(skySceneAt(rows, at(PrayerKey.sunrise), const Day(2026, 10, 5)).sunProgress, closeTo(0, .002));
+      expect(skySceneAt(rows, at(PrayerKey.maghrib), const Day(2026, 10, 5)).sunProgress, closeTo(1, .002));
+      expect(skySceneAt(rows, utc(2026, 10, 5, 0), const Day(2026, 10, 5)).sunProgress, lessThan(-.2));
+    });
+
+    test('clouds: thin in the morning, fuller in the afternoon, coloured at sunset, none at night', () {
+      const day = Day(2026, 10, 5);
+      final morning = skySceneAt(rows, at(PrayerKey.sunrise) + 90 * msPerMinute, day);
+      final afternoon = skySceneAt(rows, at(PrayerKey.asr), day);
+      final sunset = skySceneAt(rows, at(PrayerKey.maghrib) - 20 * msPerMinute, day);
+      final night = skySceneAt(rows, utc(2026, 10, 5, 0), day);
+      expect(morning.cloudThin, greaterThan(.7));
+      expect(afternoon.cloudCover, greaterThan(morning.cloudCover));
+      expect(afternoon.cloudThin, lessThan(.2));
+      expect(sunset.cloudSunset, greaterThan(.5));
+      expect(night.cloudCover, 0);
+    });
+
+    test('the hills follow the seasons, with snow in winter', () {
+      expect(seasonColor(const Day(2026, 4, 15)), 0xFF3F8F52);
+      expect(seasonColor(const Day(2026, 7, 15)), 0xFFC9A24A);
+      expect(seasonColor(const Day(2026, 10, 15)), 0xFFB0602C);
+      expect(seasonColor(const Day(2027, 1, 15)), 0xFF5D6E80);
+      expect(snowOn(const Day(2027, 1, 20)), 1);
+      expect(snowOn(const Day(2026, 12, 20)), 1);
+      expect(snowOn(const Day(2026, 7, 1)), 0);
+      expect(snowOn(const Day(2026, 4, 15)), 0);
     });
   });
 }

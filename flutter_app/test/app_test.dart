@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
+import 'package:vaktet/src/logic/day.dart';
 import 'package:vaktet/src/state/app_controller.dart';
 
 import 'test_fonts.dart';
@@ -99,24 +100,54 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('stepping to another day shows its times and a way back to today', (tester) async {
+  testWidgets('another day shows its own sky at this hour, its times, and a way back to today', (tester) async {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
     await tester.tap(_label('Dita tjetër'));
     await tester.pumpAndSettle();
     expect(find.text('E diel, 4 tetor 2026'), findsOneWidget);
     expect(find.text('Kthehu te sot'), findsOneWidget);
-    expect(find.text('NAMAZI I ARDHSHËM'), findsNothing);
+    // the sky of 4 October at 18:38: Jacia is next that evening
+    expect(find.text('NAMAZI I ARDHSHËM'), findsOneWidget);
+    expect(find.text('Jacia'), findsWidgets);
+    await _openSheet(tester);
+    expect(find.text('VAKTET E DITËS'), findsOneWidget);
     expect(find.text('04:54'), findsOneWidget); // Imsaku on 4 October
+    expect(find.text('DY KËSHILLA PËR KËTË DITË'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Kthehu te sot'));
     await tester.pumpAndSettle();
     expect(c.isToday, isTrue);
     expect(find.text('E shtunë, 3 tetor 2026'), findsOneWidget);
+    expect(find.text('Kthehu te sot'), findsNothing);
     await tester.tap(_label('Dita e mëparshme'));
     await tester.pumpAndSettle();
     expect(find.text('E premte, 2 tetor 2026'), findsOneWidget);
+    await _openSheet(tester);
     expect(find.text('Xhumaja'), findsOneWidget);
     handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('swipe left for the next day, right for the day before', (tester) async {
+    final c = await _open(tester);
+    await tester.pumpAndSettle();
+    await tester.flingFrom(const Offset(320, 450), const Offset(-220, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(c.selected.d, 4);
+    expect(find.text('E diel, 4 tetor 2026'), findsOneWidget);
+    await tester.flingFrom(const Offset(70, 450), const Offset(220, 0), 1200);
+    await tester.flingFrom(const Offset(70, 450), const Offset(220, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(c.selected.d, 2);
+    // a slow, short drag does nothing
+    await tester.dragFrom(const Offset(200, 450), const Offset(-30, 0));
+    await tester.pumpAndSettle();
+    expect(c.selected.d, 2);
+    // the moon of another day is that day's moon: 26 October is a full moon
+    c.select(const Day(2026, 10, 26));
+    expect(c.model.scene.moon.illumination, greaterThan(.97));
     await _close(tester);
   });
 
@@ -130,9 +161,6 @@ void main() {
     await tester.tap(find.text('Prishtinë').last);
     await tester.pumpAndSettle();
     expect(find.text('04:52'), findsOneWidget); // one minute earlier
-    c.stepDay(1);
-    await tester.pumpAndSettle();
-    expect(find.text('Prishtinë: 1 minutë më herët se kohët bazë të Takvimit.'), findsOneWidget);
     expect(c.city.id, 'prishtine');
     expect((await SharedPreferences.getInstance()).getString('city'), 'prishtine');
     handle.dispose();

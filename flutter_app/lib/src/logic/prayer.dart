@@ -12,7 +12,7 @@ import 'day.dart';
 import 'format.dart';
 import 'sky_scene.dart';
 
-export 'sky_scene.dart' show MoonState, SkyScene;
+export 'sky_scene.dart' show MoonState, SkyBlend, SkyScene;
 
 enum PrayerKey { imsak, sabah, sunrise, dhuhr, dreka, asr, maghrib, isha }
 

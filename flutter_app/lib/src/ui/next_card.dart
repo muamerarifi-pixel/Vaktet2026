@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
@@ -6,6 +7,7 @@ import 'glass.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
 import 'text.dart';
+import 'widgets.dart';
 
 const Color _white = Color(0xFFFFFFFF);
 
@@ -35,8 +37,12 @@ class NextCard extends StatelessWidget {
     required this.mode,
     required this.clock,
     this.reveal,
+    this.parallax,
     this.countdownWeight = 900,
   });
+
+  /// Full screen only: how far the phone is tilted.
+  final ValueListenable<Offset>? parallax;
 
   final TodayModel model;
   final int now;
@@ -59,7 +65,7 @@ class NextCard extends StatelessWidget {
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, parallax: parallax, child: content),
     );
   }
 }
@@ -134,14 +140,19 @@ class _NameAndTime extends StatelessWidget {
         style: vt(full ? clampPx(17, vw * .048, 21) : clampPx(16, vw * .044, 19), 800, color: _white, ls: .02),
       ),
     );
-    return SizedBox(
-      width: double.infinity,
-      child: Wrap(
-        alignment: center ? WrapAlignment.center : WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: center ? (full ? 14 : 14) : 12,
-        runSpacing: full ? 10 : 6,
-        children: [name, time],
+    // when a prayer time comes, the next one's name and time fade in
+    return FadeSwap(
+      value: '${card.name} ${card.time}',
+      duration: const Duration(milliseconds: 900),
+      child: SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          alignment: center ? WrapAlignment.center : WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: center ? (full ? 14 : 14) : 12,
+          runSpacing: full ? 10 : 6,
+          children: [name, time],
+        ),
       ),
     );
   }
