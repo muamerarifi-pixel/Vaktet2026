@@ -7,6 +7,7 @@ import '../logic/tips.dart';
 import '../state/app_controller.dart';
 import 'colors.dart';
 import 'glass.dart';
+import 'landscape.dart' show khatam;
 import 'next_card.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
@@ -170,7 +171,6 @@ class DayNotes extends StatelessWidget {
     final notes = all.take(onSky ? (short ? 1 : 3) : 6).toList();
     if (!friday && notes.isEmpty) return const SizedBox.shrink();
     final chips = <Widget>[
-      if (friday) _NoteChip(text: 'E xhuma · Xhuma mubarek', dot: _gold, onSky: onSky, gold: true),
       for (final n in notes)
         _NoteChip(
           text: noteText(n, today: c.isToday),
@@ -180,34 +180,107 @@ class DayNotes extends StatelessWidget {
     ];
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: chips),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (friday) _FridayMark(onSky: onSky),
+          if (friday && chips.isNotEmpty) const SizedBox(height: 7),
+          if (chips.isNotEmpty) Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: chips),
+        ],
+      ),
     );
   }
 }
 
+/// Fridays: a small eight-pointed star in gold and "Xhuma mubarek", with a hairline on each side.
+class _FridayMark extends StatelessWidget {
+  const _FridayMark({required this.onSky});
+
+  final bool onSky;
+
+  @override
+  Widget build(BuildContext context) {
+    final gold = onSky ? _gold : const Color(0xFF9A7220);
+    Widget line(bool left) => Container(
+      width: 22,
+      height: 1,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [gold.withValues(alpha: 0), gold.withValues(alpha: .7)],
+          begin: left ? Alignment.centerLeft : Alignment.centerRight,
+          end: left ? Alignment.centerRight : Alignment.centerLeft,
+        ),
+      ),
+    );
+    return Semantics(
+      label: 'E xhuma, Xhuma mubarek',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          line(true),
+          const SizedBox(width: 8),
+          CustomPaint(size: const Size(11, 11), painter: _KhatamPainter(gold)),
+          const SizedBox(width: 7),
+          Text(
+            'Xhuma mubarek',
+            style: vt(
+              13,
+              720,
+              color: gold,
+              ls: .04,
+              height: 1.3,
+              shadows: onSky ? const [Shadow(color: Color(0x59000000), blurRadius: 8, offset: Offset(0, 1))] : null,
+            ),
+          ),
+          const SizedBox(width: 8),
+          line(false),
+        ],
+      ),
+    );
+  }
+}
+
+class _KhatamPainter extends CustomPainter {
+  _KhatamPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawPath(
+      khatam(size.center(Offset.zero), size.shortestSide / 2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..strokeJoin = StrokeJoin.round
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_KhatamPainter old) => old.color != color;
+}
+
 class _NoteChip extends StatelessWidget {
-  const _NoteChip({required this.text, required this.dot, required this.onSky, this.gold = false});
+  const _NoteChip({required this.text, required this.dot, required this.onSky});
 
   final String text;
   final Color dot;
   final bool onSky;
-  final bool gold;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final fg = onSky ? (gold ? _gold : const Color(0xF2FFFFFF)) : (gold ? const Color(0xFF8A6414) : colors.ink);
+    final fg = onSky ? const Color(0xF2FFFFFF) : colors.ink;
     final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (gold)
-          SvgIcon(VIcon.brand, size: 13, color: onSky ? _gold : const Color(0xFFB8892B))
-        else
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-          ),
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 7),
         Flexible(
           child: Text(
@@ -222,8 +295,8 @@ class _NoteChip extends StatelessWidget {
     const padding = EdgeInsets.fromLTRB(10, 4, 12, 4);
     if (onSky) {
       return Glass(
-        fill: gold ? const Color(0x2EE9C46A) : const Color(0x1FFFFFFF),
-        border: gold ? const Color(0x66F1CF7A) : const Color(0x33FFFFFF),
+        fill: const Color(0x1FFFFFFF),
+        border: const Color(0x33FFFFFF),
         blur: 10,
         padding: padding,
         child: row,
@@ -233,8 +306,8 @@ class _NoteChip extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: gold ? const Color(0x22E9C46A) : colors.surface,
-        border: Border.all(color: gold ? const Color(0x66C99A3A) : colors.line),
+        color: colors.surface,
+        border: Border.all(color: colors.line),
       ),
       child: row,
     );

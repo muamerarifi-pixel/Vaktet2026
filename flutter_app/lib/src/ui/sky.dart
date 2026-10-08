@@ -328,7 +328,6 @@ class SkyOptions {
     this.life = true,
     this.friday = false,
     this.festive = false,
-    this.topInset = 0,
   });
 
   /// The village, the lake and the meadow under the full-screen sky.
@@ -344,9 +343,6 @@ class SkyOptions {
   /// A great night or day, or Ramazan: the minaret is lit with strings of lights.
   final bool festive;
 
-  /// The height of the status bar, for the Friday band of stars.
-  final double topInset;
-
   @override
   bool operator ==(Object other) =>
       other is SkyOptions &&
@@ -354,11 +350,10 @@ class SkyOptions {
       other.mosque == mosque &&
       other.life == life &&
       other.friday == friday &&
-      other.festive == festive &&
-      other.topInset == topInset;
+      other.festive == festive;
 
   @override
-  int get hashCode => Object.hash(landscape, mosque, life, friday, festive, topInset);
+  int get hashCode => Object.hash(landscape, mosque, life, friday, festive);
 }
 
 class SkyPainter extends CustomPainter {
@@ -493,22 +488,8 @@ class SkyPainter extends CustomPainter {
           );
           if (options.life) _paintFireflies(canvas, size, t);
         }
-        if (_full && options.friday) {
-          final open = lift?.value ?? 0;
-          paintFridayRosette(
-            canvas,
-            Offset(size.width / 2, size.height / 2 - .2 * open * size.height),
-            math.min(size.width * .46, 230),
-            t,
-            alpha: (.13 + .1 * pal.stars) * (1 - open),
-            dim: _k,
-          );
-        }
       case SkyLayer.front:
         _veil(canvas, size);
-        if (_full && options.friday) {
-          paintFridayFrame(canvas, size, daylight: 1 - pal.stars, topInset: options.topInset, dim: _k);
-        }
         // glass sheen along the top edge
         canvas.drawRect(
           Offset.zero & size,
@@ -1185,7 +1166,13 @@ class SkyPainter extends CustomPainter {
         village: false,
         friday: options.friday,
         festive: options.festive,
-      ).mosqueAt(canvas, Offset(X * sx - pad, top + (v + 1.5) * sy), sy * .42);
+      ).mosqueAt(
+        canvas,
+        Offset(X * sx - pad, top + (v + 1.5) * sy),
+        sy * .36,
+        // the colour the far hill shows over the sky
+        Color.alphaBlend(hill.withValues(alpha: hill.a * .55), _k(pal.colors.last)),
+      );
     }
     hillAt(_nearHillPath, near, 1, 28);
     // the lit windows of the villages

@@ -425,7 +425,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       life: c.on(Feature.skyLife),
       friday: model.friday && c.on(Feature.fridayLook),
       festive: hijri?.m == 9 || model.notes.any((n) => n.kind == NoteKind.islamic),
-      topInset: MediaQuery.paddingOf(context).top,
     );
     final hints = c.on(Feature.hints);
     final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;

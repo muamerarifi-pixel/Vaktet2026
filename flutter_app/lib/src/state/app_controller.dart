@@ -27,9 +27,13 @@ enum FontChoice {
 
 /// The parts of the app that can be switched on and off in the settings: (title, hint, on by default).
 enum Feature {
-  fridayLook('Pamja e xhumasë', 'Të premteve qielli merr zbukurime islame në ar dhe xhamia ndizet.', true),
-  mosque('Xhamia në horizont', 'Një xhami pranë maleve, që ndryshon me dritën, stinët dhe natën.', true),
-  landscape('Fshati, liqeni dhe bari', 'Shtëpitë, pemët, uji dhe bari poshtë qiellit, sipas orës dhe stinës.', true),
+  fridayLook(
+    'Pamja e xhumasë',
+    'Të premteve xhamia merr një dritë të artë dhe nën datë shfaqet „Xhuma mubarek“.',
+    true,
+  ),
+  mosque('Xhamia në horizont', 'Një xhami e vogël pranë maleve, në ngjyrat e orës; natën ndizen dritaret.', true),
+  landscape('Fshati dhe liqeni', 'Kodra, një fshat i vogël me selvi dhe një liqen që pasqyron qiellin.', true),
   skyLife('Jeta e qiellit', 'Retë, zogjtë, avionët, yjet që bien dhe xixëllonjat.', true),
   hijri('Shfaq datën hixhri', 'Data hixhri nën datën e sotme dhe në muaj.', true),
   national('Ditët kombëtare të Kosovës', 'Festat zyrtare dhe ditët përkujtimore në ekranin kryesor.', true),

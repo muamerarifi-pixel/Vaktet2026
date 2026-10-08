@@ -48,11 +48,11 @@ me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe 
 <img src="docs/screenshots/v1.4/06_month_colours.jpg" width="160" alt="Muaji, me ngjyrë për çdo vakt">
 </div>
 
-🕌 **Xhamia në horizont, pranë maleve** – me kube, minare dhe hilale të arta; merr dritën e çdo ore, skuqet në perëndim, mbulohet me borë në dimër dhe ndizet natën.
+🕌 **Xhamia në horizont, pranë maleve** – një siluetë e vogël e qetë: kube, minare e hollë dhe hilale. Merr ngjyrat e orës; dielli i ulët e prek kubenë, natën ndizen dritaret dhe ballkoni i minares.
 
-🏡 **Fshati, liqeni dhe bari** – shtëpi me çati të kuqe e një kullë guri, pemë sipas stinës (lakuriqe në dimër), liqen që pasqyron qiellin dhe ngrin në dimër, oxhaqe që tymojnë kur bën ftohtë, bar që lëkundet dhe lule në pranverë. Majat e maleve kanë borë sipas kohës së vitit.
+🏔️ **Malet, fshati dhe liqeni** – shtresa siluetash që errësohen sa më afër që vijnë, gjithmonë në ngjyrat e qiellit: maja me borë sipas kohës së vitit, kodra me shtëpi të vogla e selvi, një liqen që pasqyron qiellin, dritën e diellit e të hënës, dhe ngrin në dimër.
 
-🌟 **Pamja e xhumasë** – të premteve: brez yjesh tetëcepëshe dhe hark mihrabi në ar, një rozetë që rrotullohet ngadalë pas numërimit, „Xhuma mubarek" dhe drita në minare.
+🌟 **Pamja e xhumasë** – e qetë: një yll tetëcepësh i artë dhe „Xhuma mubarek" nën datë, hilalet e xhamisë në ar dhe një dritë e butë e artë rreth saj.
 
 📅 **Ditët kombëtare të Kosovës, netët e mëdha islame dhe shënimet e Takvimit të BIK** – në ekranin kryesor, poshtë datës: festat zyrtare (edhe dita e pushimit kur festa bie në fundjavë), Kadri, Miraxhi, Berati, Regaibi, Mevludi, Bajramet, Ashura, hëna e re e e plotë, stinët, xhemret, ora verore … Data hixhri ndjek Takvimin e BIK.
 

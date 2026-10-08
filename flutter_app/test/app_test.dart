@@ -401,7 +401,7 @@ void main() {
     c.dispose();
     // Friday 9 October 2026, 11:00 in Kosovo
     c = await _open(tester, at: DateTime.utc(2026, 10, 9, 9).millisecondsSinceEpoch);
-    expect(find.text('E xhuma · Xhuma mubarek'), findsOneWidget);
+    expect(find.text('Xhuma mubarek'), findsOneWidget);
     expect(find.text('Koha e namazit Duha (nafile), deri në 12:16'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await _close(tester);
@@ -412,7 +412,7 @@ void main() {
       prefs: {'f_fridayLook': false, 'f_nafile': false, 'f_hints': false, 'f_hijri': false},
       at: DateTime.utc(2026, 10, 9, 11).millisecondsSinceEpoch,
     );
-    expect(find.text('E xhuma · Xhuma mubarek'), findsNothing);
+    expect(find.text('Xhuma mubarek'), findsNothing);
     expect(find.textContaining('Duha'), findsNothing);
     expect(find.text('Rrëshqit lart për vaktet'), findsNothing);
     expect(find.text('Rrëshqit poshtë për muajin'), findsNothing);
