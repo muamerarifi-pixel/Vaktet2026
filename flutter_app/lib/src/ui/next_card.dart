@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
@@ -37,12 +36,12 @@ class NextCard extends StatelessWidget {
     required this.mode,
     required this.clock,
     this.reveal,
-    this.parallax,
+    this.options = const SkyOptions(),
     this.countdownWeight = 900,
   });
 
-  /// Full screen only: how far the phone is tilted.
-  final ValueListenable<Offset>? parallax;
+  /// What the sky shows (picked in the settings).
+  final SkyOptions options;
 
   final TodayModel model;
   final int now;
@@ -65,7 +64,7 @@ class NextCard extends StatelessWidget {
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, parallax: parallax, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, options: options, child: content),
     );
   }
 }

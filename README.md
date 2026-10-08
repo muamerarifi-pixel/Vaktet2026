@@ -38,6 +38,34 @@ me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe 
 </table>
 </div>
 
+## Të reja në versionin 1.4 (Android)
+
+<div align="center">
+<img src="docs/screenshots/v1.4/01_sunset_mosque.jpg" width="160" alt="Xhamia pranë maleve në perëndim">&nbsp;
+<img src="docs/screenshots/v1.4/02_friday_night.jpg" width="160" alt="Nata e xhumasë, me zbukurime në ar dhe xhaminë e ndriçuar">&nbsp;
+<img src="docs/screenshots/v1.4/03_nata_e_kadrit.jpg" width="160" alt="Sonte: Nata e Kadrit">&nbsp;
+<img src="docs/screenshots/v1.4/04_winter_lake.jpg" width="160" alt="Dimri, me liqenin e ngrirë">&nbsp;
+<img src="docs/screenshots/v1.4/06_month_colours.jpg" width="160" alt="Muaji, me ngjyrë për çdo vakt">
+</div>
+
+🕌 **Xhamia në horizont, pranë maleve** – me kube, minare dhe hilale të arta; merr dritën e çdo ore, skuqet në perëndim, mbulohet me borë në dimër dhe ndizet natën.
+
+🏡 **Fshati, liqeni dhe bari** – shtëpi me çati të kuqe e një kullë guri, pemë sipas stinës (lakuriqe në dimër), liqen që pasqyron qiellin dhe ngrin në dimër, oxhaqe që tymojnë kur bën ftohtë, bar që lëkundet dhe lule në pranverë. Majat e maleve kanë borë sipas kohës së vitit.
+
+🌟 **Pamja e xhumasë** – të premteve: brez yjesh tetëcepëshe dhe hark mihrabi në ar, një rozetë që rrotullohet ngadalë pas numërimit, „Xhuma mubarek" dhe drita në minare.
+
+📅 **Ditët kombëtare të Kosovës, netët e mëdha islame dhe shënimet e Takvimit të BIK** – në ekranin kryesor, poshtë datës: festat zyrtare (edhe dita e pushimit kur festa bie në fundjavë), Kadri, Miraxhi, Berati, Regaibi, Mevludi, Bajramet, Ashura, hëna e re e e plotë, stinët, xhemret, ora verore … Data hixhri ndjek Takvimin e BIK.
+
+⏰ **Alarmi për sabah në ekran** – pas jacisë e deri në imsak, pa rrëshqitur lart.
+
+🤲 **Namazet nafile** – me shkronja të vogla, kur u vjen koha: Duha, Evvabini dhe Tehexhudi.
+
+⬇️ **Rrëshqit poshtë për muajin** – butonat „Sot" dhe „Muaji" u hoqën. Në muaj çdo vakt ka ngjyrën e vet, dhe ditët e shënuara listohen poshtë tabelës.
+
+👈 **Rrëshqitja anash më e qetë** – dita ndryshon vetëm me një rrëshqitje të qëllimshme, jo me prekje të rastit.
+
+⚙️ **Gjithçka ndizet e fiket te Cilësimet → Veçoritë.** „Lëvizja e qiellit" u hoq.
+
 ## Të reja në versionin 1.3 (Android dhe web)
 
 🌅 **Qielli ndryshon butë** – ngjyrat nuk kërcejnë më te çdo vakt, por shkrihen minutë pas minute: agimi skuqet ngadalë, muzgu zbehet në blu.

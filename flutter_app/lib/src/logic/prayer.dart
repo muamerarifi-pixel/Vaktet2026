@@ -7,6 +7,7 @@ library;
 import 'dart:math' as math;
 
 import '../data/vaktet_base.dart';
+import 'calendar_notes.dart';
 import 'cities.dart';
 import 'day.dart';
 import 'format.dart';
@@ -261,6 +262,18 @@ class AlarmModel {
 
 /// Suggested alarm for Sabahu: a set number of minutes before sunrise (default 30).
 /// Shown after Jacia has passed (for tomorrow) and after midnight until the alarm time (for today).
+({int local, int instant, int sunrise}) _alarmOf(List<PrayerRow> r, int offsetMinutes) {
+  final sun = rowOf(r, PrayerKey.sunrise);
+  final sabah = rowOf(r, PrayerKey.sabah);
+  var local = sun.local - offsetMinutes;
+  var instant = sun.instant - offsetMinutes * msPerMinute;
+  if (instant < sabah.instant) {
+    local = sabah.local;
+    instant = sabah.instant;
+  }
+  return (local: local, instant: instant, sunrise: sun.local);
+}
+
 AlarmModel? alarmSuggestion({
   required int now,
   required Day day,
@@ -268,17 +281,7 @@ AlarmModel? alarmSuggestion({
   required City city,
   required int offsetMinutes,
 }) {
-  ({int local, int instant, int sunrise}) alarmOf(List<PrayerRow> r) {
-    final sun = rowOf(r, PrayerKey.sunrise);
-    final sabah = rowOf(r, PrayerKey.sabah);
-    var local = sun.local - offsetMinutes;
-    var instant = sun.instant - offsetMinutes * msPerMinute;
-    if (instant < sabah.instant) {
-      local = sabah.local;
-      instant = sabah.instant;
-    }
-    return (local: local, instant: instant, sunrise: sun.local);
-  }
+  ({int local, int instant, int sunrise}) alarmOf(List<PrayerRow> r) => _alarmOf(r, offsetMinutes);
 
   final todayAlarm = alarmOf(rows);
   final isha = rowOf(rows, PrayerKey.isha);
@@ -298,6 +301,32 @@ AlarmModel? alarmSuggestion({
   );
 }
 
+/// The Sabah alarm on the home screen: from Jacia until Imsaku, for the morning that is coming.
+AlarmModel? homeAlarmSuggestion({
+  required int now,
+  required Day day,
+  required List<PrayerRow> rows,
+  required City city,
+  required int offsetMinutes,
+}) {
+  final isha = rowOf(rows, PrayerKey.isha), imsak = rowOf(rows, PrayerKey.imsak);
+  final String when;
+  final ({int local, int instant, int sunrise}) alarm;
+  if (now >= isha.instant) {
+    alarm = _alarmOf(dayRows(day.addDays(1), city), offsetMinutes);
+    when = 'nesër';
+  } else if (now < imsak.instant) {
+    alarm = _alarmOf(rows, offsetMinutes);
+    when = 'sot';
+  } else {
+    return null;
+  }
+  return AlarmModel(
+    fmtTime(alarm.local),
+    '$offsetMinutes min para lindjes së diellit ($when ${fmtTime(alarm.sunrise)})',
+  );
+}
+
 // ---------- Everything the Today screen shows ----------
 
 class TodayModel {
@@ -312,7 +341,22 @@ class TodayModel {
     required this.orb,
     required this.scene,
     required this.dayFraction,
+    this.homeAlarm,
+    this.nafile,
+    this.notes = const [],
   });
+
+  /// The Sabah alarm shown on the sky itself, from Jacia until Imsaku (today only).
+  final AlarmModel? homeAlarm;
+
+  /// A voluntary prayer whose time it is (today only).
+  final NafileHint? nafile;
+
+  /// What the calendar notes for the day shown.
+  final List<DayNote> notes;
+
+  /// The day shown is a Friday (Xhumaja).
+  bool get friday => day.weekday == 5;
 
   final Day day;
   final bool isToday;
@@ -340,6 +384,7 @@ TodayModel computeToday({
   required Day selected,
   required City city,
   required int alarmOffset,
+  int hijriAdj = 0,
 }) {
   final isToday = selected == today;
   final rows = dayRows(selected, city);
@@ -367,5 +412,10 @@ TodayModel computeToday({
     orb: orbAt(todayRows, now),
     scene: skySceneAt(todayRows, now, today),
     dayFraction: ((now - midnight) / msPerDay).clamp(0.0, 1.0),
+    homeAlarm: isToday
+        ? homeAlarmSuggestion(now: now, day: selected, rows: rows, city: city, offsetMinutes: alarmOffset)
+        : null,
+    nafile: isToday ? nafileAt(now: now, day: selected, rows: rows, city: city) : null,
+    notes: notesFor(selected, hijriAdj: hijriAdj, city: city),
   );
 }

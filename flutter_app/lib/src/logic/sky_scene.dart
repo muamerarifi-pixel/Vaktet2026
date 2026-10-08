@@ -298,7 +298,11 @@ class SkyScene {
     this.cloudSunset = 0,
     this.season = 0xFF3F8F52,
     this.snow = 0,
+    this.cold = .5,
   });
+
+  /// How cold the time of year is: 1 in mid-January, 0 in mid-July (the snow on the high mountains).
+  final double cold;
 
   /// The colours of the sky, melting from one prayer time into the next.
   final SkyBlend blend;
@@ -453,5 +457,6 @@ SkyScene skySceneAt(List<PrayerRow> rows, int now, Day day) {
     cloudSunset: _q(clouds.$3, 1 / 100),
     season: seasonColor(day),
     snow: _q(snowOn(day), 1 / 100),
+    cold: _q(.5 + .5 * math.cos(2 * math.pi * (dayOfYear(day) - 15) / 365), 1 / 100),
   );
 }

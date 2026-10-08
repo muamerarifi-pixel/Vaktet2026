@@ -16,8 +16,9 @@ Future<void> showSettings(BuildContext context, AppController controller) {
       insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
+        // only the settings change what it shows, not the ticking clock
         child: ListenableBuilder(
-          listenable: controller,
+          listenable: controller.settingsVersion,
           builder: (context, _) => _Sheet(controller: controller),
         ),
       ),
@@ -127,15 +128,14 @@ class _Sheet extends StatelessWidget {
                 weightOf: (w) => w.toDouble(),
               ),
             ),
-            _Field(
-              title: 'Lëvizja e qiellit',
-              hint: 'Kur e anon telefonin, yjet, hëna dhe kodrat lëvizin pak, si të shikoje nga dritarja.',
-              child: Segmented<bool>(
-                options: const [('Me lëvizje', true), ('Pa lëvizje', false)],
-                value: c.tilt,
-                onChanged: c.setTilt,
-              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 20, bottom: 2),
+              child: Text('Veçoritë', style: vt(15, 800, color: colors.ink, height: 1.5)),
             ),
+            Text('Ndizni ose fikni çdo pjesë të aplikacionit.', style: vt(13.5, 500, color: colors.muted)),
+            const SizedBox(height: 6),
+            for (final f in Feature.values)
+              _Switch(title: f.title, hint: f.hint, value: c.on(f), onChanged: (v) => c.setFeature(f, v)),
             Container(
               margin: const EdgeInsets.only(top: 18),
               padding: const EdgeInsets.only(top: 14),
@@ -158,6 +158,84 @@ class _Sheet extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A feature that can be switched on and off.
+class _Switch extends StatelessWidget {
+  const _Switch({required this.title, required this.hint, required this.value, required this.onChanged});
+
+  final String title;
+  final String hint;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Semantics(
+      toggled: value,
+      label: title,
+      excludeSemantics: true,
+      onTap: () => onChanged(!value),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: vt(14.5, 750, color: colors.ink, height: 1.35)),
+                    Text(hint, style: vt(12.5, 500, color: colors.muted, height: 1.35)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _Toggle(on: value),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A small switch in the app's colours.
+class _Toggle extends StatelessWidget {
+  const _Toggle({required this.on});
+
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final d = motion(context) == Duration.zero ? Duration.zero : const Duration(milliseconds: 180);
+    return AnimatedContainer(
+      duration: d,
+      curve: Curves.easeOut,
+      width: 44,
+      height: 26,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), color: on ? c.accent : c.line),
+      child: AnimatedAlign(
+        duration: d,
+        curve: Curves.easeOut,
+        alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: on ? c.accentInk : c.surface,
+            boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 2, offset: Offset(0, 1))],
+          ),
         ),
       ),
     );

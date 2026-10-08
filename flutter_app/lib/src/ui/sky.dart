@@ -1,13 +1,12 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../logic/prayer.dart';
 import 'colors.dart';
+import 'landscape.dart';
 
 /// How the sky card is shown.
 enum SkyMode {
@@ -311,8 +310,55 @@ enum SkyLayer {
   /// Haze, clouds, stars, shooting stars, sun rays, the sun or the moon.
   motion,
 
-  /// The hills, the shade behind the numbers and the glass sheen.
+  /// The mountains, the mosque, the village, the lake and the meadow (full screen), or the hills (card).
+  land,
+
+  /// What moves on the land: the water, the smoke, the grass, the fireflies, the Friday rosette.
+  landMotion,
+
+  /// The shade behind the numbers and the glass sheen (and the Friday frame).
   front,
+}
+
+/// What the sky shows, as picked in the settings.
+class SkyOptions {
+  const SkyOptions({
+    this.landscape = true,
+    this.mosque = true,
+    this.life = true,
+    this.friday = false,
+    this.festive = false,
+    this.topInset = 0,
+  });
+
+  /// The village, the lake and the meadow under the full-screen sky.
+  final bool landscape;
+  final bool mosque;
+
+  /// Clouds, birds, planes, shooting stars and fireflies.
+  final bool life;
+
+  /// The Friday look (the day shown is a Friday and it is switched on).
+  final bool friday;
+
+  /// A great night or day, or Ramazan: the minaret is lit with strings of lights.
+  final bool festive;
+
+  /// The height of the status bar, for the Friday band of stars.
+  final double topInset;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SkyOptions &&
+      other.landscape == landscape &&
+      other.mosque == mosque &&
+      other.life == life &&
+      other.friday == friday &&
+      other.festive == festive &&
+      other.topInset == topInset;
+
+  @override
+  int get hashCode => Object.hash(landscape, mosque, life, friday, festive, topInset);
 }
 
 class SkyPainter extends CustomPainter {
@@ -327,12 +373,12 @@ class SkyPainter extends CustomPainter {
     required this.radius,
     this.clock,
     this.lift,
-    this.parallax,
+    this.options = const SkyOptions(),
   }) : super(
          repaint: switch (layer) {
-           SkyLayer.motion => Listenable.merge([clock, lift, parallax]),
-           SkyLayer.front => parallax,
-           SkyLayer.back => null,
+           SkyLayer.motion => Listenable.merge([clock, lift]),
+           SkyLayer.landMotion => Listenable.merge([clock, lift]),
+           SkyLayer.land || SkyLayer.back || SkyLayer.front => null,
          },
        );
 
@@ -353,15 +399,16 @@ class SkyPainter extends CustomPainter {
   /// Full screen: how far the prayer-times sheet is open; the sun or moon rises with the countdown.
   final Animation<double>? lift;
 
-  /// How far the phone is tilted, in pixels: the stars move a little, the moon more, the hills most.
-  final ValueListenable<Offset>? parallax;
+  final SkyOptions options;
 
   bool get _full => mode == SkyMode.full;
 
-  Offset _tilt(double depth) => (parallax?.value ?? Offset.zero) * depth;
+  /// The full-screen sky stands over the mountains and the village.
+  bool get _land => _full && options.landscape;
 
   /// Where the hills meet the sky: the sun and the moon rise and set behind them.
   double _horizon(Size size) {
+    if (_land) return Landscape.horizonFor(size);
     final hh = _full ? math.min(.20 * size.height, 170.0) : math.min(.26 * size.height, 64.0);
     return size.height - hh * .45;
   }
@@ -384,6 +431,17 @@ class SkyPainter extends CustomPainter {
 
   Color _k(Color c) => dark ? _dim(c) : c;
 
+  Landscape _landscape(Size size, SkyPalette pal) => Landscape(
+    size: size,
+    pal: pal,
+    scene: scene,
+    dim: _k,
+    mosque: options.mosque,
+    village: true,
+    friday: options.friday,
+    festive: options.festive,
+  );
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
@@ -401,39 +459,56 @@ class SkyPainter extends CustomPainter {
       case SkyLayer.motion:
         final t = clock?.seconds ?? 0.0;
         final live = clock != null;
-        // each depth moves its own amount when the phone tilts
-        void at(double depth, void Function() draw) {
-          final o = _tilt(depth);
-          if (o == Offset.zero) return draw();
-          canvas.save();
-          canvas.translate(o.dx, o.dy);
-          draw();
-          canvas.restore();
+        final life = options.life;
+        _haze(canvas, size, pal, t);
+        _paintStars(canvas, size, pal, t);
+        if (_full && live && life) _shootingStar(canvas, size, pal, t);
+        _horizonGlow(canvas, size);
+        _paintMoon(canvas, size, t);
+        _paintSun(canvas, size, pal, t);
+        if (_full) _brightStar(canvas, size, t);
+        if (_full && life) _paintClouds(canvas, size, pal, t);
+        if (_full && live && life) {
+          _birds(canvas, size, t);
+          _plane(canvas, size, t);
+          _nightPlane(canvas, size, t);
         }
-
-        at(.2, () => _haze(canvas, size, pal, t));
-        at(.35, () {
-          _paintStars(canvas, size, pal, t);
-          if (_full && live) _shootingStar(canvas, size, pal, t);
-        });
-        at(.55, () {
-          _horizonGlow(canvas, size);
-          _paintMoon(canvas, size, t);
-          _paintSun(canvas, size, pal, t);
-          if (_full) _brightStar(canvas, size, t);
-        });
-        if (_full) at(.7, () => _paintClouds(canvas, size, pal, t));
-        if (_full && live) {
-          at(.75, () {
-            _birds(canvas, size, t);
-            _plane(canvas, size, t);
-            _nightPlane(canvas, size, t);
-          });
+        if (_full && life && !_land) _paintFireflies(canvas, size, t);
+      case SkyLayer.land:
+        if (_land) {
+          _landscape(size, pal).paintStill(canvas);
+        } else {
+          _hills(canvas, size, pal);
         }
-        if (_full) at(.9, () => _paintFireflies(canvas, size, t));
+      case SkyLayer.landMotion:
+        final t = clock?.seconds ?? 0.0;
+        if (_land) {
+          final sp = scene.sunProgress, mp = scene.moon.progress;
+          _landscape(size, pal).paintMotion(
+            canvas,
+            t,
+            sun: sp > -.02 && sp < 1.02 ? Offset(_arc(size, sp).dx, 0) : null,
+            moon: scene.moon.up && scene.moon.illumination > .05 ? Offset(_arc(size, mp).dx, 0) : null,
+            moonLight: scene.moon.illumination,
+          );
+          if (options.life) _paintFireflies(canvas, size, t);
+        }
+        if (_full && options.friday) {
+          final open = lift?.value ?? 0;
+          paintFridayRosette(
+            canvas,
+            Offset(size.width / 2, size.height / 2 - .2 * open * size.height),
+            math.min(size.width * .46, 230),
+            t,
+            alpha: (.13 + .1 * pal.stars) * (1 - open),
+            dim: _k,
+          );
+        }
       case SkyLayer.front:
-        _hills(canvas, size, pal);
         _veil(canvas, size);
+        if (_full && options.friday) {
+          paintFridayFrame(canvas, size, daylight: 1 - pal.stars, topInset: options.topInset, dim: _k);
+        }
         // glass sheen along the top edge
         canvas.drawRect(
           Offset.zero & size,
@@ -1033,10 +1108,9 @@ class SkyPainter extends CustomPainter {
   void _hills(Canvas canvas, Size size, SkyPalette pal) {
     final w = size.width, h = size.height;
     final hh = _full ? math.min(.20 * h, 170.0) : math.min(.26 * h, 64.0);
-    // a little wider than the screen, so tilting the phone never shows their ends
-    final pad = parallax == null ? 0.0 : 14.0;
+    const pad = 0.0;
     final sx = (w + 2 * pad) / 400, sy = hh / 60, top = h - hh;
-    final far = _tilt(.8), near = _tilt(1);
+    const far = Offset.zero, near = Offset.zero;
     // the season shows on the hills by day (green, golden, orange-brown, snowy), and fades into the dark at night
     final base = _k(pal.hill);
     final daylight = 1 - pal.stars * .85;
@@ -1094,6 +1168,24 @@ class SkyPainter extends CustomPainter {
             ),
         );
       }
+    }
+    if (_full && options.mosque) {
+      // the mosque stands on the far hill, just behind the near one
+      const X = 262.0;
+      var v = 10.0;
+      while (v < 60 && !_farHillPath.contains(Offset(X, v))) {
+        v += .5;
+      }
+      Landscape(
+        size: size,
+        pal: pal,
+        scene: scene,
+        dim: _k,
+        mosque: true,
+        village: false,
+        friday: options.friday,
+        festive: options.festive,
+      ).mosqueAt(canvas, Offset(X * sx - pad, top + (v + 1.5) * sy), sy * .42);
     }
     hillAt(_nearHillPath, near, 1, 28);
     // the lit windows of the villages
@@ -1176,7 +1268,7 @@ class SkyPainter extends CustomPainter {
       old.clock != clock ||
       old.lift != lift ||
       old.scene != scene ||
-      old.parallax != parallax ||
+      old.options != options ||
       (layer == SkyLayer.motion &&
           (old.orb.sun != orb.sun || old.orb.x != orb.x || old.orb.y != orb.y || old.orb.yFull != orb.yFull));
 }
@@ -1190,7 +1282,7 @@ class SkyCard extends StatelessWidget {
     required this.clock,
     required this.child,
     this.lift,
-    this.parallax,
+    this.options = const SkyOptions(),
   });
 
   final TodayModel model;
@@ -1198,9 +1290,7 @@ class SkyCard extends StatelessWidget {
   final SkyClock? clock;
   final Widget child;
   final Animation<double>? lift;
-
-  /// How far the phone is tilted (full screen only).
-  final ValueListenable<Offset>? parallax;
+  final SkyOptions options;
 
   @override
   Widget build(BuildContext context) {
@@ -1224,7 +1314,7 @@ class SkyCard extends StatelessWidget {
             radius: radius,
             clock: clock,
             lift: lift,
-            parallax: parallax,
+            options: options,
           ),
         ),
       ),
@@ -1232,7 +1322,14 @@ class SkyCard extends StatelessWidget {
 
     Widget card = Stack(
       fit: full ? StackFit.expand : StackFit.loose,
-      children: [layer(SkyLayer.back), layer(SkyLayer.motion), layer(SkyLayer.front), child],
+      children: [
+        layer(SkyLayer.back),
+        layer(SkyLayer.motion),
+        layer(SkyLayer.land),
+        if (full) layer(SkyLayer.landMotion),
+        layer(SkyLayer.front),
+        child,
+      ],
     );
     if (!full) card = ClipRRect(borderRadius: BorderRadius.circular(radius), child: card);
     if (full) return card;
@@ -1345,59 +1442,5 @@ class _EllipseTransform extends GradientTransform {
       ..translateByDouble(cx, y, 0, 1)
       ..scaleByDouble(rx * bounds.width / shortest, ry * bounds.height / shortest, 1, 1)
       ..translateByDouble(-cx, -y, 0, 1);
-  }
-}
-
-/// The phone's tilt, as a small offset in pixels, for the depth of the full-screen sky.
-///
-/// Reads the accelerometer and keeps only the change: tilting the phone moves the sky a little, and holding it
-/// still lets the sky drift slowly back to the middle, so it never matters how the phone is held.
-class SkyTilt extends ValueNotifier<Offset> {
-  SkyTilt(this.events) : super(Offset.zero);
-
-  /// The accelerometer, as (x, y) in m/s².
-  final Stream<Offset> Function() events;
-
-  /// The most the nearest layer moves, in pixels.
-  static const double reach = 10;
-
-  StreamSubscription<Offset>? _sub;
-  Offset? _base;
-  Offset _target = Offset.zero;
-
-  bool get running => _sub != null;
-
-  void start() {
-    if (_sub != null) return;
-    try {
-      _sub = events().listen(_onEvent, onError: (_) => stop(), cancelOnError: true);
-    } catch (_) {
-      _sub = null; // no sensor on this device
-    }
-  }
-
-  void stop() {
-    _sub?.cancel();
-    _sub = null;
-    _base = null;
-    _target = Offset.zero;
-    if (value != Offset.zero) value = Offset.zero;
-  }
-
-  void _onEvent(Offset raw) {
-    final base = _base == null ? raw : _base! + (raw - _base!) * .02;
-    _base = base;
-    final d = raw - base;
-    // tilting right moves the sky left, as when you look past a window frame
-    final t = Offset((-d.dx * 2.2).clamp(-reach, reach), (d.dy * 2.2).clamp(-reach, reach));
-    _target = t;
-    final next = value + (_target - value) * .18;
-    if ((next - value).distance > .04) value = next;
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
   }
 }

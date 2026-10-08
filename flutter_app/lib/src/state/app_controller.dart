@@ -25,6 +25,33 @@ enum FontChoice {
   final String label;
 }
 
+/// The parts of the app that can be switched on and off in the settings: (title, hint, on by default).
+enum Feature {
+  fridayLook('Pamja e xhumasë', 'Të premteve qielli merr zbukurime islame në ar dhe xhamia ndizet.', true),
+  mosque('Xhamia në horizont', 'Një xhami pranë maleve, që ndryshon me dritën, stinët dhe natën.', true),
+  landscape('Fshati, liqeni dhe bari', 'Shtëpitë, pemët, uji dhe bari poshtë qiellit, sipas orës dhe stinës.', true),
+  skyLife('Jeta e qiellit', 'Retë, zogjtë, avionët, yjet që bien dhe xixëllonjat.', true),
+  hijri('Shfaq datën hixhri', 'Data hixhri nën datën e sotme dhe në muaj.', true),
+  national('Ditët kombëtare të Kosovës', 'Festat zyrtare dhe ditët përkujtimore në ekranin kryesor.', true),
+  islamic('Netët dhe ditët e mëdha islame', 'Kadri, Miraxhi, Berati, Bajramet, Ashura … në ekranin kryesor.', true),
+  takvim('Shënimet e Takvimit të BIK', 'Hëna e re dhe e plotë, stinët, xhemret, ora verore …', true),
+  homeAlarm('Alarmi për sabah në ekran', 'Pas jacisë e deri në imsak, alarmi shihet pa rrëshqitur lart.', true),
+  nafile('Sugjerime për namaze nafile', 'Duha, Evvabini dhe Tehexhudi, me shkronja të vogla kur u vjen koha.', true),
+  tips('Këshillat e ditës', 'Dy këshilla për çdo ditë, nën vaktet.', true),
+  hints('Udhëzimet e rrëshqitjes', 'Shigjetat “Rrëshqit lart / poshtë” në ekranin kryesor.', true),
+  daySwipe('Rrëshqit majtas/djathtas për ditët', 'Me një rrëshqitje anash kalon te dita tjetër ose e mëparshme.', true),
+  pulse('Drita kur hyn vakti', 'Një valë e butë drite kur vjen koha e namazit.', true),
+  haptics('Dridhja e lehtë', 'Një dridhje e vogël kur ndryshon dita.', true);
+
+  const Feature(this.title, this.hint, this.byDefault);
+
+  final String title;
+  final String hint;
+  final bool byDefault;
+
+  String get _key => 'f_$name';
+}
+
 /// What the app shell rebuilds from: the theme and the text look (not every tick).
 typedef Look = ({ThemeChoice theme, FontChoice font, double fontScale});
 
@@ -45,7 +72,9 @@ class AppController extends ChangeNotifier {
     hijriAdj = adj.clamp(-2, 2);
     final alarm = prefs.getInt(_kAlarm) ?? 30;
     alarmOffset = alarmChoices.contains(alarm) ? alarm : 30;
-    tilt = prefs.getBool(_kTilt) ?? true;
+    for (final f in Feature.values) {
+      _features[f] = prefs.getBool(f._key) ?? f.byDefault;
+    }
     now = _clock();
     today = kosovoToday(now);
     selected = today;
@@ -61,7 +90,6 @@ class AppController extends ChangeNotifier {
   static const _kFont = 'font';
   static const _kFontScale = 'fontScale';
   static const _kCountWeight = 'countdownWeight';
-  static const _kTilt = 'tilt';
 
   static const List<int> alarmChoices = [15, 30, 45, 60];
 
@@ -89,8 +117,13 @@ class AppController extends ChangeNotifier {
   late int hijriAdj;
   late int alarmOffset;
 
-  /// The sky moves a little when the phone is tilted.
-  late bool tilt;
+  final Map<Feature, bool> _features = {};
+
+  /// Whether a part of the app is switched on.
+  bool on(Feature f) => _features[f] ?? f.byDefault;
+
+  /// Bumped on every change of the settings (not on the ticks), for the screens that only show settings.
+  final ValueNotifier<int> settingsVersion = ValueNotifier<int>(0);
 
   HomeView view = HomeView.today;
 
@@ -116,7 +149,14 @@ class AppController extends ChangeNotifier {
 
   void _recompute() {
     final at = viewNow;
-    model = computeToday(now: at, today: selected, selected: selected, city: city, alarmOffset: alarmOffset);
+    model = computeToday(
+      now: at,
+      today: selected,
+      selected: selected,
+      city: city,
+      alarmOffset: alarmOffset,
+      hijriAdj: hijriAdj,
+    );
   }
 
   // ---------- Clock ----------
@@ -161,6 +201,7 @@ class AppController extends ChangeNotifier {
   void dispose() {
     stop();
     lookNotifier.dispose();
+    settingsVersion.dispose();
     super.dispose();
   }
 
@@ -171,55 +212,60 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _settingChanged() {
+    settingsVersion.value++;
+    _changed();
+  }
+
   void setCity(City c) {
     city = c;
     _prefs.setString(_kCity, c.id);
-    _changed();
+    _settingChanged();
   }
 
   void setTheme(ThemeChoice t) {
     theme = t;
     lookNotifier.value = _look;
     _prefs.setString(_kTheme, t.name);
-    _changed();
+    _settingChanged();
   }
 
   void setFont(FontChoice f) {
     font = f;
     lookNotifier.value = _look;
     _prefs.setString(_kFont, f.name);
-    _changed();
+    _settingChanged();
   }
 
   void setFontScale(double v) {
     fontScale = v;
     lookNotifier.value = _look;
     _prefs.setDouble(_kFontScale, v);
-    _changed();
+    _settingChanged();
   }
 
   void setCountdownWeight(int w) {
     countdownWeight = w;
     _prefs.setInt(_kCountWeight, w);
-    _changed();
+    _settingChanged();
   }
 
   void setHijriAdj(int v) {
     hijriAdj = v.clamp(-2, 2);
     _prefs.setInt(_kHijri, hijriAdj);
-    _changed();
+    _settingChanged();
   }
 
   void setAlarmOffset(int v) {
     alarmOffset = v;
     _prefs.setInt(_kAlarm, v);
-    _changed();
+    _settingChanged();
   }
 
-  void setTilt(bool on) {
-    tilt = on;
-    _prefs.setBool(_kTilt, on);
-    _changed();
+  void setFeature(Feature f, bool value) {
+    _features[f] = value;
+    _prefs.setBool(f._key, value);
+    _settingChanged();
   }
 
   void setView(HomeView v) {
