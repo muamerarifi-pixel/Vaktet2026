@@ -26,7 +26,8 @@ Color prayerColor(int i, bool dark) => dark ? _prayerColors[i].$2 : _prayerColor
 
 const Color _holidayLight = Color(0xFFC0392B), _holidayDark = Color(0xFFFF8E7E);
 
-/// The Month tab: one table with all the days of the month.
+/// The month: one table with all its days. The headings stay at the top while the days scroll, so the times can
+/// be compared; it needs a bounded height.
 class MonthPanel extends StatelessWidget {
   const MonthPanel({super.key, required this.controller, required this.onPick});
 
@@ -73,39 +74,61 @@ class MonthPanel extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: colors.line),
-          ),
-          child: Column(
-            children: [
-              _HeaderRow(narrow: narrow),
-              for (var d = 1; d <= days; d++)
-                _DayRow(
-                  day: Day(y, m, d),
-                  last: d == days,
-                  narrow: narrow,
-                  controller: c,
-                  onTap: () {
-                    c.select(Day(y, m, d));
-                    onPick();
-                  },
+        // the column headings stay in place; only the days scroll under them
+        Expanded(
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: colors.line),
+            ),
+            child: Column(
+              children: [
+                _HeaderRow(narrow: narrow),
+                Expanded(
+                  child: ListView.builder(
+                    // each month starts at its first day
+                    key: ValueKey('$y-$m'),
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: days + 1,
+                    itemBuilder: (context, i) {
+                      if (i == days) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              child: Text(
+                                'Kolona e drekës tregon hyrjen e kohës. Dreka falet në 12:00 në dimër dhe në 13:00 në verë.',
+                                textAlign: TextAlign.center,
+                                style: vt(13, 500, color: colors.muted),
+                              ),
+                            ),
+                            if (marked.isNotEmpty) _MarkedDays(marked: marked, controller: c),
+                            const SizedBox(height: 12),
+                          ],
+                        );
+                      }
+                      final day = Day(y, m, i + 1);
+                      return _DayRow(
+                        day: day,
+                        last: i + 1 == days,
+                        narrow: narrow,
+                        controller: c,
+                        onTap: () {
+                          c.select(day);
+                          onPick();
+                        },
+                      );
+                    },
+                  ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
-          child: Text(
-            'Kolona e drekës tregon hyrjen e kohës. Dreka falet në 12:00 në dimër dhe në 13:00 në verë.',
-            textAlign: TextAlign.center,
-            style: vt(13, 500, color: colors.muted),
-          ),
-        ),
-        if (marked.isNotEmpty) _MarkedDays(marked: marked, controller: c),
       ],
     );
   }
@@ -343,12 +366,10 @@ class _MarkedDays extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: c.line),
+        border: Border(top: BorderSide(color: c.line)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

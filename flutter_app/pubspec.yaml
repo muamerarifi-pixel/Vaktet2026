@@ -1,7 +1,7 @@
 name: vaktet
 description: "Vaktet – kohët e namazit në Kosovë sipas Takvimit të Bashkësisë Islame të Kosovës. Punon pa internet."
 publish_to: 'none'
-version: 1.4.1+12
+version: 1.5.0+13
 
 environment:
   sdk: ^3.13.5
@@ -31,3 +31,19 @@ flutter:
     - family: JetBrainsMono
       fonts:
         - asset: assets/fonts/JetBrainsMono.ttf
+    # the countdown's own faces: digits and colon only (assets/fonts/countdown, OFL)
+    - family: VaktetCormorant
+      fonts:
+        - asset: assets/fonts/countdown/CormorantGaramond.ttf
+    - family: VaktetPlayfair
+      fonts:
+        - asset: assets/fonts/countdown/PlayfairDisplay.ttf
+    - family: VaktetCinzel
+      fonts:
+        - asset: assets/fonts/countdown/Cinzel.ttf
+    - family: VaktetOutfit
+      fonts:
+        - asset: assets/fonts/countdown/Outfit.ttf
+    - family: VaktetUnbounded
+      fonts:
+        - asset: assets/fonts/countdown/Unbounded.ttf

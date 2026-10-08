@@ -38,7 +38,15 @@ class NextCard extends StatelessWidget {
     this.reveal,
     this.options = const SkyOptions(),
     this.countdownWeight = 900,
+    this.countdownFont,
+    this.gold = false,
   });
+
+  /// The countdown's own font (null: the app's font).
+  final String? countdownFont;
+
+  /// The countdown is gold (Fridays).
+  final bool gold;
 
   /// What the sky shows (picked in the settings).
   final SkyOptions options;
@@ -59,8 +67,24 @@ class NextCard extends StatelessWidget {
     final card = model.card!;
     final width = MediaQuery.sizeOf(context).width;
     final content = switch (mode) {
-      SkyMode.card => _Normal(model: model, card: card, now: now, vw: width, weight: countdownWeight),
-      SkyMode.full => _FullScreen(card: card, now: now, vw: width, weight: countdownWeight, reveal: reveal),
+      SkyMode.card => _Normal(
+        model: model,
+        card: card,
+        now: now,
+        vw: width,
+        weight: countdownWeight,
+        family: countdownFont,
+        gold: gold,
+      ),
+      SkyMode.full => _FullScreen(
+        card: card,
+        now: now,
+        vw: width,
+        weight: countdownWeight,
+        reveal: reveal,
+        family: countdownFont,
+        gold: gold,
+      ),
     };
     return Semantics(
       liveRegion: true,
@@ -157,7 +181,35 @@ class _NameAndTime extends StatelessWidget {
   }
 }
 
-/// The big `HH:MM:SS`: digits at full strength, the colons a touch softer.
+/// The metallic gold of the Friday countdown: light, deep and light again, like polished gold.
+const LinearGradient _goldShine = LinearGradient(
+  begin: Alignment(-1, -1),
+  end: Alignment(1, 1),
+  colors: [Color(0xFFFFF4CF), Color(0xFFF0CB6E), Color(0xFFB98A2E), Color(0xFFF7E2A0), Color(0xFFD4A445)],
+  stops: [0, .32, .52, .72, 1],
+);
+
+/// The widest digit of a font at a size, so every digit can sit in a cell of the same width.
+final Map<String, double> _digitWidths = {};
+
+double _widestDigit(TextStyle style) {
+  final key = '${style.fontFamily}/${style.fontSize}/${style.fontVariations}';
+  return _digitWidths[key] ??= () {
+    var widest = 0.0;
+    for (var d = 0; d < 10; d++) {
+      final tp = TextPainter(
+        text: TextSpan(text: '$d', style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      widest = widest < tp.width ? tp.width : widest;
+      tp.dispose();
+    }
+    return widest;
+  }();
+}
+
+/// The big `HH:MM:SS`: digits at full strength, the colons a touch softer. In a font of its own (picked in the
+/// settings) each digit sits in a cell of the same width, so the numbers never jump; on Fridays it is gold.
 class _CountdownNumber extends StatelessWidget {
   const _CountdownNumber({
     required this.text,
@@ -165,6 +217,8 @@ class _CountdownNumber extends StatelessWidget {
     required this.weight,
     required this.center,
     this.full = false,
+    this.family,
+    this.gold = false,
   });
 
   final String text;
@@ -173,34 +227,70 @@ class _CountdownNumber extends StatelessWidget {
   final bool center;
   final bool full;
 
+  /// The countdown's own font, or null for the app's font.
+  final String? family;
+
+  /// Polished gold (Fridays).
+  final bool gold;
+
   @override
   Widget build(BuildContext context) {
-    final base = vt(
+    var base = vt(
       size,
       weight.toDouble(),
       color: _white,
-      ls: full ? -.03 : -.025,
+      ls: family == null ? (full ? -.03 : -.025) : 0,
       height: 1,
-      shadows: full ? _countShadowFull : _countShadow,
+      shadows: gold
+          ? const [Shadow(color: Color(0x66E9C46A), blurRadius: 18)]
+          : (full ? _countShadowFull : _countShadow),
     );
-    final parts = text.split(':');
-    final spans = <InlineSpan>[];
-    for (var i = 0; i < parts.length; i++) {
-      if (i > 0) {
-        spans.add(
-          TextSpan(
-            text: ':',
-            style: base.copyWith(color: const Color(0x8CFFFFFF)),
-          ),
-        );
-      }
-      spans.add(TextSpan(text: parts[i]));
+    if (family != null) {
+      base = base.copyWith(
+        fontFamily: family,
+        fontFeatures: const [FontFeature.liningFigures(), FontFeature.tabularFigures()],
+      );
     }
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: center ? Alignment.center : Alignment.centerLeft,
-      child: Text.rich(TextSpan(children: spans), style: base, softWrap: false, maxLines: 1),
-    );
+    final colon = base.copyWith(color: const Color(0x8CFFFFFF));
+    Widget number;
+    if (family == null) {
+      final parts = text.split(':');
+      final spans = <InlineSpan>[];
+      for (var i = 0; i < parts.length; i++) {
+        if (i > 0) spans.add(TextSpan(text: ':', style: colon));
+        spans.add(TextSpan(text: parts[i]));
+      }
+      number = Text.rich(TextSpan(children: spans), style: base, softWrap: false, maxLines: 1);
+    } else {
+      final cell = _widestDigit(base);
+      number = Semantics(
+        label: text,
+        excludeSemantics: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final ch in text.split(''))
+              ch == ':'
+                  ? Padding(
+                      padding: EdgeInsets.symmetric(horizontal: size * .04),
+                      child: Text(':', style: colon),
+                    )
+                  : SizedBox(
+                      width: cell,
+                      child: Text(ch, style: base, textAlign: TextAlign.center, softWrap: false),
+                    ),
+          ],
+        ),
+      );
+    }
+    if (gold) {
+      number = ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: (bounds) => _goldShine.createShader(bounds),
+        child: number,
+      );
+    }
+    return FittedBox(fit: BoxFit.scaleDown, alignment: center ? Alignment.center : Alignment.centerLeft, child: number);
   }
 }
 
@@ -219,11 +309,10 @@ class _CountdownLabel extends StatelessWidget {
 }
 
 class _Alt extends StatelessWidget {
-  const _Alt({required this.card, required this.now, this.center = false});
+  const _Alt({required this.card, required this.now});
 
   final NextCardModel card;
   final int now;
-  final bool center;
 
   @override
   Widget build(BuildContext context) {
@@ -245,7 +334,6 @@ class _Alt extends StatelessWidget {
           ],
         ),
         style: base,
-        textAlign: center ? TextAlign.center : TextAlign.start,
       ),
     );
   }
@@ -254,13 +342,23 @@ class _Alt extends StatelessWidget {
 // ---------- Normal card ----------
 
 class _Normal extends StatelessWidget {
-  const _Normal({required this.model, required this.card, required this.now, required this.vw, required this.weight});
+  const _Normal({
+    required this.model,
+    required this.card,
+    required this.now,
+    required this.vw,
+    required this.weight,
+    this.family,
+    this.gold = false,
+  });
 
   final TodayModel model;
   final NextCardModel card;
   final int now;
   final double vw;
   final int weight;
+  final String? family;
+  final bool gold;
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +378,8 @@ class _Normal extends StatelessWidget {
             size: clampPx(54, vw * .16, 74),
             weight: weight,
             center: false,
+            family: family,
+            gold: gold,
           ),
           const SizedBox(height: 6),
           _CountdownLabel(text: card.countdownLabel),
@@ -343,15 +443,25 @@ class _DaylinePainter extends CustomPainter {
 
 // ---------- Full-screen sky ----------
 
-/// The countdown sits exactly in the middle of the screen; the prayer name above it, the extra line below.
+/// The countdown sits exactly in the middle of the screen, with the prayer's name above it.
 class _FullScreen extends StatelessWidget {
-  const _FullScreen({required this.card, required this.now, required this.vw, required this.weight, this.reveal});
+  const _FullScreen({
+    required this.card,
+    required this.now,
+    required this.vw,
+    required this.weight,
+    this.reveal,
+    this.family,
+    this.gold = false,
+  });
 
   final NextCardModel card;
   final int now;
   final double vw;
   final int weight;
   final Animation<double>? reveal;
+  final String? family;
+  final bool gold;
 
   @override
   Widget build(BuildContext context) {
@@ -387,6 +497,8 @@ class _FullScreen extends StatelessWidget {
                     weight: weight,
                     center: true,
                     full: true,
+                    family: family,
+                    gold: gold,
                   ),
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
@@ -412,24 +524,8 @@ class _FullScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 64),
-                    child: card.altText == null
-                        ? null
-                        : FadeTransition(
-                            // it would sit under the prayer-times sheet
-                            opacity: reveal == null ? kAlwaysCompleteAnimation : ReverseAnimation(reveal!),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 380),
-                              child: _Alt(card: card, now: now, center: true),
-                            ),
-                          ),
-                  ),
-                ),
-              ),
+              // the second line ("Sabahu mund të falet …") is a small line at the bottom of the screen instead
+              const Spacer(),
             ],
           );
           final r = reveal;

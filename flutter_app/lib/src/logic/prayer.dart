@@ -358,6 +358,11 @@ class TodayModel {
   /// The day shown is a Friday (Xhumaja).
   bool get friday => day.weekday == 5;
 
+  /// The night before Friday: from Akshami on Thursday until Imsaku on Friday.
+  bool fridayNightAt(int now) =>
+      (day.weekday == 4 && now >= rowOf(rows, PrayerKey.maghrib).instant) ||
+      (day.weekday == 5 && now < rowOf(rows, PrayerKey.imsak).instant);
+
   final Day day;
   final bool isToday;
   final List<PrayerRow> rows;

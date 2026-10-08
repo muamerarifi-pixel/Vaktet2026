@@ -29,12 +29,19 @@ enum FontChoice {
 enum Feature {
   fridayLook(
     'Pamja e xhumasë',
-    'Të premteve xhamia merr një dritë të artë dhe nën datë shfaqet „Xhuma mubarek“.',
+    'Të premteve koha e mbetur shkëlqen në ar, dhe natën e xhumasë qielli mbushet me yje.',
     true,
   ),
-  mosque('Xhamia në horizont', 'Një xhami e vogël pranë maleve, në ngjyrat e orës; natën ndizen dritaret.', true),
-  landscape('Fshati dhe liqeni', 'Kodra, një fshat i vogël me selvi dhe një liqen që pasqyron qiellin.', true),
-  skyLife('Jeta e qiellit', 'Retë, zogjtë, avionët, yjet që bien dhe xixëllonjat.', true),
+  landscape(
+    'Malet dhe liqeni',
+    'Male me borë sipas stinës dhe një liqen që i pasqyron. Nuk lëvizin, nuk harxhojnë bateri.',
+    true,
+  ),
+  skyLife(
+    'Qiell i gjallë',
+    'Yjet vezullojnë, retë lundrojnë, kalojnë zogj e avionë. Fikeni për të kursyer baterinë.',
+    true,
+  ),
   hijri('Shfaq datën hixhri', 'Data hixhri nën datën e sotme dhe në muaj.', true),
   national('Ditët kombëtare të Kosovës', 'Festat zyrtare dhe ditët përkujtimore në ekranin kryesor.', true),
   islamic('Netët dhe ditët e mëdha islame', 'Kadri, Miraxhi, Berati, Bajramet, Ashura … në ekranin kryesor.', true),
@@ -42,7 +49,7 @@ enum Feature {
   homeAlarm('Alarmi për sabah në ekran', 'Pas jacisë e deri në imsak, alarmi shihet pa rrëshqitur lart.', true),
   nafile('Sugjerime për namaze nafile', 'Duha, Evvabini dhe Tehexhudi, me shkronja të vogla kur u vjen koha.', true),
   tips('Këshillat e ditës', 'Dy këshilla për çdo ditë, nën vaktet.', true),
-  hints('Udhëzimet e rrëshqitjes', 'Shigjetat “Rrëshqit lart / poshtë” në ekranin kryesor.', true),
+  hints('Udhëzimi i rrëshqitjes', '„Rrëshqit lart për vaktet“ në fund të ekranit.', true),
   daySwipe('Rrëshqit majtas/djathtas për ditët', 'Me një rrëshqitje anash kalon te dita tjetër ose e mëparshme.', true),
   pulse('Drita kur hyn vakti', 'Një valë e butë drite kur vjen koha e namazit.', true),
   haptics('Dridhja e lehtë', 'Një dridhje e vogël kur ndryshon dita.', true);
@@ -54,6 +61,23 @@ enum Feature {
   final bool byDefault;
 
   String get _key => 'f_$name';
+}
+
+/// The font of the big countdown. The four bundled faces carry only the digits and the colon, so they weigh
+/// a few kilobytes each.
+enum CountdownFont {
+  text(null, 'Si teksti'),
+  cormorant('VaktetCormorant', 'Elegante'),
+  playfair('VaktetPlayfair', 'Fisnike'),
+  cinzel('VaktetCinzel', 'Romake'),
+  outfit('VaktetOutfit', 'E pastër'),
+  unbounded('VaktetUnbounded', 'E gjerë');
+
+  const CountdownFont(this.family, this.label);
+
+  /// The family in pubspec.yaml; null for the font of the rest of the app.
+  final String? family;
+  final String label;
 }
 
 /// What the app shell rebuilds from: the theme and the text look (not every tick).
@@ -69,6 +93,10 @@ class AppController extends ChangeNotifier {
     font = FontChoice.values.firstWhere((f) => f.name == prefs.getString(_kFont), orElse: () => FontChoice.figtree);
     final scale = prefs.getDouble(_kFontScale) ?? 1.0;
     fontScale = fontScales.contains(scale) ? scale : 1.0;
+    countdownFont = CountdownFont.values.firstWhere(
+      (f) => f.name == prefs.getString(_kCountFont),
+      orElse: () => CountdownFont.text,
+    );
     final weight = prefs.getInt(_kCountWeight) ?? 900;
     countdownWeight = countdownWeights.contains(weight) ? weight : 900;
     lookNotifier = ValueNotifier<Look>(_look);
@@ -94,6 +122,7 @@ class AppController extends ChangeNotifier {
   static const _kFont = 'font';
   static const _kFontScale = 'fontScale';
   static const _kCountWeight = 'countdownWeight';
+  static const _kCountFont = 'countdownFont';
 
   static const List<int> alarmChoices = [15, 30, 45, 60];
 
@@ -113,6 +142,7 @@ class AppController extends ChangeNotifier {
   late FontChoice font;
   late double fontScale;
   late int countdownWeight;
+  late CountdownFont countdownFont;
 
   /// Changes only when the theme or the text look does (the app rebuilds from this, not from every tick).
   late final ValueNotifier<Look> lookNotifier;
@@ -251,6 +281,12 @@ class AppController extends ChangeNotifier {
   void setCountdownWeight(int w) {
     countdownWeight = w;
     _prefs.setInt(_kCountWeight, w);
+    _settingChanged();
+  }
+
+  void setCountdownFont(CountdownFont f) {
+    countdownFont = f;
+    _prefs.setString(_kCountFont, f.name);
     _settingChanged();
   }
 

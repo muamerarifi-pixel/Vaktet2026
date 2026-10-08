@@ -119,6 +119,11 @@ class _Sheet extends StatelessWidget {
               ),
             ),
             _Field(
+              title: 'Shkronjat e kohës së mbetur',
+              hint: 'Fytyra e shifrave të mëdha të numërimit.',
+              child: _CountdownFonts(value: c.countdownFont, weight: c.countdownWeight, onChanged: c.setCountdownFont),
+            ),
+            _Field(
               title: 'Trashësia e kohës së mbetur',
               hint: 'Sa të trasha janë shifrat e mëdha të kohës deri te vakti tjetër.',
               child: Segmented<int>(
@@ -160,6 +165,84 @@ class _Sheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The countdown's fonts, each shown as a little countdown in its own face.
+class _CountdownFonts extends StatelessWidget {
+  const _CountdownFonts({required this.value, required this.weight, required this.onChanged});
+
+  final CountdownFont value;
+  final int weight;
+  final ValueChanged<CountdownFont> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    Widget tile(CountdownFont f) {
+      final on = f == value;
+      return Semantics(
+        inMutuallyExclusiveGroup: true,
+        checked: on,
+        label: f.label,
+        excludeSemantics: true,
+        onTap: () => onChanged(f),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onChanged(f),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(6, 8, 6, 7),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: on ? c.surface : c.bg,
+              border: Border.all(color: on ? c.accent : c.line, width: on ? 1.6 : 1),
+            ),
+            child: Column(
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '05:42',
+                    softWrap: false,
+                    style: vt(
+                      24,
+                      weight.toDouble(),
+                      color: on ? c.ink : c.muted,
+                      height: 1.15,
+                    ).copyWith(fontFamily: f.family, fontFeatures: const [FontFeature.liningFigures()]),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  f.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: vt(12, 700, color: on ? c.accent : c.muted, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    const perRow = 3;
+    final fonts = CountdownFont.values;
+    return Column(
+      children: [
+        for (var r = 0; r < fonts.length; r += perRow) ...[
+          if (r > 0) const SizedBox(height: 6),
+          Row(
+            children: [
+              for (var i = r; i < r + perRow; i++) ...[
+                if (i > r) const SizedBox(width: 6),
+                Expanded(child: i < fonts.length ? tile(fonts[i]) : const SizedBox()),
+              ],
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

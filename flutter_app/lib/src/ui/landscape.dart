@@ -6,26 +6,20 @@ import 'package:flutter/material.dart';
 import '../logic/prayer.dart';
 import 'colors.dart';
 
-/// The land under the full-screen sky, drawn as layers of silhouette: a far mountain range, a hill with a mosque,
-/// a nearer hill with a small village and cypresses, a lake, and the dark shore in front.
+/// The land under the full-screen sky: two mountain ranges, a forested ridge, a lake that mirrors them, and the
+/// dark shore with a few pines.
 ///
-/// Every layer takes its colour from the sky: the far range is almost the colour of the horizon, and each nearer
-/// layer is a step darker, so the land always belongs to the hour (gold at sunset, blue at night, pale in the
-/// winter haze). Details are kept small and few; at night only the windows and the minaret's balcony light up.
+/// The mountains are built as faces: from every peak a ridge runs down to its foot, and each face is lit or in
+/// shade depending on where the sun is, with gullies in the rock, snow that lies according to the time of year
+/// and pink alpenglow at sunrise and sunset. Each range is a step closer and darker, with mist at its foot, so
+/// the land has depth. Every colour comes from the sky of the hour.
+///
+/// Nothing here moves: it is painted only when the light changes (about once a minute), so it costs no battery.
 ///
 /// Laid out in a box at the bottom of the screen: x from 0 to 400 across, v from 0 (the top of the box) to 100
 /// (the bottom of the screen); the mountains rise above the box.
 class Landscape {
-  Landscape({
-    required this.size,
-    required this.pal,
-    required this.scene,
-    required this.dim,
-    required this.mosque,
-    required this.village,
-    required this.friday,
-    required this.festive,
-  });
+  Landscape({required this.size, required this.pal, required this.scene, required this.dim});
 
   final Size size;
   final SkyPalette pal;
@@ -34,36 +28,24 @@ class Landscape {
   /// The dark theme's dimming of a colour.
   final Color Function(Color) dim;
 
-  /// Draw the mosque on the hill.
-  final bool mosque;
-
-  /// Draw the village, the lake and the shore (otherwise only the mountains and the hill).
-  final bool village;
-
-  /// The day shown is a Friday: the mosque's crescents and windows turn gold, and it glows softly.
-  final bool friday;
-
-  /// A great night, or Ramazan: a short string of lights hangs from the minaret after dark.
-  final bool festive;
-
   double get w => size.width;
   double get h => size.height;
 
   /// Height of the box.
-  static double heightFor(Size size) => math.min(.21 * size.height, 184.0);
+  static double heightFor(Size size) => math.min(.23 * size.height, 196.0);
 
   late final double boxH = heightFor(size);
   double get top => h - boxH;
 
-  /// One unit of the box, the same across and up (for buildings, which must not stretch).
+  /// One unit of the box, the same across and up.
   double get u => boxH / 100;
   double x(double X) => X / 400 * w;
   double y(double v) => top + v * boxH / 100;
 
   /// Where the sun and the moon go down: behind the mountains.
-  static double horizonFor(Size size) => size.height - heightFor(size) * 1.02;
+  static double horizonFor(Size size) => size.height - heightFor(size) * 1.12;
 
-  // ---------- Colour ----------
+  // ---------- Light and colour ----------
 
   /// 1 in full daylight, about .1 in the depth of the night.
   late final double daylight = (1 - pal.stars * .9).clamp(0.0, 1.0);
@@ -75,8 +57,18 @@ class Landscape {
     return _smooth(1 - edge / .2);
   }();
 
-  /// Where the sun is across the screen (0–1).
+  /// Where the sun is across the screen (0–1); the faces turned towards it are lit.
   late final double sunX = .5 - .42 * math.cos(math.pi * scene.sunProgress.clamp(0.0, 1.0));
+
+  /// −1 when the light comes from the left (morning), 1 from the right (afternoon); the moon at night.
+  late final double _lightFrom = () {
+    final night = scene.sunProgress < 0 || scene.sunProgress > 1;
+    if (night && scene.moon.up) return (scene.moon.progress.clamp(0.0, 1.0) - .5) * 2;
+    return (sunX - .5) * 2;
+  }();
+
+  /// How strong the light and shade are: by day, and softly under a bright moon.
+  late final double _contrast = math.max(daylight, scene.moon.up ? .35 * scene.moon.illumination : 0);
 
   late final Color _haze = pal.colors.last;
   late final Color _sky = pal.colors[pal.colors.length ~/ 2];
@@ -89,500 +81,466 @@ class Landscape {
     final night = Color.lerp(pal.colors.first, const Color(0xFF02040C), .55)!;
     final day = Color.lerp(Color(scene.season), const Color(0xFF1C2626), .58)!;
     var g = Color.lerp(night, day, daylight)!;
-    g = Color.lerp(g, Color.lerp(const Color(0xFF2A3344), const Color(0xFFB8C4D0), daylight)!, snow * .55)!;
+    g = Color.lerp(g, Color.lerp(const Color(0xFF2A3344), const Color(0xFFB8C4D0), daylight)!, snow * .5)!;
     if (scene.moon.up) g = Color.lerp(g, const Color(0xFF8C9AB8), .08 * scene.moon.illumination * (1 - daylight))!;
     return g;
   }();
 
+  /// Rock: a cool grey, taking the light of the hour.
+  late final Color _rock = Color.lerp(const Color(0xFF5E6470), _ground, .55)!;
+
   /// The colour of a layer: [t] 0 is the horizon's haze, 1 the darkest ground.
-  Color layer(double t) {
-    var c = Color.lerp(_haze, _ground, t)!;
+  Color _layer(Color base, double t) {
+    var c = Color.lerp(_haze, base, t)!;
     if (scene.tintStrength > 0) c = Color.lerp(c, Color(scene.tint), scene.tintStrength * .35)!;
-    return dim(c);
+    return c;
   }
 
-  late final Color farColor = layer(.42);
-  late final Color midColor = layer(.62);
-  late final Color nearColor = layer(.8);
-  late final Color shoreColor = layer(.93);
-
   /// Snow on the high peaks: through most of the year, only on the tops in summer.
-  double get _peakSnow => math.max(snow, .1 + .7 * math.pow(scene.cold, 1.3));
+  double get _peakSnow => math.max(snow, .12 + .7 * math.pow(scene.cold, 1.3));
+
+  /// [c] lit ([f] > 0) or shaded ([f] < 0); the lit side warms at sunrise and sunset.
+  Color _shade(Color c, double f) {
+    final k = f * _contrast;
+    if (k >= 0) {
+      final lit = Color.lerp(c, Colors.white, .16 * k)!;
+      return warm > 0 ? Color.lerp(lit, pal.sun, .22 * warm * k)! : lit;
+    }
+    return Color.lerp(c, const Color(0xFF060814), .30 * -k)!;
+  }
 
   // ---------- Shapes ----------
 
-  /// A smooth line through [pts] (x, v), closed down to the bottom of the screen.
-  Path _smoothRidge(List<(double, double)> pts) {
-    final p = Path()..moveTo(x(pts.first.$1), y(pts.first.$2));
-    for (var i = 0; i < pts.length - 1; i++) {
-      final p0 = pts[math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[math.min(pts.length - 1, i + 2)];
-      p.cubicTo(
-        x(p1.$1 + (p2.$1 - p0.$1) / 6),
-        y(p1.$2 + (p2.$2 - p0.$2) / 6),
-        x(p2.$1 - (p3.$1 - p1.$1) / 6),
-        y(p2.$2 - (p3.$2 - p1.$2) / 6),
-        x(p2.$1),
-        y(p2.$2),
-      );
-    }
-    return p
-      ..lineTo(x(pts.last.$1), y(104))
-      ..lineTo(x(pts.first.$1), y(104))
-      ..close();
-  }
-
-  /// The height (v) of a line through [pts] at [X], eased between the points.
-  static double _heightAt(List<(double, double)> pts, double X) {
-    for (var i = 0; i < pts.length - 1; i++) {
-      final (x0, v0) = pts[i];
-      final (x1, v1) = pts[i + 1];
-      if (X >= x0 && X <= x1) {
-        final t = (X - x0) / (x1 - x0);
-        return v0 + (v1 - v0) * (t * t * (3 - 2 * t));
+  /// A ridge line: the main points, with smaller bumps added in between (always the same, from [seed]).
+  static List<Offset> _ridge(List<(double, double)> main, int seed, double rough) {
+    final rnd = math.Random(seed);
+    var pts = [for (final (X, v) in main) Offset(X, v)];
+    var amp = rough;
+    for (var pass = 0; pass < 3; pass++) {
+      final next = <Offset>[];
+      for (var i = 0; i < pts.length - 1; i++) {
+        final a = pts[i], b = pts[i + 1];
+        next
+          ..add(a)
+          ..add(
+            Offset(
+              (a.dx + b.dx) / 2 + (rnd.nextDouble() - .5) * (b.dx - a.dx) * .2,
+              (a.dy + b.dy) / 2 + (rnd.nextDouble() - .5) * amp,
+            ),
+          );
       }
+      next.add(pts.last);
+      pts = next;
+      amp *= .55;
     }
-    return pts.last.$2;
+    return pts;
   }
 
-  static const List<(double, double)> _range = [
-    (-10, 8),
-    (20, -4),
-    (38, 2),
-    (60, -16),
-    (78, -6),
-    (96, -12),
-    (120, -30),
-    (138, -20),
-    (150, -24),
-    (172, -6),
-    (196, 2),
-    (222, -2),
-    (250, 6),
-    (280, -8),
-    (304, -20),
-    (324, -34),
-    (342, -22),
-    (360, -26),
-    (384, -8),
-    (410, 0),
+  static const List<(double, double)> _farMain = [
+    (-12, -2),
+    (14, -14),
+    (34, -6),
+    (58, -26),
+    (74, -16),
+    (92, -22),
+    (116, -44),
+    (132, -30),
+    (146, -36),
+    (168, -12),
+    (190, -4),
+    (214, -16),
+    (236, -8),
+    (258, -2),
+    (280, -18),
+    (300, -30),
+    (322, -48),
+    (340, -32),
+    (356, -38),
+    (380, -14),
+    (412, -20),
   ];
 
-  static const List<(double, double)> _hill = [
-    (-10, 24),
-    (40, 18),
-    (90, 22),
-    (140, 16),
-    (190, 19),
-    (236, 13),
-    (262, 12),
-    (290, 14),
-    (340, 21),
-    (380, 18),
-    (410, 22),
+  static const List<(double, double)> _midMain = [
+    (-12, 16),
+    (22, 4),
+    (44, 12),
+    (70, -2),
+    (96, 10),
+    (124, 6),
+    (150, 16),
+    (180, 8),
+    (206, 18),
+    (236, 4),
+    (262, -6),
+    (284, 6),
+    (310, 14),
+    (340, 2),
+    (368, 10),
+    (392, 0),
+    (412, 8),
   ];
 
-  static const List<(double, double)> _near = [
-    (-10, 42),
-    (30, 36),
-    (80, 39),
-    (130, 45),
-    (180, 48),
-    (230, 47),
-    (280, 43),
-    (330, 37),
-    (370, 35),
-    (410, 39),
-  ];
+  static final List<Offset> _far = _ridge(_farMain, 11, 9);
+  static final List<Offset> _mid = _ridge(_midMain, 23, 7);
 
-  static const List<(double, double)> _shore = [(-10, 74), (80, 72), (160, 75), (240, 73), (320, 70), (410, 74)];
-
-  static const double _waterV = 56;
-
-  /// x (0–400) of the mosque.
-  static const double mosqueX = 262;
-
-  /// The village: (x, width, height of the walls, seed for its window).
-  static const List<(double, double, double, double)> _houses = [
-    (62, 6.4, 3.8, .12),
-    (70, 5.2, 3.2, .58),
-    (78, 7.0, 4.4, .33),
-    (88, 5.6, 3.4, .81),
-    (97, 6.2, 4.0, .45),
-    (324, 6.0, 3.6, .27),
-    (333, 7.2, 4.6, .69),
-    (343, 5.4, 3.2, .05),
-    (352, 6.6, 4.0, .9),
-  ];
-
-  /// Cypresses: (x, height).
-  static const List<(double, double)> _cypresses = [(44, 10), (50, 13), (108, 9), (312, 12), (318, 9), (364, 11)];
+  /// Where the water begins, and where the shore in front begins.
+  static const double _waterV = 50;
 
   // ---------- Painting ----------
 
-  /// Everything that does not move.
-  void paintStill(Canvas canvas) {
-    _mountains(canvas);
-    _hillAndMosque(canvas);
-    if (village) {
-      _nearHill(canvas);
-      _lake(canvas);
-      _shoreline(canvas);
-    }
+  void paint(Canvas canvas) {
+    // the land above the water, recorded once so the lake can mirror it
+    final recorder = ui.PictureRecorder();
+    final land = Canvas(recorder);
+    _range(land, _far, depth: .36, foot: 34, rock: _rock, snowLine: _lerp(-38, 4, _peakSnow), seed: 3);
+    _mist(land, 34, .5);
+    _range(
+      land,
+      _mid,
+      depth: .56,
+      foot: 46,
+      rock: Color.lerp(_rock, _ground, .5)!,
+      snowLine: _lerp(-14, 30, snow * .9),
+      seed: 7,
+    );
+    _mist(land, 44, .38);
+    _forest(land);
+    final picture = recorder.endRecording();
+
+    canvas.drawPicture(picture);
+    _lake(canvas, picture);
+    _shore(canvas);
+    picture.dispose();
   }
 
-  void _mountains(Canvas canvas) {
-    final outline = Path()..moveTo(x(_range.first.$1), y(_range.first.$2));
-    for (final (X, v) in _range.skip(1)) {
-      outline.lineTo(x(X), y(v));
+  /// A mountain range: faces from each peak down to its foot, lit or shaded, with gullies and snow.
+  void _range(
+    Canvas canvas,
+    List<Offset> ridge, {
+    required double depth,
+    required double foot,
+    required Color rock,
+    required double snowLine,
+    required int seed,
+  }) {
+    Offset p(Offset q) => Offset(x(q.dx), y(q.dy));
+    final base = _layer(rock, depth + .2);
+    final outline = Path()..moveTo(p(ridge.first).dx, p(ridge.first).dy);
+    for (final q in ridge.skip(1)) {
+      outline.lineTo(p(q).dx, p(q).dy);
     }
     outline
-      ..lineTo(x(_range.last.$1), y(104))
-      ..lineTo(x(_range.first.$1), y(104))
+      ..lineTo(x(ridge.last.dx), y(foot + 8))
+      ..lineTo(x(ridge.first.dx), y(foot + 8))
       ..close();
-    canvas.drawPath(outline, Paint()..color = farColor);
+    canvas.drawPath(outline, Paint()..color = dim(base));
+
+    // the main peaks and the valleys between them
+    final marks = <int>[0];
+    for (var i = 1; i < ridge.length - 1; i++) {
+      final isPeak = ridge[i].dy < ridge[i - 1].dy && ridge[i].dy < ridge[i + 1].dy;
+      final isValley = ridge[i].dy > ridge[i - 1].dy && ridge[i].dy > ridge[i + 1].dy;
+      // only the bigger ones: a peak must stand a little above its neighbours two steps away
+      if ((isPeak || isValley) && i - marks.last >= 3) marks.add(i);
+    }
+    marks.add(ridge.length - 1);
+
+    final rnd = math.Random(seed);
+    // from every peak and every valley a spur runs down to the foot: a jagged line, slanting a little; the faces
+    // on either side share it, so they meet without gaps
+    final spurs = <int, List<Offset>>{};
+    for (final k in marks) {
+      final top = p(ridge[k]);
+      final bottom = y(foot + 8);
+      final slant = (rnd.nextDouble() - .5) * 14 * u;
+      final pts = <Offset>[top];
+      const n = 5;
+      for (var j = 1; j <= n; j++) {
+        final f = j / n;
+        final jitter = j == n ? 0.0 : (rnd.nextDouble() - .5) * 3.2 * u;
+        pts.add(Offset(top.dx + slant * f + jitter, top.dy + (bottom - top.dy) * f));
+      }
+      spurs[k] = pts;
+    }
+    final snowColorLit = Color.lerp(
+      _layer(const Color(0xFFF4F7FB), depth + .45),
+      const Color(0xFFFFC2B0),
+      warm * daylight * .4,
+    )!;
+    final snowColorShade = _layer(const Color(0xFFB4C0D6), depth + .4);
 
     canvas.save();
     canvas.clipPath(outline);
-    // snow on the peaks, with a soft lower edge; pink in the alpenglow
-    final snowLine = _lerp(-28, 6, _peakSnow);
-    final snowColor = Color.lerp(
-      Color.lerp(farColor, dim(const Color(0xFFF2F5FA)), .25 + .45 * daylight)!,
-      dim(const Color(0xFFFFC4B4)),
-      warm * daylight * .35,
-    )!;
-    canvas.drawRect(
-      Rect.fromLTRB(0, y(-50), w, y(snowLine + 5)),
-      Paint()
-        ..shader = ui.Gradient.linear(Offset(0, y(snowLine - 4)), Offset(0, y(snowLine + 5)), [
-          snowColor,
-          snowColor.withValues(alpha: 0),
-        ]),
-    );
-    // the side of each peak away from the sun is a shade darker
-    final shadeLeft = sunX >= .5;
-    final shade = Paint()..color = Colors.black.withValues(alpha: .05 + .09 * daylight);
-    for (var i = 1; i < _range.length - 1; i++) {
-      final (px, pv) = _range[i];
-      if (!(pv < _range[i - 1].$2 && pv < _range[i + 1].$2)) continue;
-      final step = shadeLeft ? -1 : 1;
-      var k = i;
-      while (k + step >= 0 && k + step < _range.length && _range[k + step].$2 > _range[k].$2) {
-        k += step;
+    for (var m = 0; m < marks.length - 1; m++) {
+      final a = marks[m], b = marks[m + 1];
+      final goingDown = ridge[b].dy > ridge[a].dy; // from a peak down to a valley
+      // a face going down to the right looks right
+      final facing = (goingDown ? 1.0 : -1.0) * _lightFrom.sign * math.min(1, _lightFrom.abs() * 1.6 + .25);
+      final peak = goingDown ? ridge[a] : ridge[b];
+      // along the ridge, down the next spur, and back up this one
+      final face = Path()..moveTo(p(ridge[a]).dx, p(ridge[a]).dy);
+      for (var i = a + 1; i <= b; i++) {
+        face.lineTo(p(ridge[i]).dx, p(ridge[i]).dy);
       }
-      final face = Path()..moveTo(x(px), y(pv));
-      for (var j = i + step; step > 0 ? j <= k : j >= k; j += step) {
-        face.lineTo(x(_range[j].$1), y(_range[j].$2));
+      for (final q in spurs[b]!.skip(1)) {
+        face.lineTo(q.dx, q.dy);
       }
-      // down the slope to the valley, then back up a ridge line to the peak: no vertical edges
-      final (vx, vv) = _range[k];
-      face.lineTo(x(px + (vx - px) * .3), y(math.max(vv, pv) + (40 - math.max(vv, pv)) * .9));
+      for (final q in spurs[a]!.reversed) {
+        face.lineTo(q.dx, q.dy);
+      }
       face.close();
-      canvas.drawPath(face, shade);
-    }
-    canvas.restore();
-  }
-
-  void _hillAndMosque(Canvas canvas) {
-    canvas.drawPath(_smoothRidge(_hill), Paint()..color = midColor);
-    if (mosque) mosqueAt(canvas, Offset(x(mosqueX), y(_heightAt(_hill, mosqueX) + 1.2)), u * .8, midColor);
-  }
-
-  /// The mosque as one quiet silhouette in [color]: a hall under one great dome, two half domes and a slender
-  /// pencil minaret, with crescents. The low sun (or snow) catches the rim of the dome; after dark a few windows
-  /// and the minaret's balcony are lit; on Fridays the crescents and the light are gold.
-  void mosqueAt(Canvas canvas, Offset base, double s, Color color) {
-    final mx = base.dx, by = base.dy;
-    final night = _smooth((.62 - daylight) / .4);
-    final gold = dim(const Color(0xFFE8C26A));
-    final silhouette = Color.lerp(color, Colors.black, .14)!;
-
-    if (friday) {
-      // a soft golden light around the mosque
-      final c = Offset(mx + 4 * s, by - 10 * s);
-      final r = 46 * s;
-      canvas.drawCircle(
-        c,
-        r,
-        Paint()
-          ..shader = ui.Gradient.radial(c, r, [gold.withValues(alpha: .10 + .16 * night), gold.withValues(alpha: 0)]),
-      );
-    }
-
-    final body = Path()
-      // the hall
-      ..addRect(Rect.fromLTRB(mx - 13 * s, by - 8 * s, mx + 13 * s, by + 2 * s))
-      // the drum
-      ..addRect(Rect.fromLTRB(mx - 7 * s, by - 10.5 * s, mx + 7 * s, by - 7.5 * s))
-      // the half domes
-      ..addArc(Rect.fromCircle(center: Offset(mx - 9 * s, by - 8 * s), radius: 3.8 * s), math.pi, math.pi)
-      ..addArc(Rect.fromCircle(center: Offset(mx + 9 * s, by - 8 * s), radius: 3.8 * s), math.pi, math.pi);
-    // the great dome, a touch taller than a half circle
-    final domeY = by - 10.5 * s;
-    final dome = Path()
-      ..moveTo(mx - 7.4 * s, domeY)
-      ..cubicTo(mx - 7.4 * s, domeY - 6.4 * s, mx - 3.6 * s, domeY - 8.6 * s, mx, domeY - 8.8 * s)
-      ..cubicTo(mx + 3.6 * s, domeY - 8.6 * s, mx + 7.4 * s, domeY - 6.4 * s, mx + 7.4 * s, domeY)
-      ..close();
-    body.addPath(dome, Offset.zero);
-    // the minaret: base, shaft, balcony and a pencil cap
-    final mxR = mx + 17 * s;
-    final shaftTop = by - 38 * s;
-    final balconyY = by - 29 * s;
-    body
-      ..addRect(Rect.fromLTRB(mxR - 1.7 * s, by - 6 * s, mxR + 1.7 * s, by + 2 * s))
-      ..addRect(Rect.fromLTRB(mxR - 1.05 * s, shaftTop, mxR + 1.05 * s, by - 6 * s))
-      ..addRect(Rect.fromLTRB(mxR - 2 * s, balconyY - .5 * s, mxR + 2 * s, balconyY + .7 * s))
-      ..addPath(
-        Path()
-          ..moveTo(mxR - 1.25 * s, shaftTop)
-          ..lineTo(mxR, shaftTop - 9.5 * s)
-          ..lineTo(mxR + 1.25 * s, shaftTop)
-          ..close(),
-        Offset.zero,
-      );
-    canvas.drawPath(body, Paint()..color = silhouette);
-
-    // a thin rim of light on the dome: the low sun on its side, or snow on top
-    final sunRim = warm * daylight, snowRim = .6 * snow * daylight;
-    if (math.max(sunRim, snowRim) > .04) {
-      final shift = snowRim > sunRim ? Offset(0, .9 * s) : Offset((sunX < .5 ? 1 : -1) * .9 * s, .6 * s);
-      final rimColor = snowRim > sunRim ? dim(const Color(0xFFEFF3F8)) : dim(pal.sun);
+      final lit = _shade(base, facing);
+      final top = y(peak.dy), bottom = y(foot + 8);
       canvas.drawPath(
-        Path.combine(PathOperation.difference, dome, dome.shift(shift)),
-        Paint()..color = rimColor.withValues(alpha: .6 * math.max(sunRim, snowRim)),
+        face,
+        Paint()
+          ..shader = ui.Gradient.linear(Offset(0, top), Offset(0, bottom), [
+            dim(lit),
+            dim(Color.lerp(lit, _layer(_ground, depth + .3), .55)!),
+          ]),
       );
-    }
 
-    // the crescents: the colour of the silhouette, gold on Fridays
-    final finial = friday ? gold : silhouette;
-    _crescent(canvas, Offset(mx, domeY - 8.8 * s), 2.6 * s, finial, s);
-    _crescent(canvas, Offset(mxR, shaftTop - 9.5 * s), 2.2 * s, finial, s);
-
-    // after dark: a few windows and the balcony are lit
-    if (night > .02) {
-      final light = friday ? gold : dim(const Color(0xFFFFD9A0));
-      final dot = Paint()..color = light.withValues(alpha: .85 * night);
-      for (final dx in const [-9.0, -4.5, 0.0, 4.5, 9.0]) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset(mx + dx * s, by - 3.4 * s), width: .9 * s, height: 2.2 * s),
-            Radius.circular(.45 * s),
-          ),
-          dot,
+      canvas.save();
+      canvas.clipPath(face);
+      // snow above the snow line, with a ragged edge that reaches lower in the gullies
+      if (snowLine > peak.dy - 2) {
+        final edge = Path()..moveTo(x(ridge[a].dx - 2), y(-70));
+        final steps = math.max(4, (ridge[b].dx - ridge[a].dx) ~/ 2.5);
+        for (var s = 0; s <= steps; s++) {
+          final X = ridge[a].dx + (ridge[b].dx - ridge[a].dx) * s / steps;
+          final drop = (rnd.nextDouble() - .3) * 6 + 3 * math.sin(X * .7);
+          edge.lineTo(x(X), y(snowLine + drop));
+        }
+        edge
+          ..lineTo(x(ridge[b].dx + 2), y(-70))
+          ..close();
+        final snowColor = facing >= 0 ? snowColorLit : snowColorShade;
+        canvas.drawPath(edge, Paint()..color = dim(_shade(snowColor, facing * .6)).withValues(alpha: .92));
+      }
+      // gullies: thin lines from the ridge down the face
+      final gully = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .6
+        ..color = Colors.black.withValues(alpha: .03 + .05 * _contrast);
+      for (var i = a + 2; i < b - 1; i += 4) {
+        final q = p(ridge[i]);
+        final len = (y(foot) - q.dy) * (.25 + rnd.nextDouble() * .3);
+        final lean = (goingDown ? -1 : 1) * len * (.3 + rnd.nextDouble() * .3);
+        canvas.drawPath(
+          Path()
+            ..moveTo(q.dx, q.dy + 1)
+            ..quadraticBezierTo(q.dx + lean * .3, q.dy + len * .5, q.dx + lean, q.dy + len),
+          gully,
         );
       }
-      canvas.drawCircle(Offset(mxR, balconyY), 2.6 * s, Paint()..color = light.withValues(alpha: .22 * night));
-      canvas.drawCircle(Offset(mxR, balconyY), .55 * s, dot);
-      if (festive) {
-        // a short string of lights from the balcony down to the dome
-        final a = Offset(mxR - 2 * s, balconyY + .4 * s), b = Offset(mx + 3 * s, domeY - 7.6 * s);
-        for (var i = 1; i < 9; i++) {
-          final t = i / 9;
-          canvas.drawCircle(Offset.lerp(a, b, t)! + Offset(0, 2.6 * s * math.sin(math.pi * t)), .38 * s, dot);
-        }
-      }
+      canvas.restore();
+    }
+    canvas.restore();
+
+    // the sunlit edge of the ridge at sunrise and sunset (alpenglow)
+    if (warm * daylight > .05) {
+      final rim = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..strokeJoin = StrokeJoin.round
+        ..color = dim(Color.lerp(pal.sun, Colors.white, .3)!).withValues(alpha: .45 * warm * daylight * (1 - depth));
+      canvas.drawPath(Path()..addPolygon([for (final q in ridge) p(q)], false), rim);
     }
   }
 
-  void _crescent(Canvas canvas, Offset tip, double height, Color color, double s) {
-    canvas.drawLine(
-      tip,
-      tip.translate(0, -height * .4),
+  /// Mist lying at the foot of a range.
+  void _mist(Canvas canvas, double v, double strength) {
+    final mist = dim(Color.lerp(_haze, Colors.white, .1 * daylight)!);
+    final a = strength * (.55 + .45 * daylight) + .25 * scene.mist;
+    canvas.drawRect(
+      Rect.fromLTRB(0, y(v - 16), w, y(v + 6)),
       Paint()
-        ..color = color
-        ..strokeWidth = .32 * s
-        ..strokeCap = StrokeCap.round,
-    );
-    final c = tip.translate(0, -height * .72);
-    final r = height * .3;
-    canvas.drawPath(
-      Path.combine(
-        PathOperation.difference,
-        Path()..addOval(Rect.fromCircle(center: c, radius: r)),
-        Path()..addOval(Rect.fromCircle(center: c.translate(r * .42, -r * .18), radius: r * .8)),
-      ),
-      Paint()..color = color,
+        ..shader = ui.Gradient.linear(Offset(0, y(v - 16)), Offset(0, y(v + 2)), [
+          mist.withValues(alpha: 0),
+          mist.withValues(alpha: a.clamp(0.0, .85)),
+        ]),
     );
   }
 
-  /// Where the windows of the village are, for the lights and their reflections: (centre, order they go out).
-  List<(Offset, double)> windows() => [
-    for (final (X, wd, ht, seed) in _houses)
-      (Offset(x(X) + (seed - .5) * wd * .4 * u, y(_heightAt(_near, X) + 1.6) - ht * .45 * u), seed),
-  ];
-
-  void _nearHill(Canvas canvas) {
-    final path = _smoothRidge(_near);
-    // the village and the cypresses, as part of the same silhouette
-    for (final (X, wd, ht, _) in _houses) {
-      final b = Offset(x(X), y(_heightAt(_near, X) + 1.6));
-      final half = wd / 2 * u;
-      path.addPath(
-        Path()
-          ..moveTo(b.dx - half, b.dy)
-          ..lineTo(b.dx - half, b.dy - ht * u)
-          ..lineTo(b.dx - half - .5 * u, b.dy - ht * u)
-          ..lineTo(b.dx, b.dy - (ht + 2.6) * u)
-          ..lineTo(b.dx + half + .5 * u, b.dy - ht * u)
-          ..lineTo(b.dx + half, b.dy - ht * u)
-          ..lineTo(b.dx + half, b.dy)
-          ..close(),
-        Offset.zero,
-      );
+  /// The forested ridge above the water: the tips of countless pines.
+  void _forest(Canvas canvas) {
+    final rnd = math.Random(41);
+    final color = dim(_layer(Color.lerp(_ground, const Color(0xFF0F2018), .3 * daylight)!, .78));
+    final path = Path()..moveTo(x(-10), y(_waterV + 2));
+    for (var X = -10.0; X <= 410; X += 1.6) {
+      final ground = 42 + 3.2 * math.sin(X * .021 + 1) + 1.6 * math.sin(X * .067);
+      final tip = 1.2 + rnd.nextDouble() * 2.6;
+      path
+        ..lineTo(x(X), y(ground))
+        ..lineTo(x(X + .8), y(ground - tip));
     }
-    for (final (X, ht) in _cypresses) {
-      final b = Offset(x(X), y(_heightAt(_near, X) + 1));
-      final hh = ht * u, ww = 1.5 * u;
-      path.addPath(
-        Path()
-          ..moveTo(b.dx, b.dy - hh)
-          ..cubicTo(b.dx + ww * 1.1, b.dy - hh * .7, b.dx + ww, b.dy - hh * .2, b.dx + ww * .5, b.dy)
-          ..lineTo(b.dx - ww * .5, b.dy)
-          ..cubicTo(b.dx - ww, b.dy - hh * .2, b.dx - ww * 1.1, b.dy - hh * .7, b.dx, b.dy - hh)
-          ..close(),
-        Offset.zero,
+    path
+      ..lineTo(x(410), y(_waterV + 2))
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(0, y(36)), Offset(0, y(_waterV)), [
+          color,
+          Color.lerp(color, Colors.black, .25)!,
+        ]),
+    );
+    // snow on the trees in winter
+    if (snow > .3) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = ui.Gradient.linear(Offset(0, y(38)), Offset(0, y(46)), [
+            dim(Colors.white).withValues(alpha: .35 * snow * (.4 + .6 * daylight)),
+            dim(Colors.white).withValues(alpha: 0),
+          ]),
       );
-    }
-    canvas.drawPath(path, Paint()..color = nearColor);
-
-    // the windows, lit one by one in the evening
-    final night = 1 - daylight;
-    if (night > .35 && scene.townLights > .02) {
-      final a = (night - .35) / .65;
-      final dot = Paint();
-      for (final (c, order) in windows()) {
-        if (order >= scene.townLights) continue;
-        final color = dim(Color.lerp(const Color(0xFFFFCF80), const Color(0xFFFFEED0), order)!);
-        dot.color = color.withValues(alpha: .18 * a);
-        canvas.drawCircle(c, 1.8 * u, dot);
-        dot.color = color.withValues(alpha: .9 * a);
-        canvas.drawRect(Rect.fromCenter(center: c, width: .8 * u, height: 1 * u), dot);
-      }
     }
   }
 
   late final double _frozen = _smooth((snow - .6) / .3);
 
-  /// The lake: the sky's colours mirrored, a little darker; pale and still when it freezes.
-  void _lake(Canvas canvas) {
-    final water = Rect.fromLTRB(0, y(_waterV), w, h);
-    final near = Color.lerp(_haze, _ground, .35)!;
-    final deep = Color.lerp(_sky, _ground, .7)!;
-    final ice = Color.lerp(farColor, dim(const Color(0xFFDDE5EE)), .35 + .3 * daylight)!;
+  /// The lake: the land and the sky mirrored and softened, the sun's or the moon's path of light, and a few
+  /// still ripples. Pale and white when it freezes.
+  void _lake(Canvas canvas, ui.Picture land) {
+    final waterY = y(_waterV);
+    final water = Rect.fromLTRB(0, waterY, w, h);
+    // the sky, upside down
     canvas.drawRect(
       water,
       Paint()
-        ..shader = ui.Gradient.linear(water.topLeft, Offset(0, y(_shore.first.$2)), [
-          Color.lerp(dim(near), ice, _frozen)!,
-          Color.lerp(dim(deep), ice, _frozen * .8)!,
+        ..shader = ui.Gradient.linear(Offset(0, waterY), Offset(0, h), [
+          dim(Color.lerp(_haze, _ground, .25)!),
+          dim(Color.lerp(_sky, _ground, .55)!),
         ]),
     );
-    // the hill mirrored, fading out below the shore
+    // the land, mirrored and softened
     canvas.save();
     canvas.clipRect(water);
-    canvas.translate(0, 2 * y(_waterV));
+    canvas.saveLayer(water, Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: .8, sigmaY: 1.6));
+    canvas.translate(0, 2 * waterY);
     canvas.scale(1, -1);
-    canvas.drawPath(
-      _smoothRidge(_near),
+    canvas.drawPicture(land);
+    canvas.restore();
+    canvas.restore();
+    // the water is darker and a little blue
+    canvas.drawRect(
+      water,
       Paint()
-        ..shader = ui.Gradient.linear(Offset(0, y(_waterV)), Offset(0, y(_waterV - 9)), [
-          nearColor.withValues(alpha: .7 * (1 - _frozen * .6)),
-          nearColor.withValues(alpha: 0),
+        ..shader = ui.Gradient.linear(Offset(0, waterY), Offset(0, h), [
+          dim(const Color(0xFF0A1A2A)).withValues(alpha: .22 + .1 * (1 - daylight)),
+          dim(const Color(0xFF050B14)).withValues(alpha: .5),
         ]),
     );
-    canvas.restore();
-    // a fine bright line along the far shore
+
+    // the path of light under the sun, or the moon
+    void lightPath(double atX, Color color, double strength) {
+      if (strength <= .02) return;
+      final c = Offset(atX, waterY);
+      canvas.drawRect(
+        Rect.fromLTRB(atX - 40, waterY, atX + 40, h),
+        Paint()
+          ..shader = ui.Gradient.radial(
+            c,
+            90,
+            [color.withValues(alpha: .35 * strength), color.withValues(alpha: 0)],
+            const [0, 1],
+            TileMode.clamp,
+            (Matrix4.identity()
+                  ..translateByDouble(c.dx, c.dy, 0, 1)
+                  ..scaleByDouble(.35, 1, 1, 1)
+                  ..translateByDouble(-c.dx, -c.dy, 0, 1))
+                .storage,
+          ),
+      );
+      final r = math.Random(5);
+      final dash = Paint()
+        ..strokeWidth = 1
+        ..strokeCap = StrokeCap.round;
+      for (var i = 0; i < 16; i++) {
+        final f = (i + .5) / 16;
+        final yy = waterY + 3 + f * (h - waterY) * .8;
+        final spread = 4 + 22 * f;
+        final xx = atX + (r.nextDouble() - .5) * 2 * spread;
+        final len = 3 + 12 * f * r.nextDouble();
+        dash.color = color.withValues(alpha: strength * (.7 - .5 * f) * (.4 + .6 * r.nextDouble()));
+        canvas.drawLine(Offset(xx - len / 2, yy), Offset(xx + len / 2, yy), dash);
+      }
+    }
+
+    if (_frozen < .9) {
+      final sp = scene.sunProgress;
+      if (sp > -.02 && sp < 1.02) lightPath(sunX * w, dim(Color.lerp(pal.sun, Colors.white, .2)!), .8 * daylight);
+      final moon = scene.moon;
+      if (moon.up && moon.illumination > .05 && daylight < .5) {
+        final mx = (.5 - .42 * math.cos(math.pi * moon.progress.clamp(0.0, 1.0))) * w;
+        lightPath(mx, dim(const Color(0xFFF2EEDC)), .6 * moon.illumination * (1 - daylight));
+      }
+      // still ripples
+      final rnd = math.Random(17);
+      final ripple = Paint()
+        ..strokeWidth = .7
+        ..color = dim(Color.lerp(_haze, Colors.white, .5)!).withValues(alpha: .05 + .05 * daylight);
+      for (var i = 0; i < 10; i++) {
+        final yy = waterY + 2 + rnd.nextDouble() * (h - waterY) * .6;
+        final xx = rnd.nextDouble() * w;
+        final len = 20 + rnd.nextDouble() * 50;
+        canvas.drawLine(Offset(xx, yy), Offset(xx + len, yy), ripple);
+      }
+    }
+    // ice
+    if (_frozen > .02) {
+      canvas.drawRect(
+        water,
+        Paint()..color = dim(Color.lerp(_haze, const Color(0xFFE4ECF4), .6)!).withValues(alpha: .7 * _frozen),
+      );
+    }
+    // a fine bright line where the water meets the land
     canvas.drawRect(
-      Rect.fromLTRB(0, y(_waterV) - .3, w, y(_waterV) + .6),
-      Paint()..color = Colors.white.withValues(alpha: .06 + .07 * daylight),
+      Rect.fromLTRB(0, waterY - .3, w, waterY + .7),
+      Paint()..color = Colors.white.withValues(alpha: .05 + .08 * daylight),
     );
   }
 
-  void _shoreline(Canvas canvas) {
-    final path = _smoothRidge(_shore);
-    // a few reeds at the water's edge on the left
-    for (var i = 0; i < 6; i++) {
-      final X = 8.0 + i * 2.6;
-      final b = Offset(x(X), y(_heightAt(_shore, X) + 1));
-      final hh = (4.0 + (i * 7 % 5)) * u;
-      final lean = (i % 3 - 1) * .7 * u;
-      path.addPath(
-        Path()
-          ..moveTo(b.dx - .25 * u, b.dy)
-          ..quadraticBezierTo(b.dx + lean * .3, b.dy - hh * .6, b.dx + lean, b.dy - hh)
-          ..quadraticBezierTo(b.dx + lean * .3 + .3 * u, b.dy - hh * .6, b.dx + .25 * u, b.dy)
-          ..close(),
-        Offset.zero,
-      );
+  /// The shore in front, with a few pines on each side.
+  void _shore(Canvas canvas) {
+    final color = dim(_layer(Color.lerp(_ground, Colors.black, .35)!, .95));
+    final path = Path()..moveTo(x(-10), y(84));
+    path
+      ..cubicTo(x(60), y(80), x(120), y(87), x(200), y(86))
+      ..cubicTo(x(280), y(85), x(340), y(79), x(410), y(83))
+      ..lineTo(x(410), y(104))
+      ..lineTo(x(-10), y(104))
+      ..close();
+    // pines: (x, height in units)
+    for (final (X, ht) in const [
+      (6.0, 26.0),
+      (16.0, 34.0),
+      (27.0, 22.0),
+      (36.0, 15.0),
+      (368.0, 18.0),
+      (382.0, 30.0),
+      (395.0, 24.0),
+    ]) {
+      final baseV = X < 200 ? 84 - (X / 60) * 4 : 79 + (X - 340) / 70 * 4;
+      path.addPath(_pine(Offset(x(X), y(baseV + 1)), ht * u * .6, ht * u * .16), Offset.zero);
     }
-    canvas.drawPath(path, Paint()..color = shoreColor);
+    canvas.drawPath(path, Paint()..color = color);
   }
 
-  // ---------- What moves ----------
-
-  /// The water: a few slow glints, the sun's or the moon's path of light, and the windows mirrored at night.
-  void paintMotion(Canvas canvas, double t, {Offset? sun, Offset? moon, double moonLight = 0}) {
-    if (!village || _frozen > .95) return;
-    final calm = 1 - _frozen;
-    final top = y(_waterV), bottom = y(_heightAt(_shore, 200) - 1);
-    final depth = bottom - top;
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = .8;
-
-    // a few long, slow glints
-    final rnd = math.Random(31);
-    final glint = dim(Color.lerp(_haze, Colors.white, .55)!);
-    for (var i = 0; i < 9; i++) {
-      final yy = top + (.18 + rnd.nextDouble() * .7) * depth;
-      final xx = rnd.nextDouble() * w + math.sin(t * .15 + i) * 10;
-      final len = 14 + rnd.nextDouble() * 30;
-      paint.color = glint.withValues(alpha: (.04 + .09 * _wave(t, 5 + rnd.nextDouble() * 4, i * 1.3)) * calm);
-      canvas.drawLine(Offset(xx - len / 2, yy), Offset(xx + len / 2, yy), paint);
+  /// A pine: tiers of branches narrowing to the top.
+  static Path _pine(Offset base, double height, double width) {
+    final path = Path();
+    const tiers = 5;
+    for (var i = 0; i < tiers; i++) {
+      final t0 = i / tiers, t1 = (i + 1.6) / tiers;
+      final yb = base.dy - height * t0 * .92;
+      final yt = base.dy - height * math.min(1, t1);
+      final half = width * (1 - t0 * .78);
+      path.addPolygon([Offset(base.dx - half, yb), Offset(base.dx, yt), Offset(base.dx + half, yb)], true);
     }
-
-    // the path of light under the sun or the moon
-    void lightPath(Offset at, Color color, double strength) {
-      if (strength <= .02) return;
-      final r = math.Random(7);
-      for (var i = 0; i < 14; i++) {
-        final f = (i + .5) / 14;
-        final yy = top + f * depth * .95;
-        final spread = 3 + 18 * f;
-        final xx = at.dx + (r.nextDouble() - .5) * 2 * spread;
-        final len = 3 + 10 * f;
-        final a = math.pow(_wave(t, 1.4 + r.nextDouble() * 1.6, r.nextDouble() * 6.3), 2).toDouble();
-        paint
-          ..strokeWidth = 1
-          ..color = color.withValues(alpha: strength * (.25 + .75 * a) * (1 - .5 * f) * calm);
-        canvas.drawLine(Offset(xx - len / 2, yy), Offset(xx + len / 2, yy), paint);
-      }
-    }
-
-    if (sun != null) lightPath(sun, dim(Color.lerp(pal.sun, Colors.white, .25)!), .55 * daylight);
-    if (moon != null) lightPath(moon, dim(const Color(0xFFF2EEDC)), .45 * moonLight * (1 - daylight));
-
-    // the windows in the water
-    final night = 1 - daylight;
-    if (night > .35 && scene.townLights > .02) {
-      final a = (night - .35) / .65;
-      final color = dim(const Color(0xFFFFD9A0));
-      for (final (c, order) in windows()) {
-        if (order >= scene.townLights) continue;
-        final mirror = 2 * top - c.dy;
-        for (var k = 0; k < 2; k++) {
-          final wob = math.sin(t * 1.8 + order * 20 + k) * 1.2;
-          paint
-            ..strokeWidth = .9
-            ..color = color.withValues(alpha: (.18 + .12 * _wave(t, 2, order * 9)) * a * calm);
-          canvas.drawLine(
-            Offset(c.dx - 1.6 + wob, mirror + k * 2.6),
-            Offset(c.dx + 1.6 + wob, mirror + k * 2.6),
-            paint,
-          );
-        }
-      }
-    }
+    path.addRect(Rect.fromLTRB(base.dx - width * .08, base.dy - height * .1, base.dx + width * .08, base.dy + 2));
+    return path;
   }
 }
 
@@ -592,9 +550,6 @@ double _smooth(double x) {
   final t = x.clamp(0.0, 1.0);
   return t * t * (3 - 2 * t);
 }
-
-double _wave(double seconds, double period, [double phase = 0]) =>
-    .5 + .5 * math.sin(seconds / period * 2 * math.pi + phase);
 
 /// An eight-pointed star (two squares, one turned by 45°): the Friday mark.
 Path khatam(Offset c, double r) {

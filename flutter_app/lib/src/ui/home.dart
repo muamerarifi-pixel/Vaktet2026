@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
-import '../logic/calendar_notes.dart';
+import '../logic/format.dart';
 import '../state/app_controller.dart';
 import 'colors.dart';
 import 'month_view.dart';
@@ -20,9 +20,6 @@ import 'widgets.dart';
 const double _wideBreakpoint = 900;
 const double _maxContentWidth = 1120;
 
-/// How far the sky is pulled down (in pixels) before letting go opens the month.
-const double _monthPull = 90;
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.controller, this.skyMotion = true});
 
@@ -35,7 +32,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-enum _Drag { none, ignored, sheet, month }
+enum _Drag { none, ignored, sheet }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver, TickerProviderStateMixin {
   late final SkyClock _sky = SkyClock(this);
@@ -44,13 +41,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   late final AnimationController _sheet = AnimationController(vsync: this);
   final GlobalKey _sheetKey = GlobalKey();
 
-  /// How far the sky is pulled down towards the month, in pixels.
-  late final AnimationController _pull = AnimationController(
-    vsync: this,
-    lowerBound: 0,
-    upperBound: 400,
-    duration: const Duration(milliseconds: 220),
-  );
+  /// Whether the app is in front (the sky's clock stops while it is not).
+  bool _resumed = true;
+
+  /// Runs the sky's clock only while a moving sky is on the screen: not behind the month, not while the app is
+  /// hidden, and not when the living sky is switched off. Otherwise nothing is drawn between the seconds.
+  void _syncSky(bool want) {
+    if (want == _sky.running) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      want ? _sky.start() : _sky.stop();
+    });
+  }
 
   /// Each change of layout gets a key of its own, so going back to a layout that is still fading out
   /// (a quick tap back and forth) never puts two pages with the same key on the screen.
@@ -62,7 +64,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller.start();
-    if (widget.skyMotion) _sky.start();
   }
 
   @override
@@ -80,7 +81,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     widget.controller.stop();
     _sky.dispose();
     _sheet.dispose();
-    _pull.dispose();
     super.dispose();
   }
 
@@ -88,9 +88,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _resumed = true;
       widget.controller.start();
-      if (widget.skyMotion) _sky.start();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _resumed = false;
       widget.controller.stop();
       _sky.stop();
     }
@@ -100,7 +101,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     if (widget.controller.on(Feature.haptics)) HapticFeedback.selectionClick();
   }
 
-  // ---------- Swiping up and down on the full-screen sky ----------
+  // ---------- Swiping the prayer times up over the full-screen sky ----------
 
   double get _sheetHeight =>
       (_sheetKey.currentContext?.size?.height ?? 0) > 0 ? _sheetKey.currentContext!.size!.height : 380;
@@ -120,48 +121,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   void _updateVerticalDrag(DragUpdateDetails d) {
     final dy = d.primaryDelta!;
     if (_drag == _Drag.none) {
-      // the first movement decides: up (or an open sheet) moves the sheet, down pulls the month
-      if (_sheet.value > 0 || _sheet.isAnimating || dy < 0) {
-        _drag = _edgeDrag ? _Drag.ignored : _Drag.sheet;
-      } else {
-        _drag = _Drag.month;
-      }
+      // the first movement decides: up (or an open sheet) moves the sheet; a swipe down on the sky does nothing
+      final sheet = _sheet.value > 0 || _sheet.isAnimating || dy < 0;
+      _drag = sheet && !_edgeDrag ? _Drag.sheet : _Drag.ignored;
     }
-    switch (_drag) {
-      case _Drag.sheet:
-        _sheet.stop();
-        _sheet.value = (_sheet.value - dy / _sheetHeight).clamp(0.0, 1.0);
-      case _Drag.month:
-        _pull.stop();
-        _pull.value = (_pull.value + dy * .8).clamp(0.0, 400.0);
-      case _Drag.none || _Drag.ignored:
-        break;
+    if (_drag == _Drag.sheet) {
+      _sheet.stop();
+      _sheet.value = (_sheet.value - dy / _sheetHeight).clamp(0.0, 1.0);
     }
   }
 
   /// A flick decides; otherwise it goes to whichever side is nearer.
   void _endVerticalDrag(DragEndDetails d) {
     final vy = d.velocity.pixelsPerSecond.dy;
-    switch (_drag) {
-      case _Drag.sheet:
-        final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
-        _settleSheet(open, velocity: -vy / _sheetHeight);
-      case _Drag.month:
-        if (_pull.value >= _monthPull || (vy > 700 && _pull.value > 24)) {
-          _openMonth();
-        } else {
-          _pull.animateTo(0, curve: Curves.easeOutCubic);
-        }
-      case _Drag.none || _Drag.ignored:
-        break;
+    if (_drag == _Drag.sheet) {
+      final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
+      _settleSheet(open, velocity: -vy / _sheetHeight);
     }
     _drag = _Drag.none;
     _edgeDrag = false;
   }
 
+  /// A tap on the date opens the month of the day shown.
   void _openMonth() {
     _haptic();
-    _pull.value = 0;
     final c = widget.controller;
     // the month of the day shown
     c.select(c.selected);
@@ -238,9 +221,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final wide = size.width >= _wideBreakpoint;
     final colors = context.colors;
     final model = c.model;
-    final clock = MediaQuery.disableAnimationsOf(context) || !widget.skyMotion ? null : _sky;
-    // on a phone, today is the sky itself; the times and the tips are swiped up over it, the month pulled down
+    // on a phone, today is the sky itself; the times and the tips are swiped up over it, the date opens the month
     final fullSky = !wide && c.view == HomeView.today;
+    final moving =
+        widget.skyMotion &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        c.on(Feature.skyLife) &&
+        (wide || fullSky) &&
+        _resumed;
+    _syncSky(moving);
+    final clock = moving ? _sky : null;
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -289,8 +279,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                       ),
                       const SizedBox(width: 32),
                       Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(bottom: 24),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
                           child: _MonthHost(controller: c, onPick: () {}),
                         ),
                       ),
@@ -370,7 +360,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   /// How far the month has been pulled up past its end, in pixels.
   double _overscroll = 0;
 
-  /// The month on a phone: pulled down over the sky, and pushed back up (or Back) to return.
+  /// The month on a phone: it slides down over the sky; pulling up past its end (or Back, or the bar at the
+  /// bottom) returns.
   Widget _month(AppController c, Widget header) {
     void back() {
       _haptic();
@@ -400,9 +391,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                 }
                 return false;
               },
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                 child: _MonthHost(controller: c, onPick: () => c.setView(HomeView.today)),
               ),
             ),
@@ -414,18 +404,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   }
 
   /// The sky fills the screen with only the countdown; the day's times are swiped up from the bottom, and
-  /// swiped down again (or a tap on the sky, or Back) to hide them. Swiping down on the sky opens the month.
+  /// swiped down again (or a tap on the sky, or Back) to hide them. A tap on the date opens the month.
   Widget _fullSky(AppController c, Widget header, SkyClock? clock) {
     final fadeOut = ReverseAnimation(_sheet);
     final model = c.model;
-    final hijri = hijriOf(c.selected, c.hijriAdj);
+    final friday = c.on(Feature.fridayLook);
     final options = SkyOptions(
       landscape: c.on(Feature.landscape),
-      mosque: c.on(Feature.mosque),
       life: c.on(Feature.skyLife),
-      friday: model.friday && c.on(Feature.fridayLook),
-      festive: hijri?.m == 9 || model.notes.any((n) => n.kind == NoteKind.islamic),
+      fridayNight: friday && model.fridayNightAt(c.viewNow),
     );
+    final card = model.card;
+    final second = card?.altText == null ? null : '${card!.altText} ${fmtCount(card.altTarget! - c.viewNow)}';
     final hints = c.on(Feature.hints);
     final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;
     final nafile = c.on(Feature.nafile) ? model.nafile : null;
@@ -444,7 +434,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         onVerticalDragDown: _downVertical,
         onVerticalDragUpdate: _updateVerticalDrag,
         onVerticalDragEnd: _endVerticalDrag,
-        onVerticalDragCancel: () => _pull.animateTo(0),
         // swipe left for the next day, right for the day before: its sky, moon, sun and season at this hour
         onHorizontalDragDown: c.on(Feature.daySwipe) ? _downSide : null,
         onHorizontalDragUpdate: c.on(Feature.daySwipe) ? _updateSideDrag : null,
@@ -466,6 +455,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                 mode: SkyMode.full,
                 clock: clock,
                 countdownWeight: c.countdownWeight,
+                countdownFont: c.countdownFont.family,
+                gold: friday && model.friday,
                 reveal: _sheet,
                 options: options,
               ),
@@ -483,50 +474,37 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                     children: [
                       Padding(
                         padding: EdgeInsets.fromLTRB(16, 4, 16, 10 + bottomInset),
-                        child: AnimatedBuilder(
-                          animation: _pull,
-                          builder: (context, child) {
-                            // pulling down: everything follows the finger a little, and the month hint brightens
-                            final v = _pull.value;
-                            if (v == 0) return child!;
-                            return Transform.translate(offset: Offset(0, 40 * (1 - math.exp(-v / 90))), child: child);
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FadeTransition(
+                              opacity: fadeOut,
+                              child: DateRow(controller: c, onSky: true, onTapDate: _openMonth),
+                            ),
+                            if (!c.isToday)
                               FadeTransition(
                                 opacity: fadeOut,
-                                child: DateRow(controller: c, onSky: true),
-                              ),
-                              if (!c.isToday)
-                                FadeTransition(
-                                  opacity: fadeOut,
-                                  child: Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: PillButton(label: 'Kthehu te sot', onTap: c.selectToday, onSky: true),
-                                    ),
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: PillButton(label: 'Kthehu te sot', onTap: c.selectToday, onSky: true),
                                   ),
                                 ),
-                              if (hints)
-                                FadeTransition(
-                                  opacity: fadeOut,
-                                  child: Center(child: MonthHint(onTap: _openMonth)),
-                                ),
-                              const Spacer(),
-                              FadeTransition(
-                                opacity: fadeOut,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
-                                    if (nafile != null) ...[NafileLine(hint: nafile), const SizedBox(height: 4)],
-                                    if (hints) SwipeHint(onTap: () => _settleSheet(true)),
-                                  ],
-                                ),
                               ),
-                            ],
-                          ),
+                            const Spacer(),
+                            FadeTransition(
+                              opacity: fadeOut,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
+                                  if (second != null) ...[SmallLine(text: second), const SizedBox(height: 4)],
+                                  if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
+                                  if (hints) SwipeHint(onTap: () => _settleSheet(true)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       Positioned.fill(

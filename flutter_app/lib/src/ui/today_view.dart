@@ -40,7 +40,15 @@ class TodayPanel extends StatelessWidget {
           ),
         ],
         ...[
-          NextCard(model: model, now: c.viewNow, mode: SkyMode.card, clock: clock, countdownWeight: c.countdownWeight),
+          NextCard(
+            model: model,
+            now: c.viewNow,
+            mode: SkyMode.card,
+            clock: clock,
+            countdownWeight: c.countdownWeight,
+            countdownFont: c.countdownFont.family,
+            gold: model.friday && c.on(Feature.fridayLook),
+          ),
           if (model.alarm != null) AlarmCard(alarm: model.alarm!),
         ],
         TimesList(model: model, now: c.viewNow),
@@ -61,11 +69,14 @@ class TodayPanel extends StatelessWidget {
 
 /// `‹  Saturday, 3 October 2026 / 22 Rebiul Ahir 1448 h.  ›`
 class DateRow extends StatelessWidget {
-  const DateRow({super.key, required this.controller, this.onSky = false, this.bottomGap = 14});
+  const DateRow({super.key, required this.controller, this.onSky = false, this.bottomGap = 14, this.onTapDate});
 
   final AppController controller;
   final bool onSky;
   final double bottomGap;
+
+  /// A tap on the date (it opens the month).
+  final VoidCallback? onTapDate;
 
   @override
   Widget build(BuildContext context) {
@@ -83,37 +94,54 @@ class DateRow extends StatelessWidget {
     );
   }
 
+  Widget _tappable(Widget child) =>
+      onTapDate == null ? child : Tap(onTap: onTapDate!, label: 'Shfaq muajin', child: child);
+
   Widget _dates(BuildContext context, AppController c, VaktetColors colors, String hijri) {
     return Row(
       children: [
         StepButton(next: false, label: 'Dita e mëparshme', onTap: () => c.stepDay(-1), onSky: onSky),
         const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            children: [
-              Text(
-                longDate(c.selected),
-                textAlign: TextAlign.center,
-                style: vt(
-                  21,
-                  850,
-                  color: onSky ? _white : colors.ink,
-                  ls: -.015,
-                  height: 1.25,
-                  shadows: onSky
-                      ? const [Shadow(color: Color(0x40000000), blurRadius: 10, offset: Offset(0, 1))]
-                      : null,
-                ),
-              ),
-              if (hijri.isNotEmpty) ...[
-                const SizedBox(height: 2),
+          child: _tappable(
+            Column(
+              children: [
                 Text(
-                  hijri,
+                  longDate(c.selected),
                   textAlign: TextAlign.center,
-                  style: vt(14.5, 650, color: onSky ? const Color(0xC7FFFFFF) : colors.muted),
+                  style: vt(
+                    21,
+                    850,
+                    color: onSky ? _white : colors.ink,
+                    ls: -.015,
+                    height: 1.25,
+                    shadows: onSky
+                        ? const [Shadow(color: Color(0x40000000), blurRadius: 10, offset: Offset(0, 1))]
+                        : null,
+                  ),
                 ),
+                if (hijri.isNotEmpty || onTapDate != null) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          hijri,
+                          textAlign: TextAlign.center,
+                          style: vt(14.5, 650, color: onSky ? const Color(0xC7FFFFFF) : colors.muted),
+                        ),
+                      ),
+                      // the date opens the month
+                      if (onTapDate != null) ...[
+                        const SizedBox(width: 5),
+                        SvgIcon(VIcon.chevDown, size: 13, color: onSky ? const Color(0xB3FFFFFF) : colors.muted),
+                      ],
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -766,31 +794,6 @@ class SwipeHint extends StatelessWidget {
   }
 }
 
-/// "Swipe down for the month", with a chevron that stays still.
-class MonthHint extends StatelessWidget {
-  const MonthHint({super.key, required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tap(
-      onTap: onTap,
-      label: 'Shfaq muajin',
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Rrëshqit poshtë për muajin', style: _hintStyle.copyWith(fontSize: 12)),
-            SvgIcon(VIcon.chevDown, size: 14, color: const Color(0xCCFFFFFF)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// The Sabah alarm on the sky itself, from Jacia until Imsaku.
 class HomeAlarm extends StatelessWidget {
   const HomeAlarm({super.key, required this.alarm});
@@ -837,17 +840,18 @@ class HomeAlarm extends StatelessWidget {
   }
 }
 
-/// A voluntary prayer whose time it is, in small letters.
-class NafileLine extends StatelessWidget {
-  const NafileLine({super.key, required this.hint});
+/// A line in small letters at the bottom of the sky: when Sabahu can be prayed, a voluntary prayer whose time it
+/// is, the prayer after a forbidden time.
+class SmallLine extends StatelessWidget {
+  const SmallLine({super.key, required this.text});
 
-  final NafileHint hint;
+  final String text;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 8),
     child: Text(
-      hint.text,
+      text,
       textAlign: TextAlign.center,
       maxLines: 2,
       style: vt(

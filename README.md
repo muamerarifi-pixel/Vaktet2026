@@ -38,33 +38,31 @@ me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe 
 </table>
 </div>
 
-## Të reja në versionin 1.4 (Android)
+## Të reja në versionin 1.5 (Android)
 
 <div align="center">
-<img src="docs/screenshots/v1.4/01_sunset_mosque.jpg" width="160" alt="Xhamia pranë maleve në perëndim">&nbsp;
-<img src="docs/screenshots/v1.4/02_friday_night.jpg" width="160" alt="Nata e xhumasë, me zbukurime në ar dhe xhaminë e ndriçuar">&nbsp;
-<img src="docs/screenshots/v1.4/03_nata_e_kadrit.jpg" width="160" alt="Sonte: Nata e Kadrit">&nbsp;
-<img src="docs/screenshots/v1.4/04_winter_lake.jpg" width="160" alt="Dimri, me liqenin e ngrirë">&nbsp;
-<img src="docs/screenshots/v1.4/06_month_colours.jpg" width="160" alt="Muaji, me ngjyrë për çdo vakt">
+<img src="docs/screenshots/v1.5/01_sunset_mountains.jpg" width="160" alt="Malet dhe liqeni në perëndim">&nbsp;
+<img src="docs/screenshots/v1.5/02_friday_gold.jpg" width="160" alt="E premtja: koha e mbetur në ar">&nbsp;
+<img src="docs/screenshots/v1.5/03_thursday_night_stars.jpg" width="160" alt="Nata e xhumasë, plot yje">&nbsp;
+<img src="docs/screenshots/v1.5/04_winter_lake.jpg" width="160" alt="Dimri, me liqenin e ngrirë">&nbsp;
+<img src="docs/screenshots/v1.5/06_month_sticky.jpg" width="160" alt="Muaji, me titujt që qëndrojnë në vend">
 </div>
 
-🕌 **Xhamia në horizont, pranë maleve** – një siluetë e vogël e qetë: kube, minare e hollë dhe hilale. Merr ngjyrat e orës; dielli i ulët e prek kubenë, natën ndizen dritaret dhe ballkoni i minares.
+🏔️ **Malet dhe liqeni** – male me faqe në dritë e në hije sipas diellit (ose hënës), borë sipas kohës së vitit, skuqje në agim e perëndim, mjegull në këmbë të tyre, një pyll pishash dhe një liqen që i pasqyron e ngrin në dimër. Nuk lëvizin, prandaj nuk harxhojnë bateri.
 
-🏔️ **Malet, fshati dhe liqeni** – shtresa siluetash që errësohen sa më afër që vijnë, gjithmonë në ngjyrat e qiellit: maja me borë sipas kohës së vitit, kodra me shtëpi të vogla e selvi, një liqen që pasqyron qiellin, dritën e diellit e të hënës, dhe ngrin në dimër.
+🌟 **E premtja** – koha e mbetur shkëlqen në ar, nën datë „Xhuma mubarek"; natën e xhumasë (të enjten pas akshamit) qielli mbushet me yje.
 
-🌟 **Pamja e xhumasë** – e qetë: një yll tetëcepësh i artë dhe „Xhuma mubarek" nën datë, hilalet e xhamisë në ar dhe një dritë e butë e artë rreth saj.
+🔢 **Shkronja të reja për kohën e mbetur** – Elegante, Fisnike, Romake, E pastër dhe E gjerë (te Cilësimet). Shifrat nuk lëvizin kur ndryshojnë.
 
-📅 **Ditët kombëtare të Kosovës, netët e mëdha islame dhe shënimet e Takvimit të BIK** – në ekranin kryesor, poshtë datës: festat zyrtare (edhe dita e pushimit kur festa bie në fundjavë), Kadri, Miraxhi, Berati, Regaibi, Mevludi, Bajramet, Ashura, hëna e re e e plotë, stinët, xhemret, ora verore … Data hixhri ndjek Takvimin e BIK.
+📅 **Prek datën për muajin** – në muaj titujt e vakteve qëndrojnë lart ndërsa ditët rrëshqasin, që kohët të krahasohen lehtë. Çdo vakt ka ngjyrën e vet.
 
-⏰ **Alarmi për sabah në ekran** – pas jacisë e deri në imsak, pa rrëshqitur lart.
+🔋 **Më pak bateri** – uji nuk lëviz më, qielli vizatohet 20 herë në sekondë dhe ndalet krejt kur nuk shihet (në muaj, kur aplikacioni është mbyllur, ose kur „Qiell i gjallë" është i fikur).
 
-🤲 **Namazet nafile** – me shkronja të vogla, kur u vjen koha: Duha, Evvabini dhe Tehexhudi.
+✍️ **„Sabahu mund të falet në …"** – tani një rresht i vogël në fund, jo një kuti në mes të qiellit.
 
-⬇️ **Rrëshqit poshtë për muajin** – butonat „Sot" dhe „Muaji" u hoqën. Në muaj çdo vakt ka ngjyrën e vet, dhe ditët e shënuara listohen poshtë tabelës.
+🌙 **Ikona e re** – e zezë obsidian, me hilalin dhe yllin të lëmuar.
 
-👈 **Rrëshqitja anash më e qetë** – dita ndryshon vetëm me një rrëshqitje të qëllimshme, jo me prekje të rastit.
-
-⚙️ **Gjithçka ndizet e fiket te Cilësimet → Veçoritë.** „Lëvizja e qiellit" u hoq.
+📅 **Nga versioni 1.4** – ditët kombëtare të Kosovës, netët e mëdha islame dhe shënimet e Takvimit të BIK poshtë datës; alarmi për sabah në ekran nga jacia deri në imsak; namazet nafile (Duha, Evvabini, Tehexhudi) me shkronja të vogla; rrëshqitja anash më e qetë; gjithçka ndizet e fiket te Cilësimet → Veçoritë.
 
 ## Të reja në versionin 1.3 (Android dhe web)
 

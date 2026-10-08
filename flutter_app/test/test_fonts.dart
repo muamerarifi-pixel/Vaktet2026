@@ -9,4 +9,15 @@ Future<void> loadAppFonts() async {
     final loader = FontLoader(family)..addFont(Future.value(ByteData.sublistView(bytes)));
     await loader.load();
   }
+  for (final (family, file) in const [
+    ('VaktetCormorant', 'CormorantGaramond'),
+    ('VaktetPlayfair', 'PlayfairDisplay'),
+    ('VaktetCinzel', 'Cinzel'),
+    ('VaktetOutfit', 'Outfit'),
+    ('VaktetUnbounded', 'Unbounded'),
+  ]) {
+    final bytes = await File('assets/fonts/countdown/$file.ttf').readAsBytes();
+    final loader = FontLoader(family)..addFont(Future.value(ByteData.sublistView(bytes)));
+    await loader.load();
+  }
 }

@@ -31,9 +31,9 @@ class SkyClock extends ChangeNotifier {
   Duration _elapsed = Duration.zero;
   Duration _painted = Duration.zero;
 
-  /// The sky drifts slowly, so about 30 pictures a second look just as smooth as 60 or 120, for a fraction of
-  /// the work and the battery. (The swipe-up sheet and the buttons still move at the display's full rate.)
-  static const Duration _frame = Duration(microseconds: 31000);
+  /// The sky drifts slowly, so 20 pictures a second look just as smooth as 60 or 120, for a fraction of the work
+  /// and the battery. (The swipe-up sheet and the buttons still move at the display's full rate.)
+  static const Duration _frame = Duration(milliseconds: 50);
 
   double get seconds => (_base + _elapsed).inMicroseconds / 1e6;
 
@@ -43,6 +43,8 @@ class SkyClock extends ChangeNotifier {
     _painted = elapsed;
     notifyListeners();
   }
+
+  bool get running => _ticker.isActive;
 
   void start() {
     if (!_ticker.isActive) _ticker.start();
@@ -132,14 +134,16 @@ class _Star {
 }
 
 /// The same stars on every start (a fixed seed): mostly tiny and faint, a handful a little brighter,
-/// some faintly blue or warm, each twinkling on its own beat. The first [_baseStars] are always there; the rest
-/// come out only deep in the night.
+/// some faintly blue or warm, each twinkling on its own beat. The first [_baseStars] are always there, the next
+/// [_deepStars] come out deep in the night, and the last [_fridayStars] only on the night before Friday.
 const int _baseStars = 170;
+const int _deepStars = 90;
+const int _fridayStars = 340;
 
 final List<_Star> _fieldStars = () {
   final rnd = math.Random(1447);
   const tints = [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFDCE6FF), Color(0xFFFFF1DE)];
-  return List<_Star>.generate(_baseStars + 90, (i) {
+  return List<_Star>.generate(_baseStars + _deepStars + _fridayStars, (i) {
     final y = math.pow(rnd.nextDouble(), 1.35).toDouble(); // denser towards the top
     final lucky = i < _baseStars && rnd.nextDouble() < .07;
     final bright = lucky ? .8 + rnd.nextDouble() * .2 : .22 + math.pow(rnd.nextDouble(), 2) * .5;
@@ -310,50 +314,32 @@ enum SkyLayer {
   /// Haze, clouds, stars, shooting stars, sun rays, the sun or the moon.
   motion,
 
-  /// The mountains, the mosque, the village, the lake and the meadow (full screen), or the hills (card).
+  /// The mountains and the lake (full screen), or the hills (card). Painted only when the light changes.
   land,
 
-  /// What moves on the land: the water, the smoke, the grass, the fireflies, the Friday rosette.
-  landMotion,
-
-  /// The shade behind the numbers and the glass sheen (and the Friday frame).
+  /// The shade behind the numbers and the glass sheen.
   front,
 }
 
 /// What the sky shows, as picked in the settings.
 class SkyOptions {
-  const SkyOptions({
-    this.landscape = true,
-    this.mosque = true,
-    this.life = true,
-    this.friday = false,
-    this.festive = false,
-  });
+  const SkyOptions({this.landscape = true, this.life = true, this.fridayNight = false});
 
-  /// The village, the lake and the meadow under the full-screen sky.
+  /// The mountains and the lake under the full-screen sky.
   final bool landscape;
-  final bool mosque;
 
   /// Clouds, birds, planes, shooting stars and fireflies.
   final bool life;
 
-  /// The Friday look (the day shown is a Friday and it is switched on).
-  final bool friday;
-
-  /// A great night or day, or Ramazan: the minaret is lit with strings of lights.
-  final bool festive;
+  /// The night before Friday (Thursday evening until dawn): many more stars.
+  final bool fridayNight;
 
   @override
   bool operator ==(Object other) =>
-      other is SkyOptions &&
-      other.landscape == landscape &&
-      other.mosque == mosque &&
-      other.life == life &&
-      other.friday == friday &&
-      other.festive == festive;
+      other is SkyOptions && other.landscape == landscape && other.life == life && other.fridayNight == fridayNight;
 
   @override
-  int get hashCode => Object.hash(landscape, mosque, life, friday, festive);
+  int get hashCode => Object.hash(landscape, life, fridayNight);
 }
 
 class SkyPainter extends CustomPainter {
@@ -372,7 +358,6 @@ class SkyPainter extends CustomPainter {
   }) : super(
          repaint: switch (layer) {
            SkyLayer.motion => Listenable.merge([clock, lift]),
-           SkyLayer.landMotion => Listenable.merge([clock, lift]),
            SkyLayer.land || SkyLayer.back || SkyLayer.front => null,
          },
        );
@@ -398,7 +383,7 @@ class SkyPainter extends CustomPainter {
 
   bool get _full => mode == SkyMode.full;
 
-  /// The full-screen sky stands over the mountains and the village.
+  /// The full-screen sky stands over the mountains and the lake.
   bool get _land => _full && options.landscape;
 
   /// Where the hills meet the sky: the sun and the moon rise and set behind them.
@@ -425,17 +410,6 @@ class SkyPainter extends CustomPainter {
   }
 
   Color _k(Color c) => dark ? _dim(c) : c;
-
-  Landscape _landscape(Size size, SkyPalette pal) => Landscape(
-    size: size,
-    pal: pal,
-    scene: scene,
-    dim: _k,
-    mosque: options.mosque,
-    village: true,
-    friday: options.friday,
-    festive: options.festive,
-  );
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -471,22 +445,9 @@ class SkyPainter extends CustomPainter {
         if (_full && life && !_land) _paintFireflies(canvas, size, t);
       case SkyLayer.land:
         if (_land) {
-          _landscape(size, pal).paintStill(canvas);
+          Landscape(size: size, pal: pal, scene: scene, dim: _k).paint(canvas);
         } else {
           _hills(canvas, size, pal);
-        }
-      case SkyLayer.landMotion:
-        final t = clock?.seconds ?? 0.0;
-        if (_land) {
-          final sp = scene.sunProgress, mp = scene.moon.progress;
-          _landscape(size, pal).paintMotion(
-            canvas,
-            t,
-            sun: sp > -.02 && sp < 1.02 ? Offset(_arc(size, sp).dx, 0) : null,
-            moon: scene.moon.up && scene.moon.illumination > .05 ? Offset(_arc(size, mp).dx, 0) : null,
-            moonLight: scene.moon.illumination,
-          );
-          if (options.life) _paintFireflies(canvas, size, t);
         }
       case SkyLayer.front:
         _veil(canvas, size);
@@ -607,10 +568,12 @@ class SkyPainter extends CustomPainter {
 
     if (_full) {
       final boxH = h * .66;
-      final boost = scene.starBoost;
+      // the night before Friday: the sky is full of stars
+      final friday = options.fridayNight;
+      final boost = friday ? math.max(scene.starBoost, .85) : scene.starBoost;
       // a bright moon washes out the faintest stars
       final moonWash = scene.moon.up ? 1 - .35 * scene.moon.illumination : 1.0;
-      final count = _baseStars + ((_fieldStars.length - _baseStars) * boost).round();
+      final count = friday ? _fieldStars.length : _baseStars + (_deepStars * boost).round();
       final spark = Paint()
         ..strokeWidth = .6
         ..strokeCap = StrokeCap.round;
@@ -621,7 +584,7 @@ class SkyPainter extends CustomPainter {
         // a sharper twinkle: mostly bright, with quick dips, and every star on its own beat
         final wave = _wave(t, st.period, st.phase);
         final tw = 1 - st.depth * wave * wave;
-        final extra = i >= _baseStars ? boost : 1.0;
+        final extra = i >= _baseStars + _deepStars ? 1.0 : (i >= _baseStars ? boost : 1.0);
         final wash = st.bright > .7 ? 1.0 : moonWash;
         final a = (pal.stars * st.bright * tw * fade * extra * wash * (1 + .2 * boost)).clamp(0.0, 1.0);
         if (a <= .02) continue;
@@ -662,7 +625,7 @@ class SkyPainter extends CustomPainter {
   void _shootingStar(Canvas canvas, Size size, SkyPalette pal, double t) {
     if (pal.stars < .5) return;
     // more of them deep in the night
-    final every = scene.starBoost > .5 ? 7.0 : 11.0;
+    final every = options.fridayNight ? 4.5 : (scene.starBoost > .5 ? 7.0 : 11.0);
     const lasts = .9;
     final n = (t / every).floor();
     final local = t - n * every;
@@ -1150,30 +1113,6 @@ class SkyPainter extends CustomPainter {
         );
       }
     }
-    if (_full && options.mosque) {
-      // the mosque stands on the far hill, just behind the near one
-      const X = 262.0;
-      var v = 10.0;
-      while (v < 60 && !_farHillPath.contains(Offset(X, v))) {
-        v += .5;
-      }
-      Landscape(
-        size: size,
-        pal: pal,
-        scene: scene,
-        dim: _k,
-        mosque: true,
-        village: false,
-        friday: options.friday,
-        festive: options.festive,
-      ).mosqueAt(
-        canvas,
-        Offset(X * sx - pad, top + (v + 1.5) * sy),
-        sy * .36,
-        // the colour the far hill shows over the sky
-        Color.alphaBlend(hill.withValues(alpha: hill.a * .55), _k(pal.colors.last)),
-      );
-    }
     hillAt(_nearHillPath, near, 1, 28);
     // the lit windows of the villages
     final lights = _full ? scene.townLights : 0.0;
@@ -1309,14 +1248,7 @@ class SkyCard extends StatelessWidget {
 
     Widget card = Stack(
       fit: full ? StackFit.expand : StackFit.loose,
-      children: [
-        layer(SkyLayer.back),
-        layer(SkyLayer.motion),
-        layer(SkyLayer.land),
-        if (full) layer(SkyLayer.landMotion),
-        layer(SkyLayer.front),
-        child,
-      ],
+      children: [layer(SkyLayer.back), layer(SkyLayer.motion), layer(SkyLayer.land), layer(SkyLayer.front), child],
     );
     if (!full) card = ClipRRect(borderRadius: BorderRadius.circular(radius), child: card);
     if (full) return card;
