@@ -34,7 +34,8 @@ enum Feature {
   ),
   landscape(
     'Malet dhe liqeni',
-    'Male me borë sipas stinës dhe një liqen që i pasqyron. Nuk lëvizin, nuk harxhojnë bateri.',
+    'Male në largësi e kodra me pyje në mjegull, në dritën e orës, dhe një liqen që i pasqyron. '
+        'Nuk lëvizin, nuk harxhojnë bateri.',
     true,
   ),
   skyLife(

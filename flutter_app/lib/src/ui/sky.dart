@@ -144,7 +144,7 @@ final List<_Star> _fieldStars = () {
   final rnd = math.Random(1447);
   const tints = [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFDCE6FF), Color(0xFFFFF1DE)];
   return List<_Star>.generate(_baseStars + _deepStars + _fridayStars, (i) {
-    final y = math.pow(rnd.nextDouble(), 1.35).toDouble(); // denser towards the top
+    final y = math.pow(rnd.nextDouble(), 1.15).toDouble(); // a little denser towards the top
     final lucky = i < _baseStars && rnd.nextDouble() < .07;
     final bright = lucky ? .8 + rnd.nextDouble() * .2 : .22 + math.pow(rnd.nextDouble(), 2) * .5;
     return _Star(
@@ -157,6 +157,32 @@ final List<_Star> _fieldStars = () {
       rnd.nextDouble() * 2 * math.pi,
       .4 + rnd.nextDouble() * .5,
     );
+  });
+}();
+
+/// Stars too faint to twinkle, all over the sky down to the mountains: (x, y, radius, brightness), y from the top
+/// (0) to the mountains (1). The first [_baseDust] are always there; the rest come out only deep in the night.
+const int _baseDust = 460;
+
+final List<(double, double, double, double)> _dust = () {
+  final rnd = math.Random(2718);
+  return List.generate(
+    _baseDust + 200,
+    (_) => (
+      rnd.nextDouble(),
+      math.pow(rnd.nextDouble(), 1.1).toDouble(),
+      .28 + rnd.nextDouble() * .32,
+      .22 + math.pow(rnd.nextDouble(), 2).toDouble() * .68,
+    ),
+  );
+}();
+
+/// The glowing clouds of the Milky Way: (along the band 0–1, across it −1…1, size, brightness).
+final List<(double, double, double, double)> _milkyClouds = () {
+  final rnd = math.Random(4242);
+  return List.generate(16, (i) {
+    final along = (i + .5) / 16 + (rnd.nextDouble() - .5) * .05;
+    return (along, (rnd.nextDouble() - .5) * .7, .45 + rnd.nextDouble() * .7, .45 + rnd.nextDouble() * .55);
   });
 }();
 
@@ -424,7 +450,11 @@ class SkyPainter extends CustomPainter {
             ..shader = ui.Gradient.linear(Offset.zero, Offset(0, h), [for (final c in pal.colors) _k(c)], pal.stops),
         );
         _hourTint(canvas, size);
-        if (_full) _milkyWay(canvas, size, pal);
+        _horizonHaze(canvas, size, pal);
+        if (_full) {
+          _faintStars(canvas, size, pal);
+          _milkyWay(canvas, size, pal);
+        }
       case SkyLayer.motion:
         final t = clock?.seconds ?? 0.0;
         final live = clock != null;
@@ -567,40 +597,34 @@ class SkyPainter extends CustomPainter {
     final white = _k(const Color(0xFFFFFFFF));
 
     if (_full) {
-      final boxH = h * .66;
+      final floor = _horizon(size);
       // the night before Friday: the sky is full of stars
       final friday = options.fridayNight;
       final boost = friday ? math.max(scene.starBoost, .85) : scene.starBoost;
-      // a bright moon washes out the faintest stars
-      final moonWash = scene.moon.up ? 1 - .35 * scene.moon.illumination : 1.0;
+      final wash = _moonWash;
       final count = friday ? _fieldStars.length : _baseStars + (_deepStars * boost).round();
-      final spark = Paint()
-        ..strokeWidth = .6
-        ..strokeCap = StrokeCap.round;
       for (var i = 0; i < count; i++) {
         final st = _fieldStars[i];
-        // fade out over the lower part of the star field
-        final fade = st.y <= .55 ? 1.0 : 1 - (st.y - .55) / .45;
-        // a sharper twinkle: mostly bright, with quick dips, and every star on its own beat
+        final p = Offset(st.x * w, st.y * floor);
+        // a soft twinkle: mostly steady, with gentle dips, every star on its own beat
         final wave = _wave(t, st.period, st.phase);
-        final tw = 1 - st.depth * wave * wave;
+        final tw = 1 - st.depth * .7 * wave * wave;
         final extra = i >= _baseStars + _deepStars ? 1.0 : (i >= _baseStars ? boost : 1.0);
-        final wash = st.bright > .7 ? 1.0 : moonWash;
-        final a = (pal.stars * st.bright * tw * fade * extra * wash * (1 + .2 * boost)).clamp(0.0, 1.0);
+        final a =
+            (pal.stars *
+                    st.bright *
+                    tw *
+                    _thickAir(p.dy, floor, h) *
+                    extra *
+                    (st.bright > .7 ? 1.0 : wash) *
+                    (1 + .15 * boost))
+                .clamp(0.0, 1.0);
         if (a <= .02) continue;
-        final p = Offset(st.x * w, st.y * boxH);
         final tint = _k(st.tint);
         if (st.r > .7) {
-          // the brighter ones have a soft halo, and flash a tiny cross at the top of their twinkle
-          paint.color = tint.withValues(alpha: a * .12);
-          canvas.drawCircle(p, st.r * 3.4, paint);
-          final flash = math.pow(1 - wave, 6).toDouble();
-          if (flash > .05) {
-            final len = st.r * (2.5 + 4 * flash);
-            spark.color = tint.withValues(alpha: a * .55 * flash);
-            canvas.drawLine(p.translate(-len, 0), p.translate(len, 0), spark);
-            canvas.drawLine(p.translate(0, -len), p.translate(0, len), spark);
-          }
+          // the brighter ones have a soft halo
+          paint.color = tint.withValues(alpha: a * .1);
+          canvas.drawCircle(p, st.r * 3, paint);
         }
         paint.color = tint.withValues(alpha: a);
         canvas.drawCircle(p, st.r, paint);
@@ -619,6 +643,51 @@ class SkyPainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), math.max(.6, r / 2), paint);
       i++;
     }
+  }
+
+  /// A bright moon washes out the faintest stars.
+  double get _moonWash => scene.moon.up ? 1 - .4 * scene.moon.illumination : 1.0;
+
+  /// Low over the mountains the air is thicker, and the stars there are dimmer.
+  double _thickAir(double y, double floor, double h) => .3 + .7 * _smooth01((floor - y) / (.24 * h));
+
+  /// The countless faint stars, all over the sky down to the mountains.
+  void _faintStars(Canvas canvas, Size size, SkyPalette pal) {
+    if (pal.stars <= 0) return;
+    final w = size.width, h = size.height, floor = _horizon(size);
+    final boost = options.fridayNight ? 1.0 : scene.starBoost;
+    final count = _baseDust + ((_dust.length - _baseDust) * boost).round();
+    final wash = _moonWash;
+    final white = _k(const Color(0xFFF2F5FF));
+    final paint = Paint();
+    for (var i = 0; i < count; i++) {
+      final (x, y, r, b) = _dust[i];
+      final p = Offset(x * w, y * floor);
+      final a = pal.stars * b * wash * _thickAir(p.dy, floor, h) * (i >= _baseDust ? boost : 1);
+      if (a <= .02) continue;
+      paint.color = white.withValues(alpha: a);
+      canvas.drawCircle(p, r, paint);
+    }
+  }
+
+  /// The paler sky just over the mountains: thick air lit by the towns at night, a white haze by day, warm at
+  /// sunrise and sunset. A bright moon lights it more.
+  void _horizonHaze(Canvas canvas, Size size, SkyPalette pal) {
+    final h = size.height, horizon = _horizon(size);
+    final moon = scene.moon.up ? scene.moon.illumination : 0.0;
+    final a = (_full ? 1.0 : .7) * (.24 + .04 * (1 - pal.stars) + .08 * moon * pal.stars);
+    final c = _k(pal.horizonHaze);
+    final top = horizon - h * (_full ? .36 : .5);
+    canvas.drawRect(
+      Rect.fromLTRB(0, top, size.width, h),
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(0, top),
+          Offset(0, horizon),
+          [c.withValues(alpha: 0), c.withValues(alpha: a * .3), c.withValues(alpha: a)],
+          const [0, .6, 1],
+        ),
+    );
   }
 
   /// Now and then a star falls across the night sky.
@@ -839,44 +908,48 @@ class SkyPainter extends CustomPainter {
     );
   }
 
-  /// The Milky Way: a faint, dusty band across the sky in the darkest hours.
+  /// The Milky Way: faint, uneven clouds of light across the sky in the darkest hours, with its dust of stars.
   void _milkyWay(Canvas canvas, Size size, SkyPalette pal) {
     final m = scene.milkyWay * pal.stars * (scene.moon.up ? 1 - .6 * scene.moon.illumination : 1);
     if (m <= .02) return;
     final w = size.width, h = size.height;
-    final from = Offset(-.1 * w, .52 * h), to = Offset(1.1 * w, .02 * h);
+    final from = Offset(-.1 * w, .56 * h), to = Offset(1.1 * w, .02 * h);
     final dir = to - from;
     final len = dir.distance;
     final u = dir / len;
     final n = Offset(-u.dy, u.dx);
     final half = math.min(w, h) * .16;
-    canvas.save();
-    canvas.translate(from.dx, from.dy);
-    canvas.rotate(math.atan2(u.dy, u.dx));
-    final band = Rect.fromLTWH(0, -half, len, 2 * half);
-    canvas.drawRect(
-      band,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          band.topLeft,
-          band.bottomLeft,
-          [
-            const Color(0x00C8D2FF),
-            _k(Color.fromRGBO(200, 210, 255, .07 * m)),
-            _k(Color.fromRGBO(235, 228, 255, .10 * m)),
-            _k(Color.fromRGBO(200, 210, 255, .07 * m)),
-            const Color(0x00C8D2FF),
-          ],
-          const [0, .3, .5, .7, 1],
-        ),
-    );
-    canvas.restore();
+    final angle = math.atan2(u.dy, u.dx);
+    final glow = _k(const Color(0xFFD6DCF2));
+    for (final (along, across, s, b) in _milkyClouds) {
+      final c = from + u * (along * len) + n * (across * half);
+      final rx = half * 1.5 * s, ry = half * .55 * s;
+      final shape = Matrix4.identity()
+        ..translateByDouble(c.dx, c.dy, 0, 1)
+        ..rotateZ(angle)
+        ..scaleByDouble(1, ry / rx, 1, 1)
+        ..translateByDouble(-c.dx, -c.dy, 0, 1);
+      canvas.drawCircle(
+        c,
+        rx * 1.05,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            c,
+            rx,
+            [glow.withValues(alpha: .075 * b * m), glow.withValues(alpha: .03 * b * m), glow.withValues(alpha: 0)],
+            const [0, .45, 1],
+            TileMode.clamp,
+            shape.storage,
+          ),
+      );
+    }
     final dust = Paint();
     final white = _k(const Color(0xFFEAEFFF));
+    final floor = _horizon(size);
     for (final (along, across, r, b) in _milkyDust) {
       final p = from + u * (along * len) + n * (across * half * .9);
-      if (p.dy > h * .62) continue;
-      dust.color = white.withValues(alpha: b * .5 * m);
+      if (p.dy > floor) continue;
+      dust.color = white.withValues(alpha: b * .5 * m * _thickAir(p.dy, floor, h));
       canvas.drawCircle(p, r, dust);
     }
   }
@@ -1055,16 +1128,11 @@ class SkyPainter extends CustomPainter {
     const pad = 0.0;
     final sx = (w + 2 * pad) / 400, sy = hh / 60, top = h - hh;
     const far = Offset.zero, near = Offset.zero;
-    // the season shows on the hills by day (green, golden, orange-brown, snowy), and fades into the dark at night
+    // the season shows on the hills by day, and fades into the dark at night
     final base = _k(pal.hill);
     final daylight = 1 - pal.stars * .85;
-    final snow = scene.snow;
-    final seasonal = Color.lerp(base, _k(Color(scene.season)).withValues(alpha: base.a), .12 + .5 * daylight)!;
-    // in winter the whole hillside is paler under the snow
-    final hill = Color.lerp(seasonal, _k(const Color(0xFFDCE4EC)).withValues(alpha: base.a), .25 * snow * daylight)!;
-    final snowWhite = _k(const Color(0xFFF2F6FA));
-    final snowAlpha = (.3 + .5 * daylight) * snow;
-    void hillAt(Path path, Offset o, double alpha, double snowFrom) {
+    final hill = Color.lerp(base, _k(Color(scene.season)).withValues(alpha: base.a), .12 + .5 * daylight)!;
+    void hillAt(Path path, Offset o, double alpha) {
       canvas.save();
       canvas.translate(-pad + o.dx, top + o.dy);
       canvas.scale(sx, sy);
@@ -1074,21 +1142,10 @@ class SkyPainter extends CustomPainter {
           ..color = hill.withValues(alpha: hill.a * alpha)
           ..isAntiAlias = true,
       );
-      if (snow > .02) {
-        // snowy peaks, fading down the slopes
-        canvas.drawPath(
-          path,
-          Paint()
-            ..shader = ui.Gradient.linear(Offset(0, snowFrom), Offset(0, snowFrom + 22), [
-              snowWhite.withValues(alpha: snowAlpha),
-              snowWhite.withValues(alpha: 0),
-            ]),
-        );
-      }
       canvas.restore();
     }
 
-    hillAt(_farHillPath, far, .55, 8);
+    hillAt(_farHillPath, far, .55);
     // morning mist lying in the valley, between the far hills and the near ones
     if (_full && scene.mist > .02) {
       final mist = _k(const Color(0xFFF4F1F8));
@@ -1113,7 +1170,7 @@ class SkyPainter extends CustomPainter {
         );
       }
     }
-    hillAt(_nearHillPath, near, 1, 28);
+    hillAt(_nearHillPath, near, 1);
     // the lit windows of the villages
     final lights = _full ? scene.townLights : 0.0;
     if (lights > .02) {

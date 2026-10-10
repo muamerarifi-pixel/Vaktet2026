@@ -143,15 +143,13 @@ void main() {
       expect(night.cloudCover, 0);
     });
 
-    test('the hills follow the seasons, with snow in winter', () {
-      expect(seasonColor(const Day(2026, 4, 15)), 0xFF3F8F52);
-      expect(seasonColor(const Day(2026, 7, 15)), 0xFFC9A24A);
-      expect(seasonColor(const Day(2026, 10, 15)), 0xFFB0602C);
-      expect(seasonColor(const Day(2027, 1, 15)), 0xFF5D6E80);
-      expect(snowOn(const Day(2027, 1, 20)), 1);
-      expect(snowOn(const Day(2026, 12, 20)), 1);
-      expect(snowOn(const Day(2026, 7, 1)), 0);
-      expect(snowOn(const Day(2026, 4, 15)), 0);
+    test('the wooded hills follow the seasons, and never with snow', () {
+      expect(seasonColor(const Day(2026, 4, 15)), 0xFF4E7B4C);
+      expect(seasonColor(const Day(2026, 7, 15)), 0xFF7C7D48);
+      expect(seasonColor(const Day(2026, 10, 15)), 0xFF80593A);
+      expect(seasonColor(const Day(2027, 1, 15)), 0xFF5B5A55);
+      // in between they blend
+      expect(seasonColor(const Day(2027, 3, 1)), isNot(anyOf(0xFF5B5A55, 0xFF4E7B4C)));
     });
   });
 }

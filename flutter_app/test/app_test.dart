@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/logic/day.dart';
 import 'package:vaktet/src/state/app_controller.dart';
+import 'package:vaktet/src/ui/next_card.dart';
 
 import 'test_fonts.dart';
 
@@ -35,6 +36,9 @@ Future<void> _close(WidgetTester tester) async {
 
 Finder _label(String text) => find.bySemanticsLabel(text);
 
+/// The big countdown showing [text] (`HH:MM:SS`).
+Finder _countdown(String text) => find.byWidgetPredicate((w) => w is CountdownNumber && w.text == text);
+
 /// Swipes the day's prayer times up over the full-screen sky.
 Future<void> _openSheet(WidgetTester tester) async {
   await tester.pumpAndSettle();
@@ -53,7 +57,7 @@ void main() {
     expect(find.text('NAMAZI I ARDHSHËM'), findsOneWidget);
     expect(find.text('Jacia'), findsWidgets);
     expect(find.text('19:52'), findsWidgets);
-    expect(find.textContaining('01:14:00', findRichText: true), findsOneWidget);
+    expect(_countdown('01:14:00'), findsOneWidget);
     expect(find.text('deri në fillim'), findsOneWidget);
     expect(find.text('Alarmi për sabah'), findsNothing); // not yet: Jacia has not passed
     expect(find.text('Kosovë'), findsOneWidget);
@@ -70,12 +74,45 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
     await tester.pumpAndSettle();
-    expect(find.textContaining('01:14:00', findRichText: true), findsOneWidget);
+    expect(_countdown('01:14:00'), findsOneWidget);
+    // the seconds are smaller than the hours and minutes
+    double sizeOf(String digit) => tester
+        .widgetList<Text>(find.descendant(of: _countdown('01:14:00'), matching: find.text(digit)))
+        .map((t) => t.style!.fontSize!)
+        .reduce((a, b) => a < b ? a : b);
+    expect(sizeOf('0'), closeTo(sizeOf('1') * CountdownNumber.secondsScale, .01));
     now += 61 * 1000;
     controller.tick();
+    // the digits that change fade into the new ones: halfway, both are there
+    await tester.pump();
+    await tester.pump(CountdownNumber.fade ~/ 2);
+    final fading = find.descendant(of: _countdown('01:12:59'), matching: find.byType(FadeTransition));
+    expect(fading, findsWidgets);
     await tester.pumpAndSettle();
-    expect(find.textContaining('01:12:59', findRichText: true), findsOneWidget);
+    expect(_countdown('01:12:59'), findsOneWidget);
+    expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('4')), findsNothing); // faded out
     await _close(tester);
+  });
+
+  testWidgets('digits that change back and forth while they are still fading are no trouble', (tester) async {
+    Future<void> show(String text) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: MediaQuery(
+          data: const MediaQueryData(),
+          child: CountdownNumber(text: text, size: 80, weight: 900, center: true),
+        ),
+      ),
+    );
+    // quick steps back and forth (another day, another city) while the digits are still fading
+    for (final text in ['00:00:05', '00:00:06', '00:00:05', '00:00:06', '00:00:05']) {
+      await show(text);
+      await tester.pump(CountdownNumber.fade ~/ 8);
+      expect(tester.takeException(), isNull, reason: text);
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('6'), findsNothing);
+    expect(find.text('5'), findsOneWidget);
   });
 
   testWidgets('after Jacia the card shows tomorrow and the alarm is on the sky itself', (tester) async {
@@ -299,8 +336,8 @@ void main() {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
     double countdownWeight() {
-      final text = tester.widget<RichText>(find.textContaining('01:14:00', findRichText: true));
-      return text.text.style!.fontVariations!.single.value;
+      final digit = tester.widget<Text>(find.descendant(of: _countdown('01:14:00'), matching: find.byType(Text)).first);
+      return digit.style!.fontVariations!.single.value;
     }
 
     expect(countdownWeight(), 900);

@@ -6,18 +6,20 @@ import 'package:flutter/material.dart';
 import '../logic/prayer.dart';
 import 'colors.dart';
 
-/// The land under the full-screen sky: two mountain ranges, a forested ridge, a lake that mirrors them, and the
-/// dark shore with a few pines.
+/// The land under the full-screen sky, as it looks from a valley: a far mountain range, low and pale with
+/// distance, wooded ridges one in front of the other with mist lying between them, a lake that mirrors them, and
+/// the dark shore with a few pines.
 ///
-/// The mountains are built as faces: from every peak a ridge runs down to its foot, and each face is lit or in
-/// shade depending on where the sun is, with gullies in the rock, snow that lies according to the time of year
-/// and pink alpenglow at sunrise and sunset. Each range is a step closer and darker, with mist at its foot, so
-/// the land has depth. Every colour comes from the sky of the hour.
+/// Like a photograph, the land is silhouettes, each nearer one a little darker, and all of its light comes from
+/// the sky of the moment: almost black at night under a faint glow over the horizon, the mist and the far range
+/// lit a little by a bright moon, blue with distance by day with the season only on the near woods, and the haze
+/// warmed on the side of the low sun at sunrise and sunset. No snow and no ice: the calendar cannot know the
+/// weather.
 ///
 /// Nothing here moves: it is painted only when the light changes (about once a minute), so it costs no battery.
 ///
 /// Laid out in a box at the bottom of the screen: x from 0 to 400 across, v from 0 (the top of the box) to 100
-/// (the bottom of the screen); the mountains rise above the box.
+/// (the bottom of the screen); the far range rises a little above the box.
 class Landscape {
   Landscape({required this.size, required this.pal, required this.scene, required this.dim});
 
@@ -42,149 +44,192 @@ class Landscape {
   double x(double X) => X / 400 * w;
   double y(double v) => top + v * boxH / 100;
 
-  /// Where the sun and the moon go down: behind the mountains.
-  static double horizonFor(Size size) => size.height - heightFor(size) * 1.12;
+  /// Where the sun and the moon go down: behind the far range, a little below its summits.
+  static double horizonFor(Size size) => size.height - heightFor(size) * 1.08;
 
   // ---------- Light and colour ----------
 
   /// 1 in full daylight, about .1 in the depth of the night.
   late final double daylight = (1 - pal.stars * .9).clamp(0.0, 1.0);
 
-  /// How strongly the low sun colours the land (around sunrise and sunset).
+  /// 1 by day, 0 at night.
+  late final double _day = (1 - pal.stars).clamp(0.0, 1.0);
+
+  /// How strongly the low sun colours the haze (around sunrise and sunset).
   late final double warm = () {
     final sp = scene.sunProgress;
     final edge = math.min(sp.abs(), (sp - 1).abs());
     return _smooth(1 - edge / .2);
   }();
 
-  /// Where the sun is across the screen (0–1); the faces turned towards it are lit.
+  /// Where the sun is across the screen (0–1).
   late final double sunX = .5 - .42 * math.cos(math.pi * scene.sunProgress.clamp(0.0, 1.0));
 
-  /// −1 when the light comes from the left (morning), 1 from the right (afternoon); the moon at night.
-  late final double _lightFrom = () {
-    final night = scene.sunProgress < 0 || scene.sunProgress > 1;
-    if (night && scene.moon.up) return (scene.moon.progress.clamp(0.0, 1.0) - .5) * 2;
-    return (sunX - .5) * 2;
+  /// How much the moon lights the land: only when the sun is down and the moon is up, by how much of it is lit
+  /// and how high it stands.
+  late final double moonlight = () {
+    final m = scene.moon;
+    if (!m.up) return 0.0;
+    return m.illumination * _smooth(3 * math.sin(math.pi * m.progress.clamp(0.0, 1.0))) * pal.stars;
   }();
 
-  /// How strong the light and shade are: by day, and softly under a bright moon.
-  late final double _contrast = math.max(daylight, scene.moon.up ? .35 * scene.moon.illumination : 0);
-
-  late final Color _haze = pal.colors.last;
-  late final Color _sky = pal.colors[pal.colors.length ~/ 2];
-
-  double get snow => scene.snow;
-
-  /// The darkest colour of the land: the night sky's blue after dark, the season's colour (deep and quiet) by
-  /// day, paler under snow and a little lighter under a bright moon.
-  late final Color _ground = () {
-    final night = Color.lerp(pal.colors.first, const Color(0xFF02040C), .55)!;
-    final day = Color.lerp(Color(scene.season), const Color(0xFF1C2626), .58)!;
-    var g = Color.lerp(night, day, daylight)!;
-    g = Color.lerp(g, Color.lerp(const Color(0xFF2A3344), const Color(0xFFB8C4D0), daylight)!, snow * .5)!;
-    if (scene.moon.up) g = Color.lerp(g, const Color(0xFF8C9AB8), .08 * scene.moon.illumination * (1 - daylight))!;
-    return g;
-  }();
-
-  /// Rock: a cool grey, taking the light of the hour.
-  late final Color _rock = Color.lerp(const Color(0xFF5E6470), _ground, .55)!;
-
-  /// The colour of a layer: [t] 0 is the horizon's haze, 1 the darkest ground.
-  Color _layer(Color base, double t) {
-    var c = Color.lerp(_haze, base, t)!;
+  /// The air between here and the far range: the sky low over the horizon, with the hour's tint.
+  late final Color _air = () {
+    var c = Color.lerp(pal.colors.last, pal.horizonHaze, .3 + .3 * moonlight)!;
     if (scene.tintStrength > 0) c = Color.lerp(c, Color(scene.tint), scene.tintStrength * .35)!;
     return c;
-  }
+  }();
 
-  /// Snow on the high peaks: through most of the year, only on the tops in summer.
-  double get _peakSnow => math.max(snow, .12 + .7 * math.pow(scene.cold, 1.3));
+  /// The darkest the land gets, close by: near black at night, a little lifted by a bright moon, the season's
+  /// colour (deep and quiet) on the woods by day.
+  late final Color _ink = () {
+    final night = Color.lerp(pal.colors.first, const Color(0xFF010207), .6)!;
+    final day = Color.lerp(Color(scene.season), const Color(0xFF151C1E), .6)!;
+    return Color.lerp(Color.lerp(night, day, _day)!, const Color(0xFF3A4458), .25 * moonlight)!;
+  }();
 
-  /// [c] lit ([f] > 0) or shaded ([f] < 0); the lit side warms at sunrise and sunset.
-  Color _shade(Color c, double f) {
-    final k = f * _contrast;
-    if (k >= 0) {
-      final lit = Color.lerp(c, Colors.white, .16 * k)!;
-      return warm > 0 ? Color.lerp(lit, pal.sun, .22 * warm * k)! : lit;
-    }
-    return Color.lerp(c, const Color(0xFF060814), .30 * -k)!;
-  }
+  /// Bare rock far away: blue-grey by day, as dark as the rest at night.
+  late final Color _rock = Color.lerp(_ink, const Color(0xFF4A5566), .55 * _day)!;
+
+  /// The mist in the valleys: grey-blue at night (brighter under the moon), white by day.
+  late final Color _mist = Color.lerp(
+    _air,
+    Color.lerp(const Color(0xFF8F99B0), const Color(0xFFF1F3F6), _day)!,
+    .55 + .25 * moonlight,
+  )!;
+
+  /// How thick the mist lies: always a little in the valleys, more at night and most on misty mornings.
+  late final double _mistDepth = (.55 + .2 * moonlight - .25 * _day + .35 * scene.mist).clamp(0.0, .85);
+
+  /// A layer [near] (0 the air – 1 the darkest ground) of [base].
+  Color _layer(Color base, double near) => Color.lerp(_air, base, near)!;
 
   // ---------- Shapes ----------
 
-  /// A ridge line: the main points, with smaller bumps added in between (always the same, from [seed]).
-  static List<Offset> _ridge(List<(double, double)> main, int seed, double rough) {
+  /// A ridge line, the same on every start: v at every 2 units across (x = 0, 2 … 400). Summits (x, rise,
+  /// half-width, shape: 1 pointed … 3 broad) stand on the [base] line, and midpoint displacement breaks the line up
+  /// like real rock or woods, [rough] units at most, more of it on the high parts.
+  static List<double> _ridgeLine(
+    double base,
+    List<(double, double, double, double)> summits, {
+    required int seed,
+    required double rough,
+  }) {
+    const n = 256;
     final rnd = math.Random(seed);
-    var pts = [for (final (X, v) in main) Offset(X, v)];
-    var amp = rough;
-    for (var pass = 0; pass < 3; pass++) {
-      final next = <Offset>[];
-      for (var i = 0; i < pts.length - 1; i++) {
-        final a = pts[i], b = pts[i + 1];
-        next
-          ..add(a)
-          ..add(
-            Offset(
-              (a.dx + b.dx) / 2 + (rnd.nextDouble() - .5) * (b.dx - a.dx) * .2,
-              (a.dy + b.dy) / 2 + (rnd.nextDouble() - .5) * amp,
-            ),
-          );
+    final f = List<double>.filled(n + 1, 0);
+    f[0] = rnd.nextDouble();
+    f[n] = rnd.nextDouble();
+    var scale = 1.0;
+    for (var step = n; step > 1; step ~/= 2) {
+      final half = step ~/ 2;
+      for (var i = half; i < n; i += step) {
+        f[i] = (f[i - half] + f[i + half]) / 2 + (rnd.nextDouble() - .5) * scale;
       }
-      next.add(pts.last);
-      pts = next;
-      amp *= .55;
+      scale *= .68;
     }
-    return pts;
+    final lo = f.reduce(math.min), hi = f.reduce(math.max);
+    final highest = summits.fold(0.0, (m, s) => math.max(m, s.$2));
+    return List.generate(201, (i) {
+      final X = i * 2.0;
+      var rise = 0.0;
+      for (final (sx, sr, hw, shape) in summits) {
+        rise = math.max(rise, sr * math.exp(-math.pow((X - sx).abs() / hw, shape)));
+      }
+      final k = (i / 200 * n).floor();
+      final noise = (f[k] - lo) / (hi - lo) - .5;
+      return base - rise - rough * noise * (.35 + .65 * rise / highest);
+    });
   }
 
-  static const List<(double, double)> _farMain = [
-    (-12, -2),
-    (14, -14),
-    (34, -6),
-    (58, -26),
-    (74, -16),
-    (92, -22),
-    (116, -44),
-    (132, -30),
-    (146, -36),
-    (168, -12),
-    (190, -4),
-    (214, -16),
-    (236, -8),
-    (258, -2),
-    (280, -18),
-    (300, -30),
-    (322, -48),
-    (340, -32),
-    (356, -38),
-    (380, -14),
-    (412, -20),
+  /// The far range: a long massif on the left, the main summit right of the middle with a shoulder, and a pair
+  /// of sharper peaks on the right.
+  static final List<double> _far = _ridgeLine(
+    -5,
+    const [
+      (0, 8, 34, 2),
+      (42, 11, 26, 2),
+      (98, 15, 46, 3),
+      (86, 18, 12, 1.5),
+      (150, 11, 24, 2),
+      (206, 8, 30, 2.4),
+      (236, 17, 20, 1.6),
+      (264, 29, 30, 1.3),
+      (304, 14, 18, 1.8),
+      (348, 17, 16, 1.7),
+      (373, 20, 18, 1.6),
+      (400, 15, 22, 1.8),
+    ],
+    seed: 11,
+    rough: 8,
+  );
+
+  /// The wooded ridges in front, nearly level: (the ridge line, the seed of its treetops).
+  static final List<(List<double>, int)> _woods = [
+    (
+      _ridgeLine(
+        6,
+        const [(20, 4, 50, 1.8), (110, 7, 45, 1.6), (200, 2.5, 40, 2), (290, 6, 55, 1.7), (380, 8, 45, 1.6)],
+        seed: 23,
+        rough: 2.5,
+      ),
+      31,
+    ),
+    (
+      _ridgeLine(
+        22,
+        const [(0, 6, 60, 1.8), (90, 2, 40, 2), (170, 5, 50, 1.7), (270, 3, 40, 2), (360, 6.5, 60, 1.7)],
+        seed: 37,
+        rough: 2.2,
+      ),
+      43,
+    ),
+    // the nearest hills rise on both sides and dip to the lake in the middle
+    (
+      _ridgeLine(
+        44,
+        const [(0, 14, 80, 1.6), (150, 3, 40, 2), (260, 2, 40, 2), (400, 16, 90, 1.6)],
+        seed: 51,
+        rough: 2.4,
+      ),
+      59,
+    ),
   ];
 
-  static const List<(double, double)> _midMain = [
-    (-12, 16),
-    (22, 4),
-    (44, 12),
-    (70, -2),
-    (96, 10),
-    (124, 6),
-    (150, 16),
-    (180, 8),
-    (206, 18),
-    (236, 4),
-    (262, -6),
-    (284, 6),
-    (310, 14),
-    (340, 2),
-    (368, 10),
-    (392, 0),
-    (412, 8),
-  ];
-
-  static final List<Offset> _far = _ridge(_farMain, 11, 9);
-  static final List<Offset> _mid = _ridge(_midMain, 23, 7);
-
-  /// Where the water begins, and where the shore in front begins.
+  /// Where the water begins.
   static const double _waterV = 50;
+
+  /// The outline of a ridge, reaching down under the water's edge (the nearer ones cover the rest); with
+  /// [trees], a soft fuzz of treetops along its top.
+  Path _outline(List<double> line, {int? trees}) {
+    const bottom = _waterV + 2;
+    final path = Path()..moveTo(x(-4), y(bottom));
+    if (trees == null) {
+      for (var i = 0; i < line.length; i++) {
+        path.lineTo(x(i * 2.0), y(line[i]));
+      }
+    } else {
+      final rnd = math.Random(trees);
+      for (var X = -4.0; X <= 404; X += 1.1) {
+        final t = (X / 2).clamp(0.0, 199.999);
+        final i = t.floor();
+        final v = line[i] + (line[i + 1] - line[i]) * (t - i);
+        // the woods: treetops in loose clumps
+        final clump = .55 + .45 * math.sin(X * .19 + trees);
+        path.lineTo(x(X), y(v - 1.3 * clump * math.pow(rnd.nextDouble(), 1.6)));
+      }
+    }
+    path
+      ..lineTo(x(404), y(bottom))
+      ..close();
+    return path;
+  }
+
+  /// The highest point of a ridge (the smallest v).
+  static double _peak(List<double> line) => line.reduce(math.min);
+
+  /// The average height of a ridge.
+  static double _mean(List<double> line) => line.reduce((a, b) => a + b) / line.length;
 
   // ---------- Painting ----------
 
@@ -192,19 +237,10 @@ class Landscape {
     // the land above the water, recorded once so the lake can mirror it
     final recorder = ui.PictureRecorder();
     final land = Canvas(recorder);
-    _range(land, _far, depth: .36, foot: 34, rock: _rock, snowLine: _lerp(-38, 4, _peakSnow), seed: 3);
-    _mist(land, 34, .5);
-    _range(
-      land,
-      _mid,
-      depth: .56,
-      foot: 46,
-      rock: Color.lerp(_rock, _ground, .5)!,
-      snowLine: _lerp(-14, 30, snow * .9),
-      seed: 7,
-    );
-    _mist(land, 44, .38);
-    _forest(land);
+    _farRange(land);
+    for (var i = 0; i < _woods.length; i++) {
+      _wood(land, i);
+    }
     final picture = recorder.endRecording();
 
     canvas.drawPicture(picture);
@@ -213,195 +249,100 @@ class Landscape {
     picture.dispose();
   }
 
-  /// A mountain range: faces from each peak down to its foot, lit or shaded, with gullies and snow.
-  void _range(
-    Canvas canvas,
-    List<Offset> ridge, {
-    required double depth,
-    required double foot,
-    required Color rock,
-    required double snowLine,
-    required int seed,
-  }) {
-    Offset p(Offset q) => Offset(x(q.dx), y(q.dy));
-    final base = _layer(rock, depth + .2);
-    final outline = Path()..moveTo(p(ridge.first).dx, p(ridge.first).dy);
-    for (final q in ridge.skip(1)) {
-      outline.lineTo(p(q).dx, p(q).dy);
-    }
-    outline
-      ..lineTo(x(ridge.last.dx), y(foot + 8))
-      ..lineTo(x(ridge.first.dx), y(foot + 8))
-      ..close();
-    canvas.drawPath(outline, Paint()..color = dim(base));
-
-    // the main peaks and the valleys between them
-    final marks = <int>[0];
-    for (var i = 1; i < ridge.length - 1; i++) {
-      final isPeak = ridge[i].dy < ridge[i - 1].dy && ridge[i].dy < ridge[i + 1].dy;
-      final isValley = ridge[i].dy > ridge[i - 1].dy && ridge[i].dy > ridge[i + 1].dy;
-      // only the bigger ones: a peak must stand a little above its neighbours two steps away
-      if ((isPeak || isValley) && i - marks.last >= 3) marks.add(i);
-    }
-    marks.add(ridge.length - 1);
-
-    final rnd = math.Random(seed);
-    // from every peak and every valley a spur runs down to the foot: a jagged line, slanting a little; the faces
-    // on either side share it, so they meet without gaps
-    final spurs = <int, List<Offset>>{};
-    for (final k in marks) {
-      final top = p(ridge[k]);
-      final bottom = y(foot + 8);
-      final slant = (rnd.nextDouble() - .5) * 14 * u;
-      final pts = <Offset>[top];
-      const n = 5;
-      for (var j = 1; j <= n; j++) {
-        final f = j / n;
-        final jitter = j == n ? 0.0 : (rnd.nextDouble() - .5) * 3.2 * u;
-        pts.add(Offset(top.dx + slant * f + jitter, top.dy + (bottom - top.dy) * f));
-      }
-      spurs[k] = pts;
-    }
-    final snowColorLit = Color.lerp(
-      _layer(const Color(0xFFF4F7FB), depth + .45),
-      const Color(0xFFFFC2B0),
-      warm * daylight * .4,
-    )!;
-    final snowColorShade = _layer(const Color(0xFFB4C0D6), depth + .4);
-
-    canvas.save();
-    canvas.clipPath(outline);
-    for (var m = 0; m < marks.length - 1; m++) {
-      final a = marks[m], b = marks[m + 1];
-      final goingDown = ridge[b].dy > ridge[a].dy; // from a peak down to a valley
-      // a face going down to the right looks right
-      final facing = (goingDown ? 1.0 : -1.0) * _lightFrom.sign * math.min(1, _lightFrom.abs() * 1.6 + .25);
-      final peak = goingDown ? ridge[a] : ridge[b];
-      // along the ridge, down the next spur, and back up this one
-      final face = Path()..moveTo(p(ridge[a]).dx, p(ridge[a]).dy);
-      for (var i = a + 1; i <= b; i++) {
-        face.lineTo(p(ridge[i]).dx, p(ridge[i]).dy);
-      }
-      for (final q in spurs[b]!.skip(1)) {
-        face.lineTo(q.dx, q.dy);
-      }
-      for (final q in spurs[a]!.reversed) {
-        face.lineTo(q.dx, q.dy);
-      }
-      face.close();
-      final lit = _shade(base, facing);
-      final top = y(peak.dy), bottom = y(foot + 8);
-      canvas.drawPath(
-        face,
-        Paint()
-          ..shader = ui.Gradient.linear(Offset(0, top), Offset(0, bottom), [
-            dim(lit),
-            dim(Color.lerp(lit, _layer(_ground, depth + .3), .55)!),
-          ]),
-      );
-
-      canvas.save();
-      canvas.clipPath(face);
-      // snow above the snow line, with a ragged edge that reaches lower in the gullies
-      if (snowLine > peak.dy - 2) {
-        final edge = Path()..moveTo(x(ridge[a].dx - 2), y(-70));
-        final steps = math.max(4, (ridge[b].dx - ridge[a].dx) ~/ 2.5);
-        for (var s = 0; s <= steps; s++) {
-          final X = ridge[a].dx + (ridge[b].dx - ridge[a].dx) * s / steps;
-          final drop = (rnd.nextDouble() - .3) * 6 + 3 * math.sin(X * .7);
-          edge.lineTo(x(X), y(snowLine + drop));
-        }
-        edge
-          ..lineTo(x(ridge[b].dx + 2), y(-70))
-          ..close();
-        final snowColor = facing >= 0 ? snowColorLit : snowColorShade;
-        canvas.drawPath(edge, Paint()..color = dim(_shade(snowColor, facing * .6)).withValues(alpha: .92));
-      }
-      // gullies: thin lines from the ridge down the face
-      final gully = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = .6
-        ..color = Colors.black.withValues(alpha: .03 + .05 * _contrast);
-      for (var i = a + 2; i < b - 1; i += 4) {
-        final q = p(ridge[i]);
-        final len = (y(foot) - q.dy) * (.25 + rnd.nextDouble() * .3);
-        final lean = (goingDown ? -1 : 1) * len * (.3 + rnd.nextDouble() * .3);
-        canvas.drawPath(
-          Path()
-            ..moveTo(q.dx, q.dy + 1)
-            ..quadraticBezierTo(q.dx + lean * .3, q.dy + len * .5, q.dx + lean, q.dy + len),
-          gully,
-        );
-      }
-      canvas.restore();
-    }
-    canvas.restore();
-
-    // the sunlit edge of the ridge at sunrise and sunset (alpenglow)
-    if (warm * daylight > .05) {
-      final rim = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..strokeJoin = StrokeJoin.round
-        ..color = dim(Color.lerp(pal.sun, Colors.white, .3)!).withValues(alpha: .45 * warm * daylight * (1 - depth));
-      canvas.drawPath(Path()..addPolygon([for (final q in ridge) p(q)], false), rim);
-    }
-  }
-
-  /// Mist lying at the foot of a range.
-  void _mist(Canvas canvas, double v, double strength) {
-    final mist = dim(Color.lerp(_haze, Colors.white, .1 * daylight)!);
-    final a = strength * (.55 + .45 * daylight) + .25 * scene.mist;
-    canvas.drawRect(
-      Rect.fromLTRB(0, y(v - 16), w, y(v + 6)),
-      Paint()
-        ..shader = ui.Gradient.linear(Offset(0, y(v - 16)), Offset(0, y(v + 2)), [
-          mist.withValues(alpha: 0),
-          mist.withValues(alpha: a.clamp(0.0, .85)),
-        ]),
-    );
-  }
-
-  /// The forested ridge above the water: the tips of countless pines.
-  void _forest(Canvas canvas) {
-    final rnd = math.Random(41);
-    final color = dim(_layer(Color.lerp(_ground, const Color(0xFF0F2018), .3 * daylight)!, .78));
-    final path = Path()..moveTo(x(-10), y(_waterV + 2));
-    for (var X = -10.0; X <= 410; X += 1.6) {
-      final ground = 42 + 3.2 * math.sin(X * .021 + 1) + 1.6 * math.sin(X * .067);
-      final tip = 1.2 + rnd.nextDouble() * 2.6;
-      path
-        ..lineTo(x(X), y(ground))
-        ..lineTo(x(X + .8), y(ground - tip));
-    }
-    path
-      ..lineTo(x(410), y(_waterV + 2))
-      ..close();
+  /// The far range: one silhouette, pale with distance, its foot lost in the mist; the side towards the sun a
+  /// little lighter by day; the haze around it warm when the sun is low.
+  void _farRange(Canvas canvas) {
+    // it fades into the mist where the first wooded ridge stands in front of it
+    final next = _mean(_woods.first.$1);
+    final outline = _outline(_far);
+    final c = _layer(_rock, .62);
     canvas.drawPath(
-      path,
+      outline,
       Paint()
-        ..shader = ui.Gradient.linear(Offset(0, y(36)), Offset(0, y(_waterV)), [
-          color,
-          Color.lerp(color, Colors.black, .25)!,
-        ]),
+        ..shader = ui.Gradient.linear(
+          Offset(0, y(_peak(_far))),
+          Offset(0, y(next + 2)),
+          [dim(c), dim(c), dim(Color.lerp(c, _mist, _mistDepth)!)],
+          const [0, .45, 1],
+        ),
     );
-    // snow on the trees in winter
-    if (snow > .3) {
+    // by day the side facing the sun is a little lighter and the other a little darker; at noon, neither
+    final side = (sunX - .5) * 2 * _day;
+    if (side.abs() > .05) {
+      final lit = Colors.white.withValues(alpha: .09 * side.abs());
+      final shade = Colors.black.withValues(alpha: .07 * side.abs());
+      final (left, right) = side < 0 ? (lit, shade) : (shade, lit);
       canvas.drawPath(
-        path,
+        outline,
         Paint()
-          ..shader = ui.Gradient.linear(Offset(0, y(38)), Offset(0, y(46)), [
-            dim(Colors.white).withValues(alpha: .35 * snow * (.4 + .6 * daylight)),
-            dim(Colors.white).withValues(alpha: 0),
-          ]),
+          ..shader = ui.Gradient.linear(
+            Offset.zero,
+            Offset(w, 0),
+            [left, left.withValues(alpha: 0), right.withValues(alpha: 0), right],
+            const [0, .45, .55, 1],
+          ),
       );
     }
+    // the low sun lights the haze on its side, and catches the edge of the ridge
+    final glow = warm * (.4 + .6 * daylight);
+    if (glow > .02) {
+      final c = Offset(sunX * w, y(-8));
+      final sun = dim(Color.lerp(pal.sun, Colors.white, .15)!);
+      canvas.drawPath(
+        outline,
+        Paint()
+          ..blendMode = BlendMode.screen
+          ..shader = ui.Gradient.radial(c, w * .6, [sun.withValues(alpha: .3 * glow), sun.withValues(alpha: 0)]),
+      );
+      canvas.drawPath(
+        Path()..addPolygon([for (var i = 0; i < _far.length; i++) Offset(x(i * 2.0), y(_far[i]))], false),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .8
+          ..strokeJoin = StrokeJoin.round
+          ..color = sun.withValues(alpha: .35 * glow),
+      );
+    }
+    _mistBand(canvas, next + 1, 1);
   }
 
-  late final double _frozen = _smooth((snow - .6) / .3);
+  /// A wooded ridge: dark along its treetops, fading down into the mist in front of it.
+  void _wood(Canvas canvas, int i) {
+    final (line, trees) = _woods[i];
+    final last = i == _woods.length - 1;
+    // each fades into the mist where the next one stands in front of it; the nearest hills reach the water
+    final bottom = last ? _waterV : _mean(_woods[i + 1].$1) + 1;
+    final c = _layer(_ink, .74 + .1 * i);
+    final foot = last ? Color.lerp(c, _mist, _mistDepth * .3)! : Color.lerp(c, _mist, _mistDepth * (.95 - .15 * i))!;
+    canvas.drawPath(
+      _outline(line, trees: trees),
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(0, y(_peak(line) - 1.5)), Offset(0, y(bottom)), [
+          dim(c),
+          dim(c),
+          dim(foot),
+        ], last ? const [0, .6, 1] : const [0, .2, 1]),
+    );
+    _mistBand(canvas, bottom, last ? .4 : .9 - .2 * i);
+  }
+
+  /// A soft band of mist lying at [v], thickest at the bottom.
+  void _mistBand(Canvas canvas, double v, double strength) {
+    final a = (_mistDepth * strength * .6).clamp(0.0, .7);
+    if (a <= .01) return;
+    final mist = dim(_mist);
+    canvas.drawRect(
+      Rect.fromLTRB(0, y(v - 9), w, y(v + 2)),
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(0, y(v - 9)), Offset(0, y(v + 1)), [
+          mist.withValues(alpha: 0),
+          mist.withValues(alpha: a),
+        ]),
+    );
+  }
 
   /// The lake: the land and the sky mirrored and softened, the sun's or the moon's path of light, and a few
-  /// still ripples. Pale and white when it freezes.
+  /// still ripples.
   void _lake(Canvas canvas, ui.Picture land) {
     final waterY = y(_waterV);
     final water = Rect.fromLTRB(0, waterY, w, h);
@@ -410,8 +351,8 @@ class Landscape {
       water,
       Paint()
         ..shader = ui.Gradient.linear(Offset(0, waterY), Offset(0, h), [
-          dim(Color.lerp(_haze, _ground, .25)!),
-          dim(Color.lerp(_sky, _ground, .55)!),
+          dim(Color.lerp(_air, _ink, .35)!),
+          dim(Color.lerp(pal.colors[pal.colors.length ~/ 2], _ink, .6)!),
         ]),
     );
     // the land, mirrored and softened
@@ -468,32 +409,23 @@ class Landscape {
       }
     }
 
-    if (_frozen < .9) {
-      final sp = scene.sunProgress;
-      if (sp > -.02 && sp < 1.02) lightPath(sunX * w, dim(Color.lerp(pal.sun, Colors.white, .2)!), .8 * daylight);
-      final moon = scene.moon;
-      if (moon.up && moon.illumination > .05 && daylight < .5) {
-        final mx = (.5 - .42 * math.cos(math.pi * moon.progress.clamp(0.0, 1.0))) * w;
-        lightPath(mx, dim(const Color(0xFFF2EEDC)), .6 * moon.illumination * (1 - daylight));
-      }
-      // still ripples
-      final rnd = math.Random(17);
-      final ripple = Paint()
-        ..strokeWidth = .7
-        ..color = dim(Color.lerp(_haze, Colors.white, .5)!).withValues(alpha: .05 + .05 * daylight);
-      for (var i = 0; i < 10; i++) {
-        final yy = waterY + 2 + rnd.nextDouble() * (h - waterY) * .6;
-        final xx = rnd.nextDouble() * w;
-        final len = 20 + rnd.nextDouble() * 50;
-        canvas.drawLine(Offset(xx, yy), Offset(xx + len, yy), ripple);
-      }
+    final sp = scene.sunProgress;
+    if (sp > -.02 && sp < 1.02) lightPath(sunX * w, dim(Color.lerp(pal.sun, Colors.white, .2)!), .8 * daylight);
+    final moon = scene.moon;
+    if (moon.up && moon.illumination > .05 && daylight < .5) {
+      final mx = (.5 - .42 * math.cos(math.pi * moon.progress.clamp(0.0, 1.0))) * w;
+      lightPath(mx, dim(const Color(0xFFF2EEDC)), .6 * moon.illumination * (1 - daylight));
     }
-    // ice
-    if (_frozen > .02) {
-      canvas.drawRect(
-        water,
-        Paint()..color = dim(Color.lerp(_haze, const Color(0xFFE4ECF4), .6)!).withValues(alpha: .7 * _frozen),
-      );
+    // still ripples
+    final rnd = math.Random(17);
+    final ripple = Paint()
+      ..strokeWidth = .7
+      ..color = dim(Color.lerp(_air, Colors.white, .5)!).withValues(alpha: .05 + .05 * daylight);
+    for (var i = 0; i < 10; i++) {
+      final yy = waterY + 2 + rnd.nextDouble() * (h - waterY) * .6;
+      final xx = rnd.nextDouble() * w;
+      final len = 20 + rnd.nextDouble() * 50;
+      canvas.drawLine(Offset(xx, yy), Offset(xx + len, yy), ripple);
     }
     // a fine bright line where the water meets the land
     canvas.drawRect(
@@ -504,7 +436,7 @@ class Landscape {
 
   /// The shore in front, with a few pines on each side.
   void _shore(Canvas canvas) {
-    final color = dim(_layer(Color.lerp(_ground, Colors.black, .35)!, .95));
+    final color = dim(_layer(Color.lerp(_ink, Colors.black, .35)!, .96));
     final path = Path()..moveTo(x(-10), y(84));
     path
       ..cubicTo(x(60), y(80), x(120), y(87), x(200), y(86))
@@ -543,8 +475,6 @@ class Landscape {
     return path;
   }
 }
-
-double _lerp(double a, double b, double t) => a + (b - a) * t.clamp(0.0, 1.0);
 
 double _smooth(double x) {
   final t = x.clamp(0.0, 1.0);

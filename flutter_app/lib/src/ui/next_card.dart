@@ -189,17 +189,20 @@ const LinearGradient _goldShine = LinearGradient(
   stops: [0, .32, .52, .72, 1],
 );
 
-/// The widest digit of a font at a size, so every digit can sit in a cell of the same width.
+/// The widest digit of a font at a size (and the phone's text size), so every digit can sit in a cell of the
+/// same width.
 final Map<String, double> _digitWidths = {};
 
-double _widestDigit(TextStyle style) {
-  final key = '${style.fontFamily}/${style.fontSize}/${style.fontVariations}';
+double _widestDigit(TextStyle style, TextScaler scaler) {
+  final key =
+      '${style.fontFamily}/${style.fontSize}/${style.fontVariations}/${style.letterSpacing}/${scaler.scale(100)}';
   return _digitWidths[key] ??= () {
     var widest = 0.0;
     for (var d = 0; d < 10; d++) {
       final tp = TextPainter(
         text: TextSpan(text: '$d', style: style),
         textDirection: TextDirection.ltr,
+        textScaler: scaler,
       )..layout();
       widest = widest < tp.width ? tp.width : widest;
       tp.dispose();
@@ -208,10 +211,12 @@ double _widestDigit(TextStyle style) {
   }();
 }
 
-/// The big `HH:MM:SS`: digits at full strength, the colons a touch softer. In a font of its own (picked in the
-/// settings) each digit sits in a cell of the same width, so the numbers never jump; on Fridays it is gold.
-class _CountdownNumber extends StatelessWidget {
-  const _CountdownNumber({
+/// The big `HH:MM:SS`: the hours and minutes large, the seconds smaller beside them, the colons a touch softer.
+/// Each digit sits in a cell of the same width, so the numbers never jump, and when it changes it fades softly
+/// into the next one. In a font of its own (picked in the settings), and on Fridays in gold.
+class CountdownNumber extends StatelessWidget {
+  const CountdownNumber({
+    super.key,
     required this.text,
     required this.size,
     required this.weight,
@@ -221,6 +226,13 @@ class _CountdownNumber extends StatelessWidget {
     this.gold = false,
   });
 
+  /// The seconds' size next to the hours and minutes.
+  static const double secondsScale = .5;
+
+  /// How long a digit takes to fade into the next one.
+  static const Duration fade = Duration(milliseconds: 450);
+
+  /// `HH:MM:SS`.
   final String text;
   final double size;
   final int weight;
@@ -250,39 +262,48 @@ class _CountdownNumber extends StatelessWidget {
         fontFamily: family,
         fontFeatures: const [FontFeature.liningFigures(), FontFeature.tabularFigures()],
       );
-    }
-    final colon = base.copyWith(color: const Color(0x8CFFFFFF));
-    Widget number;
-    if (family == null) {
-      final parts = text.split(':');
-      final spans = <InlineSpan>[];
-      for (var i = 0; i < parts.length; i++) {
-        if (i > 0) spans.add(TextSpan(text: ':', style: colon));
-        spans.add(TextSpan(text: parts[i]));
-      }
-      number = Text.rich(TextSpan(children: spans), style: base, softWrap: false, maxLines: 1);
     } else {
-      final cell = _widestDigit(base);
-      number = Semantics(
-        label: text,
-        excludeSemantics: true,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final ch in text.split(''))
-              ch == ':'
-                  ? Padding(
-                      padding: EdgeInsets.symmetric(horizontal: size * .04),
-                      child: Text(':', style: colon),
-                    )
-                  : SizedBox(
-                      width: cell,
-                      child: Text(ch, style: base, textAlign: TextAlign.center, softWrap: false),
-                    ),
-          ],
-        ),
+      // the app's font, from the theme, so the cells are measured in the font the digits are drawn in
+      base = base.copyWith(fontFamily: DefaultTextStyle.of(context).style.fontFamily);
+    }
+    final scaler = MediaQuery.textScalerOf(context);
+    final small = base.copyWith(
+      fontSize: size * secondsScale,
+      letterSpacing: (base.letterSpacing ?? 0) * secondsScale,
+      shadows: gold ? base.shadows : (full ? _countShadow : null),
+    );
+    final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : fade;
+    Widget digits(String part, TextStyle style) {
+      final cell = _widestDigit(style, scaler);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [for (final d in part.split('')) _FadeDigit(digit: d, style: style, width: cell, duration: duration)],
       );
     }
+
+    Widget colon(TextStyle style) => Padding(
+      padding: EdgeInsets.symmetric(horizontal: style.fontSize! * (family == null ? .01 : .04)),
+      child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+    );
+
+    final parts = text.split(':');
+    Widget number = Semantics(
+      label: text,
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          for (var i = 0; i < parts.length; i++) ...[
+            if (i > 0) colon(i < parts.length - 1 ? base : small),
+            digits(parts[i], i < parts.length - 1 ? base : small),
+          ],
+        ],
+      ),
+    );
     if (gold) {
       number = ShaderMask(
         blendMode: BlendMode.srcIn,
@@ -292,6 +313,49 @@ class _CountdownNumber extends StatelessWidget {
     }
     return FittedBox(fit: BoxFit.scaleDown, alignment: center ? Alignment.center : Alignment.centerLeft, child: number);
   }
+}
+
+/// One digit of the countdown in its cell: when it changes, the old one fades out as the new one fades in.
+class _FadeDigit extends StatefulWidget {
+  const _FadeDigit({required this.digit, required this.style, required this.width, required this.duration});
+
+  final String digit;
+  final TextStyle style;
+  final double width;
+  final Duration duration;
+
+  @override
+  State<_FadeDigit> createState() => _FadeDigitState();
+}
+
+class _FadeDigitState extends State<_FadeDigit> {
+  /// Each change gets a key of its own, so a digit that comes back while it is still fading out (5 → 6 → 5 in
+  /// quick steps) never stands twice under the same key.
+  int _changes = 0;
+
+  @override
+  void didUpdateWidget(_FadeDigit old) {
+    super.didUpdateWidget(old);
+    if (old.digit != widget.digit) _changes++;
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: widget.width,
+    child: AnimatedSwitcher(
+      duration: widget.duration,
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      layoutBuilder: (current, previous) => Stack(alignment: Alignment.center, children: [...previous, ?current]),
+      child: Text(
+        widget.digit,
+        key: ValueKey(_changes),
+        style: widget.style,
+        textAlign: TextAlign.center,
+        softWrap: false,
+      ),
+    ),
+  );
 }
 
 class _CountdownLabel extends StatelessWidget {
@@ -373,7 +437,7 @@ class _Normal extends StatelessWidget {
           const SizedBox(height: 6),
           _NameAndTime(card: card, vw: vw, center: false),
           const SizedBox(height: 10),
-          _CountdownNumber(
+          CountdownNumber(
             text: fmtCount(card.target - now),
             size: clampPx(54, vw * .16, 74),
             weight: weight,
@@ -491,7 +555,7 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _CountdownNumber(
+                  CountdownNumber(
                     text: fmtCount(card.target - now),
                     size: size,
                     weight: weight,
