@@ -101,15 +101,18 @@ class SkyPalette {
   /// How visible the stars are, 0–1.
   final double stars;
   final Color hill;
+
+  /// The paler air low over the mountains: the bottom of the sky, lightened.
+  Color get horizonHaze => Color.lerp(colors.last, const Color(0xFFFFFFFF), .42)!;
 }
 
 const Map<SkyPhase, SkyPalette> skyPalettes = {
   SkyPhase.night: SkyPalette(
-    colors: [Color(0xFF060A1C), Color(0xFF11173A), Color(0xFF232A5E)],
-    stops: [0, .48, 1],
-    glow: Color(0xFF3A3F96),
-    hazeA: Color.fromRGBO(118, 92, 214, .42),
-    hazeB: Color.fromRGBO(36, 80, 176, .42),
+    colors: [Color(0xFF03060F), Color(0xFF0A1023), Color(0xFF1A2239)],
+    stops: [0, .5, 1],
+    glow: Color(0xFF2E3872),
+    hazeA: Color.fromRGBO(98, 98, 168, .22),
+    hazeB: Color.fromRGBO(40, 70, 150, .24),
     sun: Color.fromRGBO(255, 236, 196, 1),
     stars: 1,
     hill: Color.fromRGBO(2, 4, 16, .62),

@@ -7,19 +7,21 @@
 ### Kohët e namazit për Kosovën – të sakta, të bukura, pa reklama dhe pa internet
 
 Kohët zyrtare nga **Takvimi i Bashkësisë Islame të Kosovës**, për 18 qytete,<br>
-me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe me stinët.
+nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
-[![Shkarko për Android](https://img.shields.io/badge/Shkarko_për_Android-APK-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest)
+[![Shkarko për Android](https://img.shields.io/badge/Shkarko_për_Android-APK-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet-kosove-1.vercel.app)
 
+<sub>Android 1.7 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+
 <br>
 
-<img src="docs/screenshots/v1.3/10_night_milky_way_2300.jpg" width="160" alt="Nata me Kashtën e Kumtrit dhe yje që vezullojnë">&nbsp;
-<img src="docs/screenshots/v1.3/12_full_moon_2200.jpg" width="160" alt="Hëna e plotë në fazën e saj të vërtetë">&nbsp;
-<img src="docs/screenshots/v1.3/06_golden_hour_1640.jpg" width="160" alt="Ora e artë para perëndimit">&nbsp;
-<img src="docs/screenshots/v1.3/13_winter_snow_1230.jpg" width="160" alt="Dimri, me borë në kodra">&nbsp;
-<img src="docs/screenshots/v1.3/16_swipe_up_sheet.jpg" width="160" alt="Vaktet, alarmi dhe dy këshillat e ditës, të rrëshqitura lart">
+<img src="docs/screenshots/v1.7/10_night_milky_way_2300.jpg" width="160" alt="Nata, me yje deri te malet"> &nbsp;
+<img src="docs/screenshots/v1.7/02_sunrise_0650.jpg" width="160" alt="Lindja e diellit pas maleve"> &nbsp;
+<img src="docs/screenshots/v1.7/03_morning_mist_0740.jpg" width="160" alt="Mjegull në lugina në mëngjes"> &nbsp;
+<img src="docs/screenshots/v1.7/16_friday_gold_1100.jpg" width="160" alt="E premtja: koha e mbetur në ar"> &nbsp;
+<img src="docs/screenshots/v1.7/18_prayer_times_sheet.jpg" width="160" alt="Vaktet e ditës, të rrëshqitura lart">
 
 </div>
 
@@ -29,70 +31,74 @@ me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe 
 
 <div align="center">
 <table>
-<tr><td align="center"><img src="docs/screenshots/v1.3/01_dawn_0505.jpg" width="200" alt="Agimi · 05:05"><br><sub>Agimi · 05:05</sub></td><td align="center"><img src="docs/screenshots/v1.3/02_sunrise_0650.jpg" width="200" alt="Lindja e diellit · 06:50"><br><sub>Lindja e diellit · 06:50</sub></td><td align="center"><img src="docs/screenshots/v1.3/03_morning_mist_0740.jpg" width="200" alt="Mjegull e zogj · 07:40"><br><sub>Mjegull e zogj · 07:40</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.3/04_late_morning_1030.jpg" width="200" alt="Paradite · 10:30"><br><sub>Paradite · 10:30</sub></td><td align="center"><img src="docs/screenshots/v1.3/05_afternoon_clouds_1400.jpg" width="200" alt="Re pasdite · 14:00"><br><sub>Re pasdite · 14:00</sub></td><td align="center"><img src="docs/screenshots/v1.3/06_golden_hour_1640.jpg" width="200" alt="Ora e artë · 16:40"><br><sub>Ora e artë · 16:40</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.3/07_forbidden_sunset_1808.jpg" width="200" alt="Kohë e ndaluar · 18:08"><br><sub>Kohë e ndaluar · 18:08</sub></td><td align="center"><img src="docs/screenshots/v1.3/08_dusk_1840.jpg" width="200" alt="Muzgu · 18:40"><br><sub>Muzgu · 18:40</sub></td><td align="center"><img src="docs/screenshots/v1.3/09_evening_lights_1930.jpg" width="200" alt="Dritat e fshatrave · 19:30"><br><sub>Dritat e fshatrave · 19:30</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.3/10_night_milky_way_2300.jpg" width="200" alt="Kashta e Kumtrit · 23:00"><br><sub>Kashta e Kumtrit · 23:00</sub></td><td align="center"><img src="docs/screenshots/v1.3/11_moon_rising_0330.jpg" width="200" alt="Hëna lind · 03:30"><br><sub>Hëna lind · 03:30</sub></td><td align="center"><img src="docs/screenshots/v1.3/12_full_moon_2200.jpg" width="200" alt="Hëna e plotë · 22:00"><br><sub>Hëna e plotë · 22:00</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.3/13_winter_snow_1230.jpg" width="200" alt="Dimër me borë"><br><sub>Dimër me borë</sub></td><td align="center"><img src="docs/screenshots/v1.3/14_spring_green_0900.jpg" width="200" alt="Pranverë e gjelbër"><br><sub>Pranverë e gjelbër</sub></td><td align="center"><img src="docs/screenshots/v1.3/15_summer_fireflies_2130.jpg" width="200" alt="Verë me xixëllonja"><br><sub>Verë me xixëllonja</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.3/16_swipe_up_sheet.jpg" width="200" alt="Vaktet e ditës"><br><sub>Vaktet e ditës</sub></td><td align="center"><img src="docs/screenshots/v1.3/17_month_view.jpg" width="200" alt="Tabela e muajit"><br><sub>Tabela e muajit</sub></td><td align="center"><img src="docs/screenshots/v1.3/18_settings.jpg" width="200" alt="Cilësimet"><br><sub>Cilësimet</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.7/01_dawn_0505.jpg" width="200" alt="Agimi · 05:05"><br><sub>Agimi · 05:05</sub></td><td align="center"><img src="docs/screenshots/v1.7/02_sunrise_0650.jpg" width="200" alt="Lindja e diellit · 06:50"><br><sub>Lindja e diellit · 06:50</sub></td><td align="center"><img src="docs/screenshots/v1.7/03_morning_mist_0740.jpg" width="200" alt="Mjegull në lugina · 07:40"><br><sub>Mjegull në lugina · 07:40</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.7/04_late_morning_1030.jpg" width="200" alt="Paradite · 10:30"><br><sub>Paradite · 10:30</sub></td><td align="center"><img src="docs/screenshots/v1.7/05_afternoon_clouds_1400.jpg" width="200" alt="Re pasdite · 14:00"><br><sub>Re pasdite · 14:00</sub></td><td align="center"><img src="docs/screenshots/v1.7/06_golden_hour_1640.jpg" width="200" alt="Ora e artë · 16:40"><br><sub>Ora e artë · 16:40</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.7/07_forbidden_sunset_1808.jpg" width="200" alt="Kohë e ndaluar · 18:08"><br><sub>Kohë e ndaluar · 18:08</sub></td><td align="center"><img src="docs/screenshots/v1.7/08_dusk_1840.jpg" width="200" alt="Muzgu · 18:40"><br><sub>Muzgu · 18:40</sub></td><td align="center"><img src="docs/screenshots/v1.7/09_evening_1930.jpg" width="200" alt="Mbrëmja · 19:30"><br><sub>Mbrëmja · 19:30</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.7/10_night_milky_way_2300.jpg" width="200" alt="Kashta e Kumtrit · 23:00"><br><sub>Kashta e Kumtrit · 23:00</sub></td><td align="center"><img src="docs/screenshots/v1.7/11_moon_rising_0330.jpg" width="200" alt="Hëna lind · 03:30"><br><sub>Hëna lind · 03:30</sub></td><td align="center"><img src="docs/screenshots/v1.7/12_full_moon_2200.jpg" width="200" alt="Hëna e plotë · 22:00"><br><sub>Hëna e plotë · 22:00</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.7/13_winter_1230.jpg" width="200" alt="Dimri · 12:30"><br><sub>Dimri · 12:30</sub></td><td align="center"><img src="docs/screenshots/v1.7/14_spring_0900.jpg" width="200" alt="Pranvera · 09:00"><br><sub>Pranvera · 09:00</sub></td><td align="center"><img src="docs/screenshots/v1.7/15_summer_evening_2130.jpg" width="200" alt="Mbrëmje vere · 21:30"><br><sub>Mbrëmje vere · 21:30</sub></td></tr>
 </table>
 </div>
 
-## Të reja në versionin 1.3 (Android dhe web)
+## Edhe më
 
-🌅 **Qielli ndryshon butë** – ngjyrat nuk kërcejnë më te çdo vakt, por shkrihen minutë pas minute: agimi skuqet ngadalë, muzgu zbehet në blu.
+<div align="center">
+<table>
+<tr><td align="center"><img src="docs/screenshots/v1.7/16_friday_gold_1100.jpg" width="200" alt="E premtja, në ar"><br><sub>E premtja, në ar</sub></td><td align="center"><img src="docs/screenshots/v1.7/17_elegant_digits_2300.jpg" width="200" alt="Shkronjat „Elegante""><br><sub>Shkronjat „Elegante"</sub></td><td align="center"><img src="docs/screenshots/v1.7/18_prayer_times_sheet.jpg" width="200" alt="Vaktet, të rrëshqitura lart"><br><sub>Vaktet, të rrëshqitura lart</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/v1.7/19_month.jpg" width="200" alt="Muaji"><br><sub>Muaji</sub></td><td align="center"><img src="docs/screenshots/v1.7/20_settings.jpg" width="200" alt="Cilësimet"><br><sub>Cilësimet</sub></td><td></td></tr>
+</table>
+</div>
 
-🌄 **Dielli dhe hëna lindin e perëndojnë pas kodrave** – me dritë të ngrohtë në horizont në lindje e perëndim, dhe një shkëlqim të zbehtë aty ku do të lindë hëna.
+## Të reja në versionin 1.7
 
-✨ **Një moment i qetë në çdo vakt** – kur numërimi arrin zero, një valë e butë drite përshkon qiellin dhe emri i vaktit të ardhshëm shfaqet ngadalë. Pa zë, pa dritare.
+🔋 **Më pak bateri** – qielli pushon 30 sekonda pas prekjes së fundit (koha e mbetur vazhdon; një prekje e zgjon), dhe ndalet edhe kur telefoni kursen baterinë ose kur vaktet e mbulojnë. Kur lëviz, vizatohet 20 herë në sekondë dhe jo 60–120 sa ekrani; retë, mjegulla dhe yjet e zbehtë vizatohen një herë e jo në çdo pamje, dhe ekrani ndërtohet përsëri një herë në minutë – vetëm sekondat ndryshojnë çdo sekondë. Mund ta fikësh te Cilësimet → **Qielli pushon**.
 
-📱 **Thellësi kur e anon telefonin** – yjet, hëna dhe kodrat lëvizin pak secili sipas largësisë (mund ta fikësh te Cilësimet → Lëvizja e qiellit).
+👆 **Vaktet rrëshqasin butë** – ndjekin gishtin saktë që në rrëshqitjen e parë, hapen e mbyllen më shpejt dhe pa ngecje.
 
-☁️ **Re sipas orës** – të holla në mëngjes, më të plota pasdite, me skaje rozë e ari në perëndim.
+🏔️ **Më pak shtresa** – para maleve tani janë vetëm dy kodra me pyje, me mjegull mes tyre.
 
-🍂 **Stinët në kodra** – të gjelbra në pranverë, të arta në verë, portokalli-kafe në vjeshtë dhe me borë në dimër (sipas kalendarit, jo motit).
+📦 **APK më i vogël** – rreth një e treta e madhësisë së mëparshme.
 
-👈 **Rrëshqit majtas e djathtas nëpër ditë** – çdo ditë shfaqet me qiellin e vet në këtë orë: faza e hënës, dielli, retë dhe stina. Rrëshqit lart për vaktet dhe këshillat e asaj dite; „Kthehu te sot" të kthen menjëherë.
+## Të reja në versionin 1.6
 
-🌙 **Logo e re** – hilal e yll, simetrike, në gjelbër smeraldi mbi blu të thellë.
+🏔️ **Male si në një fotografi nate** – një varg malesh në largësi, i ulët e shkëmbor, dhe kodra me pyje para tij, me mjegull që shtrihet mes tyre. Ngjyrat vijnë nga qielli i çastit: natën pothuajse të zeza nën një dritë të zbehtë mbi horizont, nën hënën e plotë mjegulla dhe malet ndriçohen pak, ditën malet janë të kaltra nga largësia, dhe në lindje e në perëndim ajri skuqet nga ana e diellit.
 
-## Të reja në versionin 1.2
+❄️ **Pa borë** – as në male, as në pemë, dhe liqeni nuk ngrin më: kalendari nuk e di motin.
 
-🌙 **Hëna e vërtetë** – hëna shfaqet në fazën e saj të sotme (hilal, gjysmë, e plotë…) dhe aty ku është vërtet në qiell: hëna e plotë lind me perëndimin e diellit, hëna në rënie del pas mesnate, ndonjëherë shihet edhe ditën.
+✨ **Qielli i natës** – më i errët e më i qetë, me qindra yje të imët deri te malet, një rrip më i çelët ajri mbi horizont dhe Kashta e Kumtrit si re e butë drite.
 
-✨ **Yje që vezullojnë më shumë** – çdo yll merr frymë në ritmin e vet, më të ndriturit lëshojnë një xixë të vogël, dhe në mes të natës dalin edhe më shumë yje e bien më shpesh yje.
+⏱️ **Sekondat më të vogla** – sa gjysma e orëve e minutave, dhe çdo shifër që ndryshon shuhet butë në tjetrën.
 
-🕰️ **Një qiell për çdo orë** – 24 pamje sipas diellit, jo sipas orës së murit, prandaj vlejnë në çdo stinë: mjegull në lugina pas lindjes, zogj që dalin në mëngjes e kthehen në mbrëmje, aeroplanë ditën, dritat e fshatrave që ndizen në muzg e shuhen një nga një pas mesnate, ylli i mëngjesit e i mbrëmjes, Kashta e Kumtrit në thellësi të natës dhe xixëllonja në mbrëmjet e verës.
+## Nga versionet 1.4 dhe 1.5
 
-🧘 **Më pak butona, më shumë qetësi** – sot është vetëm qielli dhe numërimi. Rrëshqit lart dhe dalin vaktet, alarmi për sabah dhe dy këshillat e ditës, të gjitha në një vend.
+🌟 **E premtja** – koha e mbetur shkëlqen në ar, nën datë „Xhuma mubarek"; natën e xhumasë (të enjten pas akshamit) qielli mbushet me yje.
 
-⚡ **Më i lehtë** – qielli vizatohet me më pak punë dhe ndërrimet mes pamjeve janë më të shkurtra, prandaj aplikacioni rrjedh më butë dhe harxhon më pak bateri.
+🔢 **Shkronja për kohën e mbetur** – Elegante, Fisnike, Romake, E pastër dhe E gjerë. Shifrat nuk lëvizin kur ndryshojnë.
 
-## Të reja në versionin 1.1
+📅 **Prek datën për muajin** – titujt e vakteve qëndrojnë lart ndërsa ditët rrëshqasin, dhe çdo vakt ka ngjyrën e vet.
 
-✨ **Qielli merr jetë** – në gjithë ekranin yje të vegjël e të butë vezullojnë lehtë, secili në ritmin e vet, herë pas here bie një yll, dielli lëshon rreze të buta që rrotullohen ngadalë, retë lundrojnë nëpër qiell gjatë ditës dhe drita e hënës merr frymë.
+🗓️ **Ditët e veçanta** – ditët kombëtare të Kosovës, netët dhe ditët e mëdha islame dhe shënimet e Takvimit të BIK poshtë datës.
 
-👆 **Rrëshqit lart për vaktet** – kur qielli mbush ekranin, rrëshqit lart dhe vaktet e sotme dalin nga poshtë; rrëshqit poshtë (ose prek qiellin, ose kthehu mbrapa) dhe fshihen përsëri.
+⏰ **Alarmi për sabah në ekran** nga jacia deri në imsak, dhe namazet nafile (Duha, Evvabini, Tehexhudi) me shkronja të vogla kur u vjen koha.
 
-⚡ **Më i shpejtë dhe më i butë** – qielli lëviz me ritmin e ekranit, ndërrimet mes pamjeve kalojnë butë, butonat reagojnë menjëherë nën gisht, dhe aplikacioni harxhon më pak bateri.
+⚙️ **Gjithçka sipas teje** – çdo veçori ndizet e fiket te Cilësimet → Veçoritë.
 
 ## Pse Vaktet?
 
 🕌 **Kohët zyrtare të BIK-ut** – jo llogaritje të përafërta. Me dallimet e qyteteve sipas Takvimit (Prishtina −1 min, Sharri +2 min …).
 
-⏳ **Sa minuta kanë mbetur?** – Namazi i ardhshëm dhe numërimi mbrapsht i madh shihen menjëherë, pa kërkuar nëpër tabela.
+⏳ **Sa kohë ka mbetur?** – Namazi i ardhshëm dhe numërimi mbrapsht i madh shihen menjëherë, pa kërkuar nëpër tabela.
 
-🌅 **Një qiell i gjallë** – karta merr ngjyrat e kohës: natë me yje te Jacia, agim te Sabahu, mesditë te Dreka, ar te Ikindia, muzg te Akshami. Dielli e hëna lëvizin nëpër qiell gjatë ditës; në gjithë ekranin yjet vezullojnë, bien yje, dielli lëshon rreze dhe retë lundrojnë.
+🌅 **Një qiell që ndjek orën** – agimi skuqet ngadalë, mesdita është e kaltër, ikindia e artë, muzgu zbehet në blu, nata mbushet me yje. Dielli dhe hëna e vërtetë (në fazën e saj të sotme) lindin e perëndojnë pas maleve; retë ndryshojnë sipas orës, zogjtë dalin në mëngjes e kthehen në mbrëmje, dhe herë pas here bie një yll.
 
-⛔ **Kohët e ndaluara** – në lindje, zenit e perëndim të diellit karta bëhet e kuqe dhe të paralajmëron.
+⛔ **Kohët e ndaluara** – në lindje, zenit e perëndim të diellit qielli bëhet i kuq dhe të paralajmëron.
 
-🧘 **Vetëm thelbi** – në telefon qielli mbush gjithë ekranin me kohën e mbetur; rrëshqit lart për vaktet e sotme dhe dy këshilla të reja çdo ditë (për jetën dhe si musliman).
+🧘 **Vetëm thelbi** – qielli mbush ekranin me kohën e mbetur. Rrëshqit lart për vaktet, alarmin dhe dy këshilla të reja çdo ditë; prek datën për muajin; rrëshqit anash për ditën tjetër ose të mëparshme.
 
 ⏰ **Alarmi për sabah** – të sugjeron orën e alarmit 15, 30, 45 ose 60 minuta para lindjes së diellit.
 
 📅 **Tabela e muajit** dhe **data hixhri**, me korrigjim ±2 ditë nëse shpallja e BIK-ut ndryshon.
 
-🎨 **Si të pëlqen ty** – pamje e çelët, e errët ose automatike. Në Android zgjedh edhe stilin e shkronjave, madhësinë e tyre dhe trashësinë e numrave të kohës.
+🎨 **Si të pëlqen ty** – pamje e çelët, e errët ose automatike; stili dhe madhësia e shkronjave; trashësia dhe shkronjat e kohës së mbetur.
 
 📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit. Ora verore e dimërore llogaritet vetë, prandaj kohët mbeten të sakta edhe në vitet në vijim.
 
@@ -101,16 +107,18 @@ me një qiell të gjallë që ndryshon me çdo orë, me hënën e vërtetë dhe 
 ## Si ta marrësh
 
 **Android**
-1. Hap faqen e [versionit të fundit](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest) dhe shkarko skedarin `.apk`.
+1. Shkarko **[vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)** – për pothuajse çdo telefon të viteve të fundit. Për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk).
 2. Hape në telefon. Nëse të pyet, lejo instalimin nga ky burim (një herë).
 3. Gati – Vaktet është në ekranin kryesor.
 
-Nëse një version i ri nuk instalohet mbi të vjetrin („App not installed”), çinstalo një herë versionin e vjetër dhe instalo të riun.
+Versioni i ri instalohet mbi të vjetrin. Nëse të del „App not installed”, çinstalo një herë versionin e vjetër dhe instalo të riun.
 
 **iPhone, laptop ose çdo pajisje tjetër**
 1. Hap [vaktet-kosove-1.vercel.app](https://vaktet-kosove-1.vercel.app).
 2. Nga menyja e shfletuesit zgjidh **„Shto në ekranin kryesor"** / **„Install app"**.
 3. Pas hapjes së parë punon edhe pa internet.
+
+Versioni në shfletues ka ende qiellin e versionit 1.3; risitë e reja vijnë fillimisht në Android.
 
 ## Qytetet
 
@@ -152,9 +160,9 @@ Për ta provuar në kompjuter: `npx serve .` dhe hapni adresën që shfaqet.
 Për ta instaluar në telefon: hapni faqen → menyja e shfletuesit → "Shto në ekranin kryesor" / "Install app".
 
 ### Aplikacioni Android (Flutter)
-Dosja [`flutter_app/`](flutter_app/) e përmban këtë aplikacion të ndërtuar me Flutter, si aplikacion Android (APK). Pamja dhe sjellja janë si këtu, dhe punon pa internet.
+Dosja [`flutter_app/`](flutter_app/) e përmban aplikacionin Android, të ndërtuar me Flutter. Kohët dhe logjika janë të njëjta me faqen këtu (një test i krahason), dhe punon pa internet.
 
-APK ndërtohet automatikisht nga GitHub Actions (skedari `.github/workflows/android-apk.yml`): hapni **Actions → Android APK → ekzekutimin e fundit** dhe shkarkoni **vaktet-apk**. Udhëzimet e plota janë te [`flutter_app/README.md`](flutter_app/README.md).
+APK-të ndërtohen automatikisht nga GitHub Actions (skedari `.github/workflows/android-apk.yml`), një për çdo lloj procesori: `vaktet-arm64.apk` dhe `vaktet-arm32.apk`. Hapni **Actions → Android APK → ekzekutimin e fundit** dhe shkarkoni **vaktet-apk**, ose publikoni një version me **Run workflow → Publish a release**. Udhëzimet e plota janë te [`flutter_app/README.md`](flutter_app/README.md).
 
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 

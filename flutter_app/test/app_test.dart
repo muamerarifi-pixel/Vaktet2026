@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/logic/day.dart';
 import 'package:vaktet/src/state/app_controller.dart';
+import 'package:vaktet/src/ui/next_card.dart';
 
 import 'test_fonts.dart';
 
@@ -35,6 +36,9 @@ Future<void> _close(WidgetTester tester) async {
 
 Finder _label(String text) => find.bySemanticsLabel(text);
 
+/// The big countdown showing [text] (`HH:MM:SS`).
+Finder _countdown(String text) => find.byWidgetPredicate((w) => w is CountdownNumber && w.text == text);
+
 /// Swipes the day's prayer times up over the full-screen sky.
 Future<void> _openSheet(WidgetTester tester) async {
   await tester.pumpAndSettle();
@@ -53,7 +57,7 @@ void main() {
     expect(find.text('NAMAZI I ARDHSHËM'), findsOneWidget);
     expect(find.text('Jacia'), findsWidgets);
     expect(find.text('19:52'), findsWidgets);
-    expect(find.textContaining('01:14:00', findRichText: true), findsOneWidget);
+    expect(_countdown('01:14:00'), findsOneWidget);
     expect(find.text('deri në fillim'), findsOneWidget);
     expect(find.text('Alarmi për sabah'), findsNothing); // not yet: Jacia has not passed
     expect(find.text('Kosovë'), findsOneWidget);
@@ -70,23 +74,77 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
     await tester.pumpAndSettle();
-    expect(find.textContaining('01:14:00', findRichText: true), findsOneWidget);
+    expect(_countdown('01:14:00'), findsOneWidget);
+    // the seconds are smaller than the hours and minutes
+    double sizeOf(String digit) => tester
+        .widgetList<Text>(find.descendant(of: _countdown('01:14:00'), matching: find.text(digit)))
+        .map((t) => t.style!.fontSize!)
+        .reduce((a, b) => a < b ? a : b);
+    expect(sizeOf('0'), closeTo(sizeOf('1') * CountdownNumber.secondsScale, .01));
     now += 61 * 1000;
     controller.tick();
-    await tester.pumpAndSettle();
-    expect(find.textContaining('01:12:59', findRichText: true), findsOneWidget);
+    // the digits that change fade into the new ones: halfway, both are there
+    await tester.pump();
+    await tester.pump(CountdownNumber.fade ~/ 2);
+    final fading = find.descendant(of: _countdown('01:12:59'), matching: find.byType(Opacity));
+    expect(fading, findsWidgets);
+    // the fade steps with the sky's 20-a-second clock, not with every refresh of the screen
+    await tester.pump(CountdownNumber.fade * 2);
+    expect(_countdown('01:12:59'), findsOneWidget);
+    expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('4')), findsNothing); // faded out
     await _close(tester);
   });
 
-  testWidgets('after Jacia the card shows tomorrow and the alarm suggestion appears', (tester) async {
+  testWidgets('digits that change back and forth while they are still fading are no trouble', (tester) async {
+    Future<void> show(String text) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: MediaQuery(
+          data: const MediaQueryData(),
+          child: CountdownNumber(text: text, size: 80, weight: 900, center: true),
+        ),
+      ),
+    );
+    // quick steps back and forth (another day, another city) while the digits are still fading
+    for (final text in ['00:00:05', '00:00:06', '00:00:05', '00:00:06', '00:00:05']) {
+      await show(text);
+      await tester.pump(CountdownNumber.fade ~/ 8);
+      expect(tester.takeException(), isNull, reason: text);
+    }
+    await tester.pump(CountdownNumber.fade * 2);
+    expect(find.text('6'), findsNothing);
+    expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('after Jacia the card shows tomorrow and the alarm is on the sky itself', (tester) async {
     // 21:00 in Kosovo
     await _open(tester, at: DateTime.utc(2026, 10, 3, 19).millisecondsSinceEpoch);
     expect(find.text('NESËR'), findsOneWidget);
     expect(find.text('Imsaku'), findsWidgets);
-    expect(find.text('Alarmi për sabah'), findsNothing); // in the sheet, under the times
-    await _openSheet(tester);
+    // no need to swipe up for it
     expect(find.text('Alarmi për sabah'), findsOneWidget);
+    expect(find.text('30 min para lindjes së diellit (nesër 06:28)'), findsOneWidget);
+    await _openSheet(tester);
     expect(find.textContaining('Nesër, 30 min para lindjes së diellit'), findsOneWidget);
+    await _close(tester);
+  });
+
+  testWidgets('the alarm stays on the sky until Imsaku, and is gone after it', (tester) async {
+    // 03:30 in Kosovo: before Imsaku (04:53)
+    final c = await _open(tester, at: DateTime.utc(2026, 10, 3, 1, 30).millisecondsSinceEpoch);
+    expect(find.text('Alarmi për sabah'), findsOneWidget);
+    expect(find.text('30 min para lindjes së diellit (sot 06:26)'), findsOneWidget);
+    await _close(tester);
+    c.dispose();
+    // 05:00, after Imsaku: only in the sheet
+    await _open(tester, at: DateTime.utc(2026, 10, 3, 3).millisecondsSinceEpoch);
+    expect(find.text('Alarmi për sabah'), findsNothing);
+    await _close(tester);
+  });
+
+  testWidgets('the alarm on the sky can be switched off', (tester) async {
+    await _open(tester, prefs: {'f_homeAlarm': false}, at: DateTime.utc(2026, 10, 3, 19).millisecondsSinceEpoch);
+    expect(find.text('Alarmi për sabah'), findsNothing);
     await _close(tester);
   });
 
@@ -145,6 +203,17 @@ void main() {
     await tester.dragFrom(const Offset(200, 450), const Offset(-30, 0));
     await tester.pumpAndSettle();
     expect(c.selected.d, 2);
+    // nor does a quick flick that hardly moves, or a long slow drag that is not far enough
+    await tester.flingFrom(const Offset(200, 450), const Offset(-50, 0), 1500);
+    await tester.pumpAndSettle();
+    expect(c.selected.d, 2);
+    await tester.timedDragFrom(const Offset(250, 450), const Offset(-100, 0), const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(c.selected.d, 2);
+    // a swipe that starts at the very edge is the phone's Back gesture, not the next day
+    await tester.flingFrom(const Offset(4, 450), const Offset(220, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(c.selected.d, 2);
     // the moon of another day is that day's moon: 26 October is a full moon
     c.select(const Day(2026, 10, 26));
     expect(c.model.scene.moon.illumination, greaterThan(.97));
@@ -180,11 +249,31 @@ void main() {
     await _openSheet(tester);
     expect(find.text('VAKTET E SOTME'), findsOneWidget);
     expect(find.text('Imsaku'), findsWidgets);
-    expect(find.text('Alarmi për sabah'), findsOneWidget);
+    expect(find.text('Alarmi për sabah'), findsWidgets);
     expect(find.text('DY KËSHILLA PËR SOT'), findsOneWidget);
     expect(find.textContaining('Për jetën', findRichText: true), findsWidgets);
     expect(tester.takeException(), isNull);
     handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('the prayer times follow the finger exactly, from the very first swipe', (tester) async {
+    // a small phone, where the sheet is shrunk to fit
+    await _open(tester, size: const Size(320, 568));
+    await tester.pumpAndSettle();
+    final finger = await tester.startGesture(const Offset(160, 420));
+    await finger.moveBy(const Offset(0, -30)); // past the touch slop
+    await tester.pump();
+    await finger.moveBy(const Offset(0, -20));
+    await tester.pump();
+    final y0 = tester.getTopLeft(find.text('VAKTET E SOTME')).dy;
+    await finger.moveBy(const Offset(0, -60));
+    await tester.pump();
+    final y1 = tester.getTopLeft(find.text('VAKTET E SOTME')).dy;
+    expect(y0 - y1, closeTo(60, 1));
+    await finger.up();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     await _close(tester);
   });
 
@@ -268,8 +357,8 @@ void main() {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
     double countdownWeight() {
-      final text = tester.widget<RichText>(find.textContaining('01:14:00', findRichText: true));
-      return text.text.style!.fontVariations!.single.value;
+      final digit = tester.widget<Text>(find.descendant(of: _countdown('01:14:00'), matching: find.byType(Text)).first);
+      return digit.style!.fontVariations!.single.value;
     }
 
     expect(countdownWeight(), 900);
@@ -284,6 +373,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.fontScale, 1.12);
     expect(MediaQuery.textScalerOf(tester.element(find.text('Pamja'))).scale(100), closeTo(112, .01));
+    await tester.scrollUntilVisible(find.text('Hollë'), 200);
     await tester.tap(find.text('Hollë'));
     await tester.pumpAndSettle();
     expect(c.countdownWeight, 300);
@@ -298,14 +388,30 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('month tab: the table, and tapping a day opens it', (tester) async {
+  testWidgets('a tap on the date opens the month; its headings stay while the days scroll', (tester) async {
     final handle = tester.ensureSemantics();
     final c = await _open(tester);
-    await tester.tap(_label('Muaji'));
     await tester.pumpAndSettle();
+    expect(find.text('Sot'), findsNothing); // no tabs any more
+    expect(find.text('Muaji'), findsNothing);
+    // a swipe down on the sky does nothing
+    await tester.flingFrom(const Offset(195, 300), const Offset(0, 260), 1200);
+    await tester.pumpAndSettle();
+    expect(c.view, HomeView.today);
+    await tester.tap(_label('Shfaq muajin'));
+    await tester.pumpAndSettle();
+    expect(c.view, HomeView.month);
     expect(find.text('Tetor 2026'), findsOneWidget);
     expect(find.text('Ims.'), findsOneWidget);
     expect(find.text('04:52'), findsOneWidget); // 1 October
+    // scroll the days: the headings stay where they are
+    final headingY = tester.getTopLeft(find.text('Ims.')).dy;
+    await tester.drag(find.text('04:52'), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Ims.')).dy, headingY);
+    expect(find.text('04:52'), findsNothing); // 1 October has scrolled away
+    await tester.scrollUntilVisible(find.text('DITËT E SHËNUARA'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.textContaining('Kalimi në kohën dimërore'), findsOneWidget); // 25 October
     await tester.tap(_label('Muaji tjetër'));
     await tester.pumpAndSettle();
     expect(find.text('Nëntor 2026'), findsOneWidget);
@@ -317,10 +423,22 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(_label('E premte, 9 tetor'));
     await tester.pumpAndSettle();
-    // tapped a day: back on the Today tab, showing that day
+    // tapped a day: back on the sky, showing that day
     expect(c.view, HomeView.today);
     expect(c.selected.d, 9);
     expect(find.text('E premte, 9 tetor 2026'), findsOneWidget);
+    // Back, or the bar at the bottom, returns to the sky
+    await tester.tap(_label('Shfaq muajin'));
+    await tester.pumpAndSettle();
+    expect(c.view, HomeView.month);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(c.view, HomeView.today);
+    await tester.tap(_label('Shfaq muajin'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rrëshqit lart për t\'u kthyer'));
+    await tester.pumpAndSettle();
+    expect(c.view, HomeView.today);
     handle.dispose();
     await _close(tester);
   });
@@ -331,6 +449,112 @@ void main() {
     expect(find.text('Tetor 2026'), findsOneWidget);
     expect(find.text('Sot'), findsNothing); // no tab bar
     expect(find.text('Hyrja e drekës'), findsWidgets);
+    await _close(tester);
+  });
+
+  testWidgets('a holiday, a great night and the Friday look show on the sky', (tester) async {
+    // Monday 16 March 2026, 12:00 in Kosovo: the evening brings Nata e Kadrit
+    var c = await _open(tester, at: DateTime.utc(2026, 3, 16, 11).millisecondsSinceEpoch);
+    expect(find.text('Sonte: Nata e Kadrit'), findsOneWidget);
+    expect(find.text('26 Ramazan 1447 h.'), findsOneWidget); // the BIK Takvim's date
+    await _close(tester);
+    c.dispose();
+    // 17 February: Independence Day
+    c = await _open(tester, at: DateTime.utc(2026, 2, 17, 11).millisecondsSinceEpoch);
+    expect(find.text('Dita e Pavarësisë së Kosovës · festë zyrtare'), findsOneWidget);
+    await _close(tester);
+    c.dispose();
+    // Friday 9 October 2026, 11:00 in Kosovo
+    c = await _open(tester, at: DateTime.utc(2026, 10, 9, 9).millisecondsSinceEpoch);
+    expect(find.text('Xhuma mubarek'), findsOneWidget);
+    expect(find.text('Koha e namazit Duha (nafile), deri në 12:16'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _close(tester);
+    c.dispose();
+    // all of it can be switched off
+    c = await _open(
+      tester,
+      prefs: {'f_fridayLook': false, 'f_nafile': false, 'f_hints': false, 'f_hijri': false},
+      at: DateTime.utc(2026, 10, 9, 11).millisecondsSinceEpoch,
+    );
+    expect(find.text('Xhuma mubarek'), findsNothing);
+    expect(find.textContaining('Duha'), findsNothing);
+    expect(find.text('Rrëshqit lart për vaktet'), findsNothing);
+    expect(find.textContaining('Rebiul Ahir'), findsNothing);
+    await _close(tester);
+    c.dispose();
+  });
+
+  testWidgets('settings: the features can be switched off and on', (tester) async {
+    final handle = tester.ensureSemantics();
+    final c = await _open(tester);
+    await tester.tap(_label('Cilësimet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Veçoritë'), findsOneWidget);
+    expect(find.text('Lëvizja e qiellit'), findsNothing); // removed
+    await tester.scrollUntilVisible(find.text('Sugjerime për namaze nafile'), 200);
+    await tester.tap(find.text('Sugjerime për namaze nafile'));
+    await tester.pumpAndSettle();
+    expect(c.on(Feature.nafile), isFalse);
+    expect((await SharedPreferences.getInstance()).getBool('f_nafile'), isFalse);
+    await tester.tap(find.text('Sugjerime për namaze nafile'));
+    await tester.pumpAndSettle();
+    expect(c.on(Feature.nafile), isTrue);
+    handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('Friday: the countdown is gold; the night before, the sky is full of stars', (tester) async {
+    // Friday 9 October 2026, 11:00 in Kosovo
+    var c = await _open(tester, at: DateTime.utc(2026, 10, 9, 9).millisecondsSinceEpoch);
+    expect(find.byType(ShaderMask), findsOneWidget);
+    await _close(tester);
+    c.dispose();
+    // Saturday: plain white
+    c = await _open(tester);
+    expect(find.byType(ShaderMask), findsNothing);
+    await _close(tester);
+    c.dispose();
+    // Thursday 8 October 2026 at 21:00 is Friday night; at 15:00 it is not yet
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    var at = DateTime.utc(2026, 10, 8, 19).millisecondsSinceEpoch;
+    c = AppController(prefs: prefs, clock: () => at);
+    expect(c.model.fridayNightAt(c.viewNow), isTrue);
+    c.dispose();
+    at = DateTime.utc(2026, 10, 8, 13).millisecondsSinceEpoch;
+    c = AppController(prefs: prefs, clock: () => at);
+    expect(c.model.fridayNightAt(c.viewNow), isFalse);
+    c.dispose();
+  });
+
+  testWidgets('after midnight, when Sabahu can be prayed is a small line at the bottom', (tester) async {
+    // 03:30 in Kosovo
+    final c = await _open(tester, at: DateTime.utc(2026, 10, 3, 1, 30).millisecondsSinceEpoch);
+    final line = find.textContaining('Sabahu mund të falet në 05:13, pas');
+    expect(line, findsOneWidget);
+    expect(tester.getTopLeft(line).dy, greaterThan(600)); // at the bottom, not in the middle of the sky
+    await _close(tester);
+    c.dispose();
+  });
+
+  testWidgets('settings: the countdown has fonts of its own, and the choice is kept', (tester) async {
+    final handle = tester.ensureSemantics();
+    final c = await _open(tester);
+    await tester.tap(_label('Cilësimet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Shkronjat e kohës së mbetur'), findsOneWidget);
+    await tester.tap(_label('Elegante'));
+    await tester.pumpAndSettle();
+    expect(c.countdownFont, CountdownFont.cormorant);
+    expect((await SharedPreferences.getInstance()).getString('countdownFont'), 'cormorant');
+    await tester.tap(_label('Mbyll'));
+    await tester.pumpAndSettle();
+    // the digits are in Cormorant, each in a cell of the same width
+    final digits = tester.widgetList<Text>(find.text('4'));
+    expect(digits.any((t) => t.style?.fontFamily == 'VaktetCormorant'), isTrue);
+    expect(tester.takeException(), isNull);
+    handle.dispose();
     await _close(tester);
   });
 

@@ -8,14 +8,21 @@ offline.
 
 ## Get the APK
 
-The APK is built by GitHub Actions (`.github/workflows/android-apk.yml`) on every push that touches `flutter_app/`:
+The APKs are built by GitHub Actions (`.github/workflows/android-apk.yml`) on every push that touches
+`flutter_app/`, one per processor type (`flutter build apk --split-per-abi`): `vaktet-arm64.apk` for nearly every
+phone of the last years and `vaktet-arm32.apk` for older ones, each about a third of the size of one APK for all.
 
 1. Open the repository's **Actions** tab → **Android APK** → the latest run.
-2. Download the **vaktet-apk** artifact (a zip with `vaktet-<commit>.apk`) and unzip it.
-3. Copy the `.apk` to the phone and open it (allow "install unknown apps" for your browser/file manager once).
+2. Download the **vaktet-apk** artifact (a zip with both APKs) and unzip it.
+3. Copy `vaktet-arm64.apk` to the phone and open it (allow "install unknown apps" for your browser/file manager
+   once).
 
-To publish it as a GitHub Release (a direct download link): run the workflow by hand (**Run workflow**, tick
-**Publish a release**), or push a tag like `v1.0.0`.
+To publish them as a GitHub Release: run the workflow by hand (**Run workflow**, tick **Publish a release**), or
+push a tag like `v1.0.0`. The newest is then always at
+<https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk>.
+
+Split APKs get a version code of 1000 × the processor type + the build number (arm64: 2000 + …), so going back to a
+single APK for all processors later would need a build number above that, or Android refuses the downgrade.
 
 The release APK is signed with Flutter's debug key, which is fine for installing it yourself. To publish on Google Play
 you need your own upload key – see <https://docs.flutter.dev/deployment/android#sign-the-app>.

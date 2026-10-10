@@ -33,19 +33,29 @@ class NextCard extends StatelessWidget {
   const NextCard({
     super.key,
     required this.model,
-    required this.now,
+    required this.time,
     required this.mode,
     required this.clock,
     this.reveal,
-    this.parallax,
+    this.options = const SkyOptions(),
     this.countdownWeight = 900,
+    this.countdownFont,
+    this.gold = false,
   });
 
-  /// Full screen only: how far the phone is tilted.
-  final ValueListenable<Offset>? parallax;
+  /// The countdown's own font (null: the app's font).
+  final String? countdownFont;
+
+  /// The countdown is gold (Fridays).
+  final bool gold;
+
+  /// What the sky shows (picked in the settings).
+  final SkyOptions options;
 
   final TodayModel model;
-  final int now;
+
+  /// The moment shown, every second: only the countdowns are built again with it.
+  final ValueListenable<int> time;
   final SkyMode mode;
   final SkyClock? clock;
 
@@ -60,12 +70,28 @@ class NextCard extends StatelessWidget {
     final card = model.card!;
     final width = MediaQuery.sizeOf(context).width;
     final content = switch (mode) {
-      SkyMode.card => _Normal(model: model, card: card, now: now, vw: width, weight: countdownWeight),
-      SkyMode.full => _FullScreen(card: card, now: now, vw: width, weight: countdownWeight, reveal: reveal),
+      SkyMode.card => _Normal(
+        model: model,
+        card: card,
+        time: time,
+        vw: width,
+        weight: countdownWeight,
+        family: countdownFont,
+        gold: gold,
+      ),
+      SkyMode.full => _FullScreen(
+        card: card,
+        time: time,
+        vw: width,
+        weight: countdownWeight,
+        reveal: reveal,
+        family: countdownFont,
+        gold: gold,
+      ),
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, parallax: parallax, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, options: options, child: content),
     );
   }
 }
@@ -158,49 +184,215 @@ class _NameAndTime extends StatelessWidget {
   }
 }
 
-/// The big `HH:MM:SS`: digits at full strength, the colons a touch softer.
-class _CountdownNumber extends StatelessWidget {
-  const _CountdownNumber({
+/// The metallic gold of the Friday countdown: light, deep and light again, like polished gold.
+const LinearGradient _goldShine = LinearGradient(
+  begin: Alignment(-1, -1),
+  end: Alignment(1, 1),
+  colors: [Color(0xFFFFF4CF), Color(0xFFF0CB6E), Color(0xFFB98A2E), Color(0xFFF7E2A0), Color(0xFFD4A445)],
+  stops: [0, .32, .52, .72, 1],
+);
+
+/// The widest digit of a font at a size (and the phone's text size), so every digit can sit in a cell of the
+/// same width.
+final Map<String, double> _digitWidths = {};
+
+double _widestDigit(TextStyle style, TextScaler scaler) {
+  final key =
+      '${style.fontFamily}/${style.fontSize}/${style.fontVariations}/${style.letterSpacing}/${scaler.scale(100)}';
+  return _digitWidths[key] ??= () {
+    var widest = 0.0;
+    for (var d = 0; d < 10; d++) {
+      final tp = TextPainter(
+        text: TextSpan(text: '$d', style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+      )..layout();
+      widest = widest < tp.width ? tp.width : widest;
+      tp.dispose();
+    }
+    return widest;
+  }();
+}
+
+/// The big `HH:MM:SS`: the hours and minutes large, the seconds smaller beside them, the colons a touch softer.
+/// Each digit sits in a cell of the same width, so the numbers never jump, and when it changes it fades softly
+/// into the next one. In a font of its own (picked in the settings), and on Fridays in gold.
+class CountdownNumber extends StatelessWidget {
+  const CountdownNumber({
+    super.key,
     required this.text,
     required this.size,
     required this.weight,
     required this.center,
     this.full = false,
+    this.family,
+    this.gold = false,
   });
 
+  /// The seconds' size next to the hours and minutes.
+  static const double secondsScale = .5;
+
+  /// How long a digit takes to fade into the next one.
+  static const Duration fade = Duration(milliseconds: 450);
+
+  /// `HH:MM:SS`.
   final String text;
   final double size;
   final int weight;
   final bool center;
   final bool full;
 
+  /// The countdown's own font, or null for the app's font.
+  final String? family;
+
+  /// Polished gold (Fridays).
+  final bool gold;
+
   @override
   Widget build(BuildContext context) {
-    final base = vt(
+    var base = vt(
       size,
       weight.toDouble(),
       color: _white,
-      ls: full ? -.03 : -.025,
+      ls: family == null ? (full ? -.03 : -.025) : 0,
       height: 1,
-      shadows: full ? _countShadowFull : _countShadow,
+      shadows: gold
+          ? const [Shadow(color: Color(0x66E9C46A), blurRadius: 18)]
+          : (full ? _countShadowFull : _countShadow),
     );
-    final parts = text.split(':');
-    final spans = <InlineSpan>[];
-    for (var i = 0; i < parts.length; i++) {
-      if (i > 0) {
-        spans.add(
-          TextSpan(
-            text: ':',
-            style: base.copyWith(color: const Color(0x8CFFFFFF)),
-          ),
-        );
-      }
-      spans.add(TextSpan(text: parts[i]));
+    if (family != null) {
+      base = base.copyWith(
+        fontFamily: family,
+        fontFeatures: const [FontFeature.liningFigures(), FontFeature.tabularFigures()],
+      );
+    } else {
+      // the app's font, from the theme, so the cells are measured in the font the digits are drawn in
+      base = base.copyWith(fontFamily: DefaultTextStyle.of(context).style.fontFamily);
     }
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: center ? Alignment.center : Alignment.centerLeft,
-      child: Text.rich(TextSpan(children: spans), style: base, softWrap: false, maxLines: 1),
+    final scaler = MediaQuery.textScalerOf(context);
+    final small = base.copyWith(
+      fontSize: size * secondsScale,
+      letterSpacing: (base.letterSpacing ?? 0) * secondsScale,
+      shadows: gold ? base.shadows : (full ? _countShadow : null),
+    );
+    final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : fade;
+    Widget digits(String part, TextStyle style) {
+      final cell = _widestDigit(style, scaler);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [for (final d in part.split('')) _FadeDigit(digit: d, style: style, width: cell, duration: duration)],
+      );
+    }
+
+    Widget colon(TextStyle style) => Padding(
+      padding: EdgeInsets.symmetric(horizontal: style.fontSize! * (family == null ? .01 : .04)),
+      child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+    );
+
+    final parts = text.split(':');
+    Widget number = Semantics(
+      label: text,
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          for (var i = 0; i < parts.length; i++) ...[
+            if (i > 0) colon(i < parts.length - 1 ? base : small),
+            digits(parts[i], i < parts.length - 1 ? base : small),
+          ],
+        ],
+      ),
+    );
+    if (gold) {
+      number = ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: (bounds) => _goldShine.createShader(bounds),
+        child: number,
+      );
+    }
+    return FittedBox(fit: BoxFit.scaleDown, alignment: center ? Alignment.center : Alignment.centerLeft, child: number);
+  }
+}
+
+/// One digit of the countdown in its cell: when it changes, the old one fades out as the new one fades in.
+///
+/// The fade steps with the sky's own clock (20 pictures a second), not with every refresh of the screen, so a
+/// fading digit costs no more pictures than the sky already draws.
+class _FadeDigit extends StatefulWidget {
+  const _FadeDigit({required this.digit, required this.style, required this.width, required this.duration});
+
+  final String digit;
+  final TextStyle style;
+  final double width;
+  final Duration duration;
+
+  @override
+  State<_FadeDigit> createState() => _FadeDigitState();
+}
+
+class _FadeDigitState extends State<_FadeDigit> {
+  static final SkyClock _clock = SkyClock.shared;
+
+  /// The digit fading out, while it fades.
+  String? _old;
+  double _start = 0;
+  double _t = 1;
+
+  @override
+  void didUpdateWidget(_FadeDigit old) {
+    super.didUpdateWidget(old);
+    if (old.digit == widget.digit) return;
+    if (widget.duration == Duration.zero) return _finish();
+    // a digit that changes again while it is still fading starts a new fade from the one now shown
+    _old = old.digit;
+    _start = _clock.seconds;
+    _t = 0;
+    if (!_clock.isHeldBy(this)) {
+      _clock.addListener(_step);
+      _clock.hold(this);
+    }
+  }
+
+  void _step() {
+    final t = (_clock.seconds - _start) / (widget.duration.inMicroseconds / 1e6);
+    if (t >= 1) return setState(_finish);
+    setState(() => _t = t);
+  }
+
+  void _finish() {
+    _old = null;
+    _t = 1;
+    _clock.removeListener(_step);
+    _clock.release(this);
+  }
+
+  @override
+  void dispose() {
+    _clock.removeListener(_step);
+    _clock.release(this);
+    super.dispose();
+  }
+
+  Text _text(String d) => Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
+
+  @override
+  Widget build(BuildContext context) {
+    final old = _old;
+    return SizedBox(
+      width: widget.width,
+      child: old == null
+          ? _text(widget.digit)
+          : Stack(
+              alignment: Alignment.center,
+              children: [
+                Opacity(opacity: 1 - Curves.easeIn.transform(_t), child: _text(old)),
+                Opacity(opacity: Curves.easeOut.transform(_t), child: _text(widget.digit)),
+              ],
+            ),
     );
   }
 }
@@ -220,11 +412,10 @@ class _CountdownLabel extends StatelessWidget {
 }
 
 class _Alt extends StatelessWidget {
-  const _Alt({required this.card, required this.now, this.center = false});
+  const _Alt({required this.card, required this.time});
 
   final NextCardModel card;
-  final int now;
-  final bool center;
+  final ValueListenable<int> time;
 
   @override
   Widget build(BuildContext context) {
@@ -239,14 +430,18 @@ class _Alt extends StatelessWidget {
         TextSpan(
           children: [
             TextSpan(text: '${card.altText} '),
-            TextSpan(
-              text: fmtCount(card.altTarget! - now),
-              style: vt(14.5, 880, color: _white, ls: .01, height: 1.4),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: ValueListenableBuilder(
+                valueListenable: time,
+                builder: (context, now, _) =>
+                    Text(fmtCount(card.altTarget! - now), style: vt(14.5, 880, color: _white, ls: .01, height: 1.4)),
+              ),
             ),
           ],
         ),
         style: base,
-        textAlign: center ? TextAlign.center : TextAlign.start,
       ),
     );
   }
@@ -255,13 +450,23 @@ class _Alt extends StatelessWidget {
 // ---------- Normal card ----------
 
 class _Normal extends StatelessWidget {
-  const _Normal({required this.model, required this.card, required this.now, required this.vw, required this.weight});
+  const _Normal({
+    required this.model,
+    required this.card,
+    required this.time,
+    required this.vw,
+    required this.weight,
+    this.family,
+    this.gold = false,
+  });
 
   final TodayModel model;
   final NextCardModel card;
-  final int now;
+  final ValueListenable<int> time;
   final double vw;
   final int weight;
+  final String? family;
+  final bool gold;
 
   @override
   Widget build(BuildContext context) {
@@ -276,17 +481,23 @@ class _Normal extends StatelessWidget {
           const SizedBox(height: 6),
           _NameAndTime(card: card, vw: vw, center: false),
           const SizedBox(height: 10),
-          _CountdownNumber(
-            text: fmtCount(card.target - now),
-            size: clampPx(54, vw * .16, 74),
-            weight: weight,
-            center: false,
+          ValueListenableBuilder(
+            valueListenable: time,
+            builder: (context, now, _) => CountdownNumber(
+              text: fmtCount(card.target - now),
+              size: clampPx(54, vw * .16, 74),
+              weight: weight,
+              center: false,
+              family: family,
+              gold: gold,
+            ),
           ),
           const SizedBox(height: 6),
           _CountdownLabel(text: card.countdownLabel),
           const SizedBox(height: 16),
-          if (card.altText != null) ...[_Alt(card: card, now: now), const SizedBox(height: 14)],
-          _Dayline(model: model, now: now),
+          if (card.altText != null) ...[_Alt(card: card, time: time), const SizedBox(height: 14)],
+          // the line moves once a minute, with the rest of the card
+          _Dayline(model: model, now: time.value),
         ],
       ),
     );
@@ -344,15 +555,25 @@ class _DaylinePainter extends CustomPainter {
 
 // ---------- Full-screen sky ----------
 
-/// The countdown sits exactly in the middle of the screen; the prayer name above it, the extra line below.
+/// The countdown sits exactly in the middle of the screen, with the prayer's name above it.
 class _FullScreen extends StatelessWidget {
-  const _FullScreen({required this.card, required this.now, required this.vw, required this.weight, this.reveal});
+  const _FullScreen({
+    required this.card,
+    required this.time,
+    required this.vw,
+    required this.weight,
+    this.reveal,
+    this.family,
+    this.gold = false,
+  });
 
   final NextCardModel card;
-  final int now;
+  final ValueListenable<int> time;
   final double vw;
   final int weight;
   final Animation<double>? reveal;
+  final String? family;
+  final bool gold;
 
   @override
   Widget build(BuildContext context) {
@@ -382,12 +603,17 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _CountdownNumber(
-                    text: fmtCount(card.target - now),
-                    size: size,
-                    weight: weight,
-                    center: true,
-                    full: true,
+                  ValueListenableBuilder(
+                    valueListenable: time,
+                    builder: (context, now, _) => CountdownNumber(
+                      text: fmtCount(card.target - now),
+                      size: size,
+                      weight: weight,
+                      center: true,
+                      full: true,
+                      family: family,
+                      gold: gold,
+                    ),
                   ),
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
@@ -413,31 +639,16 @@ class _FullScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 64),
-                    child: card.altText == null
-                        ? null
-                        : FadeTransition(
-                            // it would sit under the prayer-times sheet
-                            opacity: reveal == null ? kAlwaysCompleteAnimation : ReverseAnimation(reveal!),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 380),
-                              child: _Alt(card: card, now: now, center: true),
-                            ),
-                          ),
-                  ),
-                ),
-              ),
+              // the second line ("Sabahu mund të falet …") is a small line at the bottom of the screen instead
+              const Spacer(),
             ],
           );
           final r = reveal;
           if (r == null) return layout;
           return AnimatedBuilder(
             animation: r,
-            child: layout,
+            // moved and shrunk as one finished picture while the prayer times are swiped up
+            child: RepaintBoundary(child: layout),
             builder: (context, child) {
               final v = r.value;
               if (v == 0) return child!;

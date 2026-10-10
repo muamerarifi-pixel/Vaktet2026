@@ -1,54 +1,36 @@
-// The tilt of the sky and the pulse when a prayer time comes.
+// The features that can be switched off, the pulse when a prayer time comes, and how the sky saves battery.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/state/app_controller.dart';
+import 'package:vaktet/src/ui/home.dart';
 import 'package:vaktet/src/ui/pulse.dart';
 import 'package:vaktet/src/ui/sky.dart';
 
+import 'test_fonts.dart';
+
 void main() {
-  group('Tilt', () {
-    test('tilting moves the sky a little, holding still lets it drift back, and it never goes too far', () async {
-      final sensor = StreamController<Offset>();
-      final tilt = SkyTilt(() => sensor.stream);
-      tilt.start();
-      sensor.add(const Offset(0, 9)); // held upright
-      await Future<void>.delayed(Duration.zero);
-      expect(tilt.value, Offset.zero);
-      for (var i = 0; i < 20; i++) {
-        sensor.add(const Offset(6, 9)); // tilted to the side
-        await Future<void>.delayed(Duration.zero);
-      }
-      expect(tilt.value.dx, lessThan(-3));
-      expect(tilt.value.distance, lessThanOrEqualTo(SkyTilt.reach + .001));
-      for (var i = 0; i < 600; i++) {
-        sensor.add(const Offset(6, 9)); // held there
-        await Future<void>.delayed(Duration.zero);
-      }
-      expect(tilt.value.dx.abs(), lessThan(1));
-      tilt.stop();
-      expect(tilt.value, Offset.zero);
-      tilt.dispose();
-      await sensor.close();
-    });
-
-    test('no sensor: nothing happens', () {
-      final tilt = SkyTilt(() => throw UnsupportedError('no sensor'));
-      tilt.start();
-      expect(tilt.running, isFalse);
-      tilt.dispose();
-    });
-
-    test('the choice is remembered', () async {
+  group('Features', () {
+    test('every feature is on at first, and switching one off is remembered', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(prefs: prefs, clock: () => 0);
-      expect(c.tilt, isTrue);
-      c.setTilt(false);
-      expect(prefs.getBool('tilt'), isFalse);
+      for (final f in Feature.values) {
+        expect(c.on(f), isTrue, reason: f.name);
+      }
+      final before = c.settingsVersion.value;
+      c.setFeature(Feature.nafile, false);
+      expect(c.on(Feature.nafile), isFalse);
+      expect(prefs.getBool('f_nafile'), isFalse);
+      expect(c.settingsVersion.value, before + 1);
       c.dispose();
+      final again = AppController(prefs: prefs, clock: () => 0);
+      expect(again.on(Feature.nafile), isFalse);
+      again.dispose();
     });
   });
 
@@ -81,6 +63,91 @@ void main() {
       await pump(tester, 1000000, 999000, enabled: false);
       final s = await pump(tester, 2000000, 1000400, enabled: false);
       expect(s.running, isFalse);
+    });
+  });
+
+  group('Battery', () {
+    setUpAll(loadAppFonts);
+
+    /// The app with a moving sky, at 23:00 in Kosovo (stars), and the phone's battery saver as [powerSave] says.
+    Future<AppController> open(WidgetTester tester, StreamController<bool> powerSave) async {
+      tester.binding.defaultBinaryMessenger.setMockStreamHandler(
+        const EventChannel('vaktet/power_save'),
+        MockStreamHandler.inline(
+          onListen: (_, events) {
+            powerSave.stream.listen(events.success);
+          },
+        ),
+      );
+      SharedPreferences.setMockInitialValues({});
+      final at = DateTime.utc(2026, 10, 6, 21).millisecondsSinceEpoch;
+      final c = AppController(prefs: await SharedPreferences.getInstance(), clock: () => at);
+      tester.view.physicalSize = const Size(390, 844) * 2;
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(VaktetApp(controller: c));
+      await tester.pump(const Duration(milliseconds: 100));
+      return c;
+    }
+
+    Future<void> close(WidgetTester tester, AppController c) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+      c.dispose();
+      expect(SkyClock.shared.running, isFalse);
+    }
+
+    testWidgets('the sky moves on a 20-a-second clock, with no ticker at the rate of the screen', (tester) async {
+      final power = StreamController<bool>();
+      final c = await open(tester, power);
+      expect(SkyClock.shared.running, isTrue);
+      // a ticker would ask for a picture on every refresh of the screen, even with nothing new to show
+      expect(tester.binding.transientCallbackCount, 0);
+      final before = SkyClock.shared.seconds;
+      await tester.pump(const Duration(seconds: 1));
+      expect(SkyClock.shared.seconds - before, closeTo(1, .06));
+      await close(tester, c);
+      await power.close();
+    });
+
+    testWidgets('the sky rests 30 seconds after the last touch, and a touch wakes it', (tester) async {
+      final power = StreamController<bool>();
+      final c = await open(tester, power);
+      await tester.pump(HomePage.restAfter - const Duration(seconds: 1));
+      expect(SkyClock.shared.running, isTrue);
+      await tester.pump(const Duration(seconds: 2));
+      expect(SkyClock.shared.running, isFalse);
+      final still = SkyClock.shared.seconds;
+      await tester.pump(const Duration(seconds: 5));
+      expect(SkyClock.shared.seconds, still); // its time stands still, so nothing jumps when it wakes
+      await tester.tapAt(const Offset(200, 420));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(SkyClock.shared.running, isTrue);
+      // switched off in the settings, it never rests
+      c.setFeature(Feature.skyRest, false);
+      await tester.pump(HomePage.restAfter + const Duration(seconds: 5));
+      expect(SkyClock.shared.running, isTrue);
+      await close(tester, c);
+      await power.close();
+    });
+
+    testWidgets('the sky is still while the phone saves battery, and under the prayer times', (tester) async {
+      final power = StreamController<bool>();
+      final c = await open(tester, power);
+      power.add(true);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(SkyClock.shared.running, isFalse);
+      power.add(false);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(SkyClock.shared.running, isTrue);
+      expect(find.text('VAKTET E SOTME'), findsNothing); // ready, but not shown
+      await tester.tap(find.text('Rrëshqit lart për vaktet'));
+      await tester.pump(); // the spring starts on this frame
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('VAKTET E SOTME'), findsOneWidget);
+      expect(SkyClock.shared.running, isFalse);
+      await close(tester, c);
+      await power.close();
     });
   });
 }

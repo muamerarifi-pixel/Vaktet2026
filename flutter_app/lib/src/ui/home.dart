@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 
+import '../logic/format.dart';
 import '../state/app_controller.dart';
 import 'colors.dart';
 import 'month_view.dart';
@@ -21,41 +23,70 @@ const double _wideBreakpoint = 900;
 const double _maxContentWidth = 1120;
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.controller, this.skyMotion = true, this.tiltEvents});
+  const HomePage({super.key, required this.controller, this.skyMotion = true});
 
   final AppController controller;
 
   /// Whether the sky moves (tests turn it off, so the screen can settle).
   final bool skyMotion;
 
-  /// The accelerometer (tests pass their own).
-  final Stream<Offset> Function()? tiltEvents;
+  /// How long the sky moves after the last touch before it rests (see [Feature.skyRest]).
+  static const Duration restAfter = Duration(seconds: 30);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver, TickerProviderStateMixin {
-  late final SkyClock _sky = SkyClock(this);
+enum _Drag { none, ignored, sheet }
 
-  /// The phone's tilt, for the depth of the full-screen sky (only listened to while that sky is showing).
-  late final SkyTilt _tilt = SkyTilt(
-    widget.tiltEvents ??
-        () => accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval).map((e) => Offset(e.x, e.y)),
-  );
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver, TickerProviderStateMixin {
+  final SkyClock _sky = SkyClock.shared;
+
+  /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
+  late final AnimationController _sheet = AnimationController(vsync: this)..addStatusListener(_sheetStatus);
+
+  /// How tall the sheet is on the screen, so it follows the finger exactly.
+  double _sheetSize = 380;
+
+  /// Whether the app is in front (the sky's clock stops while it is not).
   bool _resumed = true;
 
-  void _syncTilt(bool want) {
-    if (want == _tilt.running) return;
+  /// The sky moves for a while after each touch, and then rests (if [Feature.skyRest] is on).
+  bool _awake = true;
+  Timer? _restTimer;
+
+  /// The phone's battery saver: the sky stays still while it is on.
+  bool _powerSave = false;
+  StreamSubscription<dynamic>? _powerSaveSub;
+
+  /// The prayer times cover the sky.
+  bool _sheetOpen = false;
+
+  /// Runs the sky's clock only while a moving sky is on the screen: not behind the month or the open prayer
+  /// times, not while the app is hidden or the phone saves battery, not when the living sky is switched off, and
+  /// not once it has rested. Otherwise nothing is drawn between the seconds.
+  void _syncSky(bool want) {
+    if (want == _sky.isHeldBy(this)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      want ? _tilt.start() : _tilt.stop();
+      want ? _sky.hold(this) : _sky.release(this);
     });
   }
 
-  /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
-  late final AnimationController _sheet = AnimationController(vsync: this);
-  final GlobalKey _sheetKey = GlobalKey();
+  /// A touch anywhere wakes the sky, and it rests again [HomePage.restAfter] later.
+  void _wake() {
+    if (!widget.skyMotion) return;
+    _restTimer?.cancel();
+    _restTimer = Timer(HomePage.restAfter, () {
+      if (mounted) setState(() => _awake = false);
+    });
+    if (!_awake) setState(() => _awake = true);
+  }
+
+  void _sheetStatus(AnimationStatus status) {
+    final open = status == AnimationStatus.completed;
+    if (open != _sheetOpen) setState(() => _sheetOpen = open);
+  }
 
   /// Each change of layout gets a key of its own, so going back to a layout that is still fading out
   /// (a quick tap back and forth) never puts two pages with the same key on the screen.
@@ -67,7 +98,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller.start();
-    if (widget.skyMotion) _sky.start();
+    if (widget.skyMotion) {
+      _wake();
+      _powerSaveSub = const EventChannel('vaktet/power_save').receiveBroadcastStream().listen(
+        (on) {
+          if (mounted && on is bool && on != _powerSave) setState(() => _powerSave = on);
+        },
+        onError: (Object _) {}, // not on Android: never mind
+      );
+    }
   }
 
   @override
@@ -83,8 +122,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.stop();
-    _sky.dispose();
-    _tilt.dispose();
+    _sky.release(this);
+    _restTimer?.cancel();
+    _powerSaveSub?.cancel();
     _sheet.dispose();
     super.dispose();
   }
@@ -95,47 +135,63 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     if (state == AppLifecycleState.resumed) {
       _resumed = true;
       widget.controller.start();
-      if (widget.skyMotion) _sky.start();
+      _wake();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       _resumed = false;
       widget.controller.stop();
-      _sky.stop();
-      _tilt.stop();
+      _sky.release(this);
     }
   }
 
-  // ---------- The prayer-times sheet of the full-screen sky ----------
-
-  double get _sheetHeight =>
-      (_sheetKey.currentContext?.size?.height ?? 0) > 0 ? _sheetKey.currentContext!.size!.height : 380;
-
-  /// The sheet follows the finger.
-  /// Whether the current drag started in the bottom edge zone and is ignored.
-  bool _edgeDrag = false;
-
-  /// A swipe that starts down at the bottom edge — the tabs or the phone's own home gesture — doesn't open
-  /// the sheet, so going to the home screen doesn't pull up the times by accident.
-  void _startSheetDrag(DragStartDetails d) {
-    final mq = MediaQuery.of(context);
-    final edge = math.max(mq.systemGestureInsets.bottom, mq.padding.bottom) + 96;
-    _edgeDrag = _sheet.value == 0 && d.globalPosition.dy > mq.size.height - edge;
+  void _haptic() {
+    if (widget.controller.on(Feature.haptics)) HapticFeedback.selectionClick();
   }
 
-  void _dragSheet(DragUpdateDetails d) {
-    if (_edgeDrag) return;
-    _sheet.stop();
-    _sheet.value = (_sheet.value - d.primaryDelta! / _sheetHeight).clamp(0.0, 1.0);
+  // ---------- Swiping the prayer times up over the full-screen sky ----------
+
+  _Drag _drag = _Drag.none;
+  bool _edgeDrag = false;
+
+  /// A swipe that starts down at the bottom edge — the phone's own home gesture — doesn't open the sheet, so going
+  /// to the home screen doesn't pull up the times by accident.
+  void _downVertical(DragDownDetails d) {
+    final mq = MediaQuery.of(context);
+    final bottom = math.max(mq.systemGestureInsets.bottom, mq.padding.bottom) + 28;
+    _edgeDrag = _sheet.value == 0 && d.globalPosition.dy > mq.size.height - bottom;
+    _drag = _Drag.none;
+  }
+
+  void _updateVerticalDrag(DragUpdateDetails d) {
+    final dy = d.primaryDelta!;
+    if (_drag == _Drag.none) {
+      // the first movement decides: up (or an open sheet) moves the sheet; a swipe down on the sky does nothing
+      final sheet = _sheet.value > 0 || _sheet.isAnimating || dy < 0;
+      _drag = sheet && !_edgeDrag ? _Drag.sheet : _Drag.ignored;
+    }
+    if (_drag == _Drag.sheet) {
+      _sheet.stop();
+      _sheet.value = (_sheet.value - dy / _sheetSize).clamp(0.0, 1.0);
+    }
   }
 
   /// A flick decides; otherwise it goes to whichever side is nearer.
-  void _endSheetDrag(DragEndDetails d) {
-    if (_edgeDrag) {
-      _edgeDrag = false;
-      return;
-    }
+  void _endVerticalDrag(DragEndDetails d) {
     final vy = d.velocity.pixelsPerSecond.dy;
-    final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
-    _settleSheet(open, velocity: -vy / _sheetHeight);
+    if (_drag == _Drag.sheet) {
+      final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
+      _settleSheet(open, velocity: -vy / _sheetSize);
+    }
+    _drag = _Drag.none;
+    _edgeDrag = false;
+  }
+
+  /// A tap on the date opens the month of the day shown.
+  void _openMonth() {
+    _haptic();
+    final c = widget.controller;
+    // the month of the day shown
+    c.select(c.selected);
+    c.setView(HomeView.month);
   }
 
   /// Springs the sheet open or shut.
@@ -145,7 +201,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     _sheet.animateWith(
       _ClampedSpring(
         SpringSimulation(
-          const SpringDescription(mass: 1, stiffness: 320, damping: 34),
+          const SpringDescription(mass: 1, stiffness: 520, damping: 46),
           _sheet.value,
           target,
           velocity,
@@ -156,17 +212,52 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     );
   }
 
+  // ---------- Swiping left and right through the days ----------
+
+  double _dragX = 0;
+  bool _sideDrag = false;
+
+  void _downSide(DragDownDetails d) {
+    final mq = MediaQuery.of(context);
+    // the phone's back gesture lives at the left and right edges
+    final edge = math.max(16.0, math.max(mq.systemGestureInsets.left, mq.systemGestureInsets.right) + 8);
+    final x = d.globalPosition.dx;
+    _sideDrag = _sheet.value == 0 && x > edge && x < mq.size.width - edge;
+    _dragX = 0;
+  }
+
+  void _updateSideDrag(DragUpdateDetails d) {
+    if (_sideDrag) _dragX += d.primaryDelta!;
+  }
+
+  /// Only a deliberate swipe changes the day: far enough across the screen, and quick enough (or very far).
+  void _endSideDrag(DragEndDetails d) {
+    if (!_sideDrag) return;
+    _sideDrag = false;
+    final width = MediaQuery.sizeOf(context).width;
+    final vx = d.velocity.pixelsPerSecond.dx;
+    final far = _dragX.abs() >= math.max(72, width * .2);
+    final veryFar = _dragX.abs() >= width * .4;
+    final quick = vx.abs() >= 450 && vx.sign == _dragX.sign;
+    if (!(far && (quick || veryFar))) return;
+    _haptic();
+    widget.controller.stepDay(_dragX < 0 ? 1 : -1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => c.stepDay(-1),
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () => c.stepDay(1),
-      },
-      child: Focus(
-        autofocus: true,
-        child: ListenableBuilder(listenable: c, builder: (context, _) => _page(context, c)),
+    return Listener(
+      onPointerDown: (_) => _wake(),
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => c.stepDay(-1),
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () => c.stepDay(1),
+        },
+        child: Focus(
+          autofocus: true,
+          child: ListenableBuilder(listenable: c, builder: (context, _) => _page(context, c)),
+        ),
       ),
     );
   }
@@ -176,10 +267,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final wide = size.width >= _wideBreakpoint;
     final colors = context.colors;
     final model = c.model;
-    final clock = MediaQuery.disableAnimationsOf(context) || !widget.skyMotion ? null : _sky;
-    // on a phone, today is the sky itself; the times and the tips are swiped up over it
+    // on a phone, today is the sky itself; the times and the tips are swiped up over it, the date opens the month
     final fullSky = !wide && c.view == HomeView.today;
-    _syncTilt(fullSky && c.tilt && clock != null && _resumed);
+    final moving =
+        widget.skyMotion &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        c.on(Feature.skyLife) &&
+        (wide || fullSky) &&
+        _resumed &&
+        !_powerSave &&
+        !(fullSky && _sheetOpen) &&
+        (_awake || !c.on(Feature.skyRest));
+    _syncSky(moving);
+    final clock = moving ? _sky : null;
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -228,9 +328,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                       ),
                       const SizedBox(width: 32),
                       Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: MonthPanel(controller: c, onPick: () {}),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _MonthHost(controller: c, onPick: () {}),
                         ),
                       ),
                     ],
@@ -245,37 +345,48 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       layout = 'full';
       body = _fullSky(c, header, clock);
     } else {
-      final today = c.view == HomeView.today;
-      layout = today ? 'today' : 'month';
-      body = Column(
-        children: [
-          header,
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              child: today
-                  ? TodayPanel(controller: c, clock: clock)
-                  : MonthPanel(controller: c, onPick: () => c.setView(HomeView.today)),
-            ),
-          ),
-          _Tabs(controller: c, onSky: false),
-        ],
-      );
+      layout = 'month';
+      body = _month(c, header);
     }
 
+    final instant = MediaQuery.disableAnimationsOf(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: Scaffold(
         backgroundColor: colors.bg,
-        // going to (or leaving) the full-screen sky, or to another tab: a short, light cross-fade
+        // the month slides down from the top over the sky, and back up again; the rest cross-fades
         body: AnimatedSwitcher(
-          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 220),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
+          duration: instant ? Duration.zero : const Duration(milliseconds: 340),
+          reverseDuration: instant ? Duration.zero : const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final key = (child.key as ValueKey<String>?)?.value ?? '';
+            if (key.startsWith('month')) {
+              return _MonthLayer(
+                child: SlideTransition(
+                  position: Tween(begin: const Offset(0, -1), end: Offset.zero).animate(animation),
+                  child: child,
+                ),
+              );
+            }
+            return FadeTransition(opacity: animation, child: child);
+          },
+          layoutBuilder: (current, previous) => Stack(
+            fit: StackFit.expand,
+            children: [
+              // the month always slides over the sky, coming and going
+              ...previous.where((w) => !_isMonth(w)),
+              if (current != null && !_isMonth(current)) current,
+              ...previous.where(_isMonth),
+              if (current != null && _isMonth(current)) current,
+            ],
+          ),
           child: Stack(
             key: ValueKey(_switchKey(layout)),
             fit: StackFit.expand,
             children: [
+              if (!fullSky) ColoredBox(color: colors.bg),
               if (!fullSky) PageGlow(phase: model.phase),
               body,
             ],
@@ -285,6 +396,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     );
   }
 
+  static bool _isMonth(Widget w) => w is _MonthLayer || (w is KeyedSubtree && w.child is _MonthLayer);
+
   String _switchKey(String layout) {
     if (layout != _layout) {
       _layout = layout;
@@ -293,10 +406,74 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     return '$layout-$_switches';
   }
 
+  /// How far the month has been pulled up past its end, in pixels.
+  double _overscroll = 0;
+
+  /// The month on a phone: it slides down over the sky; pulling up past its end (or Back, or the bar at the
+  /// bottom) returns.
+  Widget _month(AppController c, Widget header) {
+    void back() {
+      _haptic();
+      c.setView(HomeView.today);
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) back();
+      },
+      child: Column(
+        children: [
+          header,
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                // pulling up past the end of the month goes back to the sky
+                if (n is OverscrollNotification && n.dragDetails != null && n.overscroll > 0) {
+                  _overscroll += n.overscroll;
+                  if (_overscroll > 80) {
+                    _overscroll = -1e9;
+                    back();
+                  }
+                } else if (n is ScrollStartNotification) {
+                  _overscroll = 0;
+                }
+                return false;
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                child: _MonthHost(controller: c, onPick: () => c.setView(HomeView.today)),
+              ),
+            ),
+          ),
+          _MonthFooter(onBack: back, hint: c.on(Feature.hints)),
+        ],
+      ),
+    );
+  }
+
   /// The sky fills the screen with only the countdown; the day's times are swiped up from the bottom, and
-  /// swiped down again (or a tap on the sky, or Back) to hide them.
+  /// swiped down again (or a tap on the sky, or Back) to hide them. A tap on the date opens the month.
   Widget _fullSky(AppController c, Widget header, SkyClock? clock) {
     final fadeOut = ReverseAnimation(_sheet);
+    final model = c.model;
+    final friday = c.on(Feature.fridayLook);
+    final options = SkyOptions(
+      landscape: c.on(Feature.landscape),
+      life: c.on(Feature.skyLife),
+      fridayNight: friday && model.fridayNightAt(c.viewNow),
+    );
+    final card = model.card;
+    final second = card?.altText == null
+        ? null
+        : ValueListenableBuilder(
+            valueListenable: c.time,
+            builder: (context, now, _) => SmallLine(text: '${card!.altText} ${fmtCount(card.altTarget! - now)}'),
+          );
+    final hints = c.on(Feature.hints);
+    final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;
+    final nafile = c.on(Feature.nafile) ? model.nafile : null;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return AnimatedBuilder(
       animation: _sheet,
       builder: (context, child) => PopScope(
@@ -308,17 +485,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onVerticalDragStart: _startSheetDrag,
-        onVerticalDragUpdate: _dragSheet,
-        onVerticalDragEnd: _endSheetDrag,
+        onVerticalDragDown: _downVertical,
+        onVerticalDragUpdate: _updateVerticalDrag,
+        onVerticalDragEnd: _endVerticalDrag,
         // swipe left for the next day, right for the day before: its sky, moon, sun and season at this hour
-        onHorizontalDragEnd: (d) {
-          if (_sheet.value > 0) return;
-          final vx = d.velocity.pixelsPerSecond.dx;
-          if (vx.abs() < 250) return;
-          HapticFeedback.selectionClick();
-          c.stepDay(vx < 0 ? 1 : -1);
-        },
+        onHorizontalDragDown: c.on(Feature.daySwipe) ? _downSide : null,
+        onHorizontalDragUpdate: c.on(Feature.daySwipe) ? _updateSideDrag : null,
+        onHorizontalDragEnd: c.on(Feature.daySwipe) ? _endSideDrag : null,
         onTap: () {
           if (_sheet.value > 0) _settleSheet(false);
         },
@@ -331,16 +504,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
               duration: const Duration(milliseconds: 280),
               expand: true,
               child: NextCard(
-                model: c.model,
-                now: c.viewNow,
+                model: model,
+                time: c.time,
                 mode: SkyMode.full,
                 clock: clock,
                 countdownWeight: c.countdownWeight,
+                countdownFont: c.countdownFont.family,
+                gold: friday && model.friday,
                 reveal: _sheet,
-                parallax: c.tilt && clock != null ? _tilt : null,
+                options: options,
               ),
             ),
-            PrayerPulse(target: c.model.card?.target, now: c.now, enabled: clock != null && c.isToday),
+            PrayerPulse(
+              target: model.card?.target,
+              now: c.now,
+              // a moment of light even while the sky rests: it lasts a few seconds, once per prayer time
+              enabled: widget.skyMotion && !MediaQuery.disableAnimationsOf(context) && c.isToday && c.on(Feature.pulse),
+            ),
             Column(
               children: [
                 header,
@@ -348,13 +528,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                   child: Stack(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                        padding: EdgeInsets.fromLTRB(16, 4, 16, 10 + bottomInset),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             FadeTransition(
                               opacity: fadeOut,
-                              child: DateRow(controller: c, onSky: true),
+                              child: DateRow(controller: c, onSky: true, onTapDate: _openMonth),
                             ),
                             if (!c.isToday)
                               FadeTransition(
@@ -369,7 +549,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                             const Spacer(),
                             FadeTransition(
                               opacity: fadeOut,
-                              child: SwipeHint(onTap: () => _settleSheet(true), clock: clock),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
+                                  if (second != null) ...[second, const SizedBox(height: 4)],
+                                  if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
+                                  if (hints) SwipeHint(onTap: () => _settleSheet(true)),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -377,27 +565,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                       Positioned.fill(
                         child: ClipRect(
                           child: LayoutBuilder(
-                            builder: (context, box) => AnimatedBuilder(
-                              animation: _sheet,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.bottomCenter,
-                                child: SizedBox(
-                                  width: box.maxWidth,
-                                  child: SkyTimesSheet(key: _sheetKey, controller: c),
-                                ),
-                              ),
-                              builder: (context, sheet) {
-                                final v = _sheet.value;
-                                if (v == 0) return const SizedBox.shrink();
-                                return Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(maxHeight: box.maxHeight),
-                                    child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
+                            // the sheet is always laid out, so it is ready (and its height known) for the first
+                            // swipe; it is painted only while open, and moves as one finished picture
+                            builder: (context, box) => RepaintBoundary(
+                              child: AnimatedBuilder(
+                                animation: _sheet,
+                                child: RepaintBoundary(
+                                  child: _MeasureSize(
+                                    onSize: (size) {
+                                      if (size.height > 0) _sheetSize = size.height;
+                                    },
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.bottomCenter,
+                                      child: SizedBox(
+                                        width: box.maxWidth,
+                                        child: Padding(
+                                          padding: EdgeInsets.only(bottom: bottomInset),
+                                          child: SkyTimesSheet(controller: c),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                );
-                              },
+                                ),
+                                builder: (context, sheet) {
+                                  final v = _sheet.value;
+                                  return Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(maxHeight: box.maxHeight),
+                                      child: Offstage(
+                                        offstage: v == 0,
+                                        child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
@@ -405,10 +609,111 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                     ],
                   ),
                 ),
-                _Tabs(controller: c, onSky: true),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tells [onSize] the size its child was laid out at.
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  const _MeasureSize({required this.onSize, required super.child});
+
+  final ValueChanged<Size> onSize;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderMeasureSize(onSize);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderMeasureSize renderObject) => renderObject.onSize = onSize;
+}
+
+class _RenderMeasureSize extends RenderProxyBox {
+  _RenderMeasureSize(this.onSize);
+
+  ValueChanged<Size> onSize;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    onSize(size);
+  }
+}
+
+/// Marks the month's page, so it always slides over the sky.
+class _MonthLayer extends StatelessWidget {
+  const _MonthLayer({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+/// The month table, built again only when what it shows changes (not on every tick of the clock).
+class _MonthHost extends StatefulWidget {
+  const _MonthHost({required this.controller, required this.onPick});
+
+  final AppController controller;
+  final VoidCallback onPick;
+
+  @override
+  State<_MonthHost> createState() => _MonthHostState();
+}
+
+class _MonthHostState extends State<_MonthHost> {
+  String? _key;
+  Widget? _child;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.controller;
+    final key =
+        '${c.cursorY}-${c.cursorM}-${c.today}-${c.selected}-${c.city.id}-${c.hijriAdj}-${c.settingsVersion.value}';
+    if (key != _key || _child == null) {
+      _key = key;
+      _child = MonthPanel(controller: c, onPick: widget.onPick);
+    }
+    return _child!;
+  }
+}
+
+/// The bottom of the month on a phone: a still arrow and the way back to the sky.
+class _MonthFooter extends StatelessWidget {
+  const _MonthFooter({required this.onBack, required this.hint});
+
+  final VoidCallback onBack;
+  final bool hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      // a swipe up on the footer goes back too
+      onVerticalDragEnd: (d) {
+        if (d.velocity.pixelsPerSecond.dy < -200) onBack();
+      },
+      child: Container(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + bottom),
+        decoration: BoxDecoration(
+          color: c.bg.withValues(alpha: .94),
+          border: Border(top: BorderSide(color: c.line)),
+        ),
+        child: Tap(
+          onTap: onBack,
+          label: 'Kthehu te qielli',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgIcon(VIcon.chevUp, size: 18, color: c.muted),
+              Text(hint ? 'Rrëshqit lart për t\'u kthyer' : 'Kthehu', style: vt(13, 700, color: c.muted, height: 1.3)),
+            ],
+          ),
         ),
       ),
     );
@@ -472,103 +777,6 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The two tabs at the bottom of the phone screen.
-class _Tabs extends StatelessWidget {
-  const _Tabs({required this.controller, required this.onSky});
-
-  final AppController controller;
-  final bool onSky;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final bottom = MediaQuery.paddingOf(context).bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottom),
-      decoration: BoxDecoration(
-        color: onSky ? const Color(0x40000000) : c.bg.withValues(alpha: .94),
-        border: Border(top: BorderSide(color: onSky ? const Color(0x24FFFFFF) : c.line)),
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 368),
-          child: Row(
-            children: [
-              Expanded(
-                child: _Tab(
-                  label: 'Sot',
-                  icon: VIcon.tabToday,
-                  selected: controller.view == HomeView.today,
-                  onSky: onSky,
-                  onTap: () => controller.setView(HomeView.today),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _Tab(
-                  label: 'Muaji',
-                  icon: VIcon.tabMonth,
-                  selected: controller.view == HomeView.month,
-                  onSky: onSky,
-                  onTap: () => controller.setView(HomeView.month),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Tab extends StatelessWidget {
-  const _Tab({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onSky,
-    required this.onTap,
-  });
-
-  final String label;
-  final VIcon icon;
-  final bool selected;
-  final bool onSky;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final fg = onSky ? (selected ? const Color(0xFFFFFFFF) : const Color(0xB8FFFFFF)) : (selected ? c.accent : c.muted);
-    final bg = selected ? (onSky ? const Color(0x2BFFFFFF) : c.accentSoft) : Colors.transparent;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgIcon(icon, size: 20, color: fg),
-              const SizedBox(width: 8),
-              Text(label, style: vt(15, 750, color: fg, height: 1.5)),
             ],
           ),
         ),

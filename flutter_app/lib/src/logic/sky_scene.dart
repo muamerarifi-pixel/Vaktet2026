@@ -180,13 +180,14 @@ SkyBlend skyBlendAt(List<PrayerRow> rows, int now) {
 
 // ---------- Seasons ----------
 
-/// The hills' colour through the year (day of the year, ARGB): snowy winter, green spring, golden summer,
-/// orange-brown autumn. Calendar only, not the weather.
+/// The colour of the wooded hills through the year (day of the year, ARGB), as they look from afar: bare
+/// brown-grey woods in winter, fresh green in spring, dry olive in summer, russet in autumn. Muted, because the air
+/// between pales every colour. Calendar only, not the weather, so there is no snow.
 const List<(int, int)> seasonColors = [
-  (15, 0xFF5D6E80), // mid-January: cold blue-grey under the snow
-  (105, 0xFF3F8F52), // mid-April: green
-  (196, 0xFFC9A24A), // mid-July: golden
-  (288, 0xFFB0602C), // mid-October: orange-brown
+  (15, 0xFF5B5A55), // mid-January: bare woods
+  (105, 0xFF4E7B4C), // mid-April: fresh green
+  (196, 0xFF7C7D48), // mid-July: dry olive
+  (288, 0xFF80593A), // mid-October: russet
 ];
 
 int dayOfYear(Day day) => day.epochDay - Day(day.y, 1, 1).epochDay + 1;
@@ -202,14 +203,6 @@ int seasonColor(Day day) {
     if (x >= a && x < b) return _lerpArgb(ca, cb, _smooth((x - a) / (b - a)));
   }
   return seasonColors.first.$2;
-}
-
-/// How much snow lies on the hills: all of it from early December to the end of February.
-double snowOn(Day day) {
-  var d = (dayOfYear(day) - 15).toDouble(); // days from mid-January
-  if (d > 182) d -= 365;
-  if (d < -182) d += 365;
-  return _smooth((60 - d.abs()) / 25);
 }
 
 // ---------- The hours ----------
@@ -249,10 +242,10 @@ double _smooth(double x) {
 
 /// The colour each hour lays over the sky: (ARGB, strength). Index = temporal hour.
 const List<(int, double)> hourTints = [
-  (0xFF151A52, .16), // 0  the middle of the night: deepest blue
-  (0xFF121848, .17),
-  (0xFF141B4C, .15),
-  (0xFF1D2358, .12),
+  (0xFF0E1430, .14), // 0  the middle of the night: deepest blue
+  (0xFF0D132C, .15),
+  (0xFF10162F, .13),
+  (0xFF181E3E, .11),
   (0xFF3A2F6E, .10), // 4  the first grey of the Imsak
   (0xFF8A4F86, .10), // 5  violet before the dawn
   (0xFFFF9466, .12), // 6  sunrise: coral
@@ -270,9 +263,9 @@ const List<(int, double)> hourTints = [
   (0xFFE55C78, .13), // 18 sunset: rose
   (0xFF8A4D9E, .13), // 19 the afterglow turns violet
   (0xFF4A3E8E, .13),
-  (0xFF2E2F7A, .14), // 21 the evening blue
-  (0xFF232769, .15),
-  (0xFF1B205E, .16),
+  (0xFF262A62, .13), // 21 the evening blue
+  (0xFF1A1F48, .14),
+  (0xFF131938, .14),
 ];
 
 /// Everything the sky adds for the current hour, each 0–1, fading in and out smoothly.
@@ -296,8 +289,7 @@ class SkyScene {
     this.cloudCover = 0,
     this.cloudThin = 0,
     this.cloudSunset = 0,
-    this.season = 0xFF3F8F52,
-    this.snow = 0,
+    this.season = 0xFF4E7B4C,
   });
 
   /// The colours of the sky, melting from one prayer time into the next.
@@ -315,9 +307,8 @@ class SkyScene {
   /// How much the clouds take the colours of sunrise and sunset, 0–1.
   final double cloudSunset;
 
-  /// The hills' colour for the season (ARGB) and the snow on them in winter.
+  /// The colour of the wooded hills for the season (ARGB).
   final int season;
-  final double snow;
 
   /// The temporal hour, 0–24.
   final double hour;
@@ -452,6 +443,5 @@ SkyScene skySceneAt(List<PrayerRow> rows, int now, Day day) {
     cloudThin: _q(clouds.$2, 1 / 100),
     cloudSunset: _q(clouds.$3, 1 / 100),
     season: seasonColor(day),
-    snow: _q(snowOn(day), 1 / 100),
   );
 }
