@@ -43,6 +43,12 @@ enum Feature {
     'Yjet vezullojnë, retë lundrojnë, kalojnë zogj e avionë. Fikeni për të kursyer baterinë.',
     true,
   ),
+  skyRest(
+    'Qielli pushon',
+    '30 sekonda pas prekjes së fundit (dhe kur telefoni kursen baterinë) qielli ndalet; koha e mbetur vazhdon. '
+        'Një prekje e zgjon.',
+    true,
+  ),
   hijri('Shfaq datën hixhri', 'Data hixhri nën datën e sotme dhe në muaj.', true),
   national('Ditët kombëtare të Kosovës', 'Festat zyrtare dhe ditët përkujtimore në ekranin kryesor.', true),
   islamic('Netët dhe ditët e mëdha islame', 'Kadri, Miraxhi, Berati, Bajramet, Ashura … në ekranin kryesor.', true),
@@ -171,7 +177,16 @@ class AppController extends ChangeNotifier {
   late int cursorY;
   late int cursorM;
 
+  /// Everything the screens show except the running seconds. It changes only on whole minutes (every prayer
+  /// time, forbidden time and day starts on one), so the screens are built again once a minute, not every second.
   late TodayModel model;
+
+  /// The moment shown ([viewNow]), every second: only the countdowns listen to it.
+  ValueListenable<int> get time => _time;
+  late final ValueNotifier<int> _time = ValueNotifier<int>(viewNow);
+
+  /// The minute the model was made for.
+  int _minute = -1;
 
   bool get isToday => selected == today;
 
@@ -184,6 +199,7 @@ class AppController extends ChangeNotifier {
 
   void _recompute() {
     final at = viewNow;
+    _minute = now ~/ msPerMinute;
     model = computeToday(
       now: at,
       today: selected,
@@ -228,8 +244,12 @@ class AppController extends ChangeNotifier {
         cursorM = t.m;
       }
     }
-    _recompute();
-    notifyListeners();
+    // the screens are built again only when a new minute starts (midnight is one too); the seconds go to [time]
+    if (now ~/ msPerMinute != _minute) {
+      _recompute();
+      notifyListeners();
+    }
+    _time.value = viewNow;
   }
 
   @override
@@ -237,6 +257,7 @@ class AppController extends ChangeNotifier {
     stop();
     lookNotifier.dispose();
     settingsVersion.dispose();
+    _time.dispose();
     super.dispose();
   }
 
@@ -245,6 +266,7 @@ class AppController extends ChangeNotifier {
   void _changed() {
     _recompute();
     notifyListeners();
+    _time.value = viewNow;
   }
 
   void _settingChanged() {

@@ -42,7 +42,7 @@ class TodayPanel extends StatelessWidget {
         ...[
           NextCard(
             model: model,
-            now: c.viewNow,
+            time: c.time,
             mode: SkyMode.card,
             clock: clock,
             countdownWeight: c.countdownWeight,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
@@ -32,7 +33,7 @@ class NextCard extends StatelessWidget {
   const NextCard({
     super.key,
     required this.model,
-    required this.now,
+    required this.time,
     required this.mode,
     required this.clock,
     this.reveal,
@@ -52,7 +53,9 @@ class NextCard extends StatelessWidget {
   final SkyOptions options;
 
   final TodayModel model;
-  final int now;
+
+  /// The moment shown, every second: only the countdowns are built again with it.
+  final ValueListenable<int> time;
   final SkyMode mode;
   final SkyClock? clock;
 
@@ -70,7 +73,7 @@ class NextCard extends StatelessWidget {
       SkyMode.card => _Normal(
         model: model,
         card: card,
-        now: now,
+        time: time,
         vw: width,
         weight: countdownWeight,
         family: countdownFont,
@@ -78,7 +81,7 @@ class NextCard extends StatelessWidget {
       ),
       SkyMode.full => _FullScreen(
         card: card,
-        now: now,
+        time: time,
         vw: width,
         weight: countdownWeight,
         reveal: reveal,
@@ -88,7 +91,7 @@ class NextCard extends StatelessWidget {
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, lift: reveal, options: options, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, options: options, child: content),
     );
   }
 }
@@ -316,6 +319,9 @@ class CountdownNumber extends StatelessWidget {
 }
 
 /// One digit of the countdown in its cell: when it changes, the old one fades out as the new one fades in.
+///
+/// The fade steps with the sky's own clock (20 pictures a second), not with every refresh of the screen, so a
+/// fading digit costs no more pictures than the sky already draws.
 class _FadeDigit extends StatefulWidget {
   const _FadeDigit({required this.digit, required this.style, required this.width, required this.duration});
 
@@ -329,33 +335,66 @@ class _FadeDigit extends StatefulWidget {
 }
 
 class _FadeDigitState extends State<_FadeDigit> {
-  /// Each change gets a key of its own, so a digit that comes back while it is still fading out (5 → 6 → 5 in
-  /// quick steps) never stands twice under the same key.
-  int _changes = 0;
+  static final SkyClock _clock = SkyClock.shared;
+
+  /// The digit fading out, while it fades.
+  String? _old;
+  double _start = 0;
+  double _t = 1;
 
   @override
   void didUpdateWidget(_FadeDigit old) {
     super.didUpdateWidget(old);
-    if (old.digit != widget.digit) _changes++;
+    if (old.digit == widget.digit) return;
+    if (widget.duration == Duration.zero) return _finish();
+    // a digit that changes again while it is still fading starts a new fade from the one now shown
+    _old = old.digit;
+    _start = _clock.seconds;
+    _t = 0;
+    if (!_clock.isHeldBy(this)) {
+      _clock.addListener(_step);
+      _clock.hold(this);
+    }
+  }
+
+  void _step() {
+    final t = (_clock.seconds - _start) / (widget.duration.inMicroseconds / 1e6);
+    if (t >= 1) return setState(_finish);
+    setState(() => _t = t);
+  }
+
+  void _finish() {
+    _old = null;
+    _t = 1;
+    _clock.removeListener(_step);
+    _clock.release(this);
   }
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: widget.width,
-    child: AnimatedSwitcher(
-      duration: widget.duration,
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      layoutBuilder: (current, previous) => Stack(alignment: Alignment.center, children: [...previous, ?current]),
-      child: Text(
-        widget.digit,
-        key: ValueKey(_changes),
-        style: widget.style,
-        textAlign: TextAlign.center,
-        softWrap: false,
-      ),
-    ),
-  );
+  void dispose() {
+    _clock.removeListener(_step);
+    _clock.release(this);
+    super.dispose();
+  }
+
+  Text _text(String d) => Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
+
+  @override
+  Widget build(BuildContext context) {
+    final old = _old;
+    return SizedBox(
+      width: widget.width,
+      child: old == null
+          ? _text(widget.digit)
+          : Stack(
+              alignment: Alignment.center,
+              children: [
+                Opacity(opacity: 1 - Curves.easeIn.transform(_t), child: _text(old)),
+                Opacity(opacity: Curves.easeOut.transform(_t), child: _text(widget.digit)),
+              ],
+            ),
+    );
+  }
 }
 
 class _CountdownLabel extends StatelessWidget {
@@ -373,10 +412,10 @@ class _CountdownLabel extends StatelessWidget {
 }
 
 class _Alt extends StatelessWidget {
-  const _Alt({required this.card, required this.now});
+  const _Alt({required this.card, required this.time});
 
   final NextCardModel card;
-  final int now;
+  final ValueListenable<int> time;
 
   @override
   Widget build(BuildContext context) {
@@ -391,9 +430,14 @@ class _Alt extends StatelessWidget {
         TextSpan(
           children: [
             TextSpan(text: '${card.altText} '),
-            TextSpan(
-              text: fmtCount(card.altTarget! - now),
-              style: vt(14.5, 880, color: _white, ls: .01, height: 1.4),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: ValueListenableBuilder(
+                valueListenable: time,
+                builder: (context, now, _) =>
+                    Text(fmtCount(card.altTarget! - now), style: vt(14.5, 880, color: _white, ls: .01, height: 1.4)),
+              ),
             ),
           ],
         ),
@@ -409,7 +453,7 @@ class _Normal extends StatelessWidget {
   const _Normal({
     required this.model,
     required this.card,
-    required this.now,
+    required this.time,
     required this.vw,
     required this.weight,
     this.family,
@@ -418,7 +462,7 @@ class _Normal extends StatelessWidget {
 
   final TodayModel model;
   final NextCardModel card;
-  final int now;
+  final ValueListenable<int> time;
   final double vw;
   final int weight;
   final String? family;
@@ -437,19 +481,23 @@ class _Normal extends StatelessWidget {
           const SizedBox(height: 6),
           _NameAndTime(card: card, vw: vw, center: false),
           const SizedBox(height: 10),
-          CountdownNumber(
-            text: fmtCount(card.target - now),
-            size: clampPx(54, vw * .16, 74),
-            weight: weight,
-            center: false,
-            family: family,
-            gold: gold,
+          ValueListenableBuilder(
+            valueListenable: time,
+            builder: (context, now, _) => CountdownNumber(
+              text: fmtCount(card.target - now),
+              size: clampPx(54, vw * .16, 74),
+              weight: weight,
+              center: false,
+              family: family,
+              gold: gold,
+            ),
           ),
           const SizedBox(height: 6),
           _CountdownLabel(text: card.countdownLabel),
           const SizedBox(height: 16),
-          if (card.altText != null) ...[_Alt(card: card, now: now), const SizedBox(height: 14)],
-          _Dayline(model: model, now: now),
+          if (card.altText != null) ...[_Alt(card: card, time: time), const SizedBox(height: 14)],
+          // the line moves once a minute, with the rest of the card
+          _Dayline(model: model, now: time.value),
         ],
       ),
     );
@@ -511,7 +559,7 @@ class _DaylinePainter extends CustomPainter {
 class _FullScreen extends StatelessWidget {
   const _FullScreen({
     required this.card,
-    required this.now,
+    required this.time,
     required this.vw,
     required this.weight,
     this.reveal,
@@ -520,7 +568,7 @@ class _FullScreen extends StatelessWidget {
   });
 
   final NextCardModel card;
-  final int now;
+  final ValueListenable<int> time;
   final double vw;
   final int weight;
   final Animation<double>? reveal;
@@ -555,14 +603,17 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CountdownNumber(
-                    text: fmtCount(card.target - now),
-                    size: size,
-                    weight: weight,
-                    center: true,
-                    full: true,
-                    family: family,
-                    gold: gold,
+                  ValueListenableBuilder(
+                    valueListenable: time,
+                    builder: (context, now, _) => CountdownNumber(
+                      text: fmtCount(card.target - now),
+                      size: size,
+                      weight: weight,
+                      center: true,
+                      full: true,
+                      family: family,
+                      gold: gold,
+                    ),
                   ),
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
@@ -596,7 +647,8 @@ class _FullScreen extends StatelessWidget {
           if (r == null) return layout;
           return AnimatedBuilder(
             animation: r,
-            child: layout,
+            // moved and shrunk as one finished picture while the prayer times are swiped up
+            child: RepaintBoundary(child: layout),
             builder: (context, child) {
               final v = r.value;
               if (v == 0) return child!;

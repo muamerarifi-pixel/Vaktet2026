@@ -86,9 +86,10 @@ void main() {
     // the digits that change fade into the new ones: halfway, both are there
     await tester.pump();
     await tester.pump(CountdownNumber.fade ~/ 2);
-    final fading = find.descendant(of: _countdown('01:12:59'), matching: find.byType(FadeTransition));
+    final fading = find.descendant(of: _countdown('01:12:59'), matching: find.byType(Opacity));
     expect(fading, findsWidgets);
-    await tester.pumpAndSettle();
+    // the fade steps with the sky's 20-a-second clock, not with every refresh of the screen
+    await tester.pump(CountdownNumber.fade * 2);
     expect(_countdown('01:12:59'), findsOneWidget);
     expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('4')), findsNothing); // faded out
     await _close(tester);
@@ -110,7 +111,7 @@ void main() {
       await tester.pump(CountdownNumber.fade ~/ 8);
       expect(tester.takeException(), isNull, reason: text);
     }
-    await tester.pumpAndSettle();
+    await tester.pump(CountdownNumber.fade * 2);
     expect(find.text('6'), findsNothing);
     expect(find.text('5'), findsOneWidget);
   });
@@ -253,6 +254,26 @@ void main() {
     expect(find.textContaining('Për jetën', findRichText: true), findsWidgets);
     expect(tester.takeException(), isNull);
     handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('the prayer times follow the finger exactly, from the very first swipe', (tester) async {
+    // a small phone, where the sheet is shrunk to fit
+    await _open(tester, size: const Size(320, 568));
+    await tester.pumpAndSettle();
+    final finger = await tester.startGesture(const Offset(160, 420));
+    await finger.moveBy(const Offset(0, -30)); // past the touch slop
+    await tester.pump();
+    await finger.moveBy(const Offset(0, -20));
+    await tester.pump();
+    final y0 = tester.getTopLeft(find.text('VAKTET E SOTME')).dy;
+    await finger.moveBy(const Offset(0, -60));
+    await tester.pump();
+    final y1 = tester.getTopLeft(find.text('VAKTET E SOTME')).dy;
+    expect(y0 - y1, closeTo(60, 1));
+    await finger.up();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     await _close(tester);
   });
 

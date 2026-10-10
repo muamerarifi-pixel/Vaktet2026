@@ -164,25 +164,17 @@ class Landscape {
     rough: 8,
   );
 
-  /// The wooded ridges in front, nearly level: (the ridge line, the seed of its treetops).
+  /// The wooded ridges in front, nearly level: (the ridge line, the seed of its treetops). Just two, with the mist
+  /// between them: more layers looked drawn rather than seen.
   static final List<(List<double>, int)> _woods = [
     (
       _ridgeLine(
-        6,
+        12,
         const [(20, 4, 50, 1.8), (110, 7, 45, 1.6), (200, 2.5, 40, 2), (290, 6, 55, 1.7), (380, 8, 45, 1.6)],
         seed: 23,
         rough: 2.5,
       ),
       31,
-    ),
-    (
-      _ridgeLine(
-        22,
-        const [(0, 6, 60, 1.8), (90, 2, 40, 2), (170, 5, 50, 1.7), (270, 3, 40, 2), (360, 6.5, 60, 1.7)],
-        seed: 37,
-        rough: 2.2,
-      ),
-      43,
     ),
     // the nearest hills rise on both sides and dip to the lake in the middle
     (

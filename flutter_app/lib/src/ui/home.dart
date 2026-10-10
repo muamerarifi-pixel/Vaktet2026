@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../logic/format.dart';
@@ -28,6 +30,9 @@ class HomePage extends StatefulWidget {
   /// Whether the sky moves (tests turn it off, so the screen can settle).
   final bool skyMotion;
 
+  /// How long the sky moves after the last touch before it rests (see [Feature.skyRest]).
+  static const Duration restAfter = Duration(seconds: 30);
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -35,23 +40,52 @@ class HomePage extends StatefulWidget {
 enum _Drag { none, ignored, sheet }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver, TickerProviderStateMixin {
-  late final SkyClock _sky = SkyClock(this);
+  final SkyClock _sky = SkyClock.shared;
 
   /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
-  late final AnimationController _sheet = AnimationController(vsync: this);
-  final GlobalKey _sheetKey = GlobalKey();
+  late final AnimationController _sheet = AnimationController(vsync: this)..addStatusListener(_sheetStatus);
+
+  /// How tall the sheet is on the screen, so it follows the finger exactly.
+  double _sheetSize = 380;
 
   /// Whether the app is in front (the sky's clock stops while it is not).
   bool _resumed = true;
 
-  /// Runs the sky's clock only while a moving sky is on the screen: not behind the month, not while the app is
-  /// hidden, and not when the living sky is switched off. Otherwise nothing is drawn between the seconds.
+  /// The sky moves for a while after each touch, and then rests (if [Feature.skyRest] is on).
+  bool _awake = true;
+  Timer? _restTimer;
+
+  /// The phone's battery saver: the sky stays still while it is on.
+  bool _powerSave = false;
+  StreamSubscription<dynamic>? _powerSaveSub;
+
+  /// The prayer times cover the sky.
+  bool _sheetOpen = false;
+
+  /// Runs the sky's clock only while a moving sky is on the screen: not behind the month or the open prayer
+  /// times, not while the app is hidden or the phone saves battery, not when the living sky is switched off, and
+  /// not once it has rested. Otherwise nothing is drawn between the seconds.
   void _syncSky(bool want) {
-    if (want == _sky.running) return;
+    if (want == _sky.isHeldBy(this)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      want ? _sky.start() : _sky.stop();
+      want ? _sky.hold(this) : _sky.release(this);
     });
+  }
+
+  /// A touch anywhere wakes the sky, and it rests again [HomePage.restAfter] later.
+  void _wake() {
+    if (!widget.skyMotion) return;
+    _restTimer?.cancel();
+    _restTimer = Timer(HomePage.restAfter, () {
+      if (mounted) setState(() => _awake = false);
+    });
+    if (!_awake) setState(() => _awake = true);
+  }
+
+  void _sheetStatus(AnimationStatus status) {
+    final open = status == AnimationStatus.completed;
+    if (open != _sheetOpen) setState(() => _sheetOpen = open);
   }
 
   /// Each change of layout gets a key of its own, so going back to a layout that is still fading out
@@ -64,6 +98,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller.start();
+    if (widget.skyMotion) {
+      _wake();
+      _powerSaveSub = const EventChannel('vaktet/power_save').receiveBroadcastStream().listen(
+        (on) {
+          if (mounted && on is bool && on != _powerSave) setState(() => _powerSave = on);
+        },
+        onError: (Object _) {}, // not on Android: never mind
+      );
+    }
   }
 
   @override
@@ -79,7 +122,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.stop();
-    _sky.dispose();
+    _sky.release(this);
+    _restTimer?.cancel();
+    _powerSaveSub?.cancel();
     _sheet.dispose();
     super.dispose();
   }
@@ -90,10 +135,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     if (state == AppLifecycleState.resumed) {
       _resumed = true;
       widget.controller.start();
+      _wake();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       _resumed = false;
       widget.controller.stop();
-      _sky.stop();
+      _sky.release(this);
     }
   }
 
@@ -102,9 +148,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   }
 
   // ---------- Swiping the prayer times up over the full-screen sky ----------
-
-  double get _sheetHeight =>
-      (_sheetKey.currentContext?.size?.height ?? 0) > 0 ? _sheetKey.currentContext!.size!.height : 380;
 
   _Drag _drag = _Drag.none;
   bool _edgeDrag = false;
@@ -127,7 +170,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     }
     if (_drag == _Drag.sheet) {
       _sheet.stop();
-      _sheet.value = (_sheet.value - dy / _sheetHeight).clamp(0.0, 1.0);
+      _sheet.value = (_sheet.value - dy / _sheetSize).clamp(0.0, 1.0);
     }
   }
 
@@ -136,7 +179,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final vy = d.velocity.pixelsPerSecond.dy;
     if (_drag == _Drag.sheet) {
       final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
-      _settleSheet(open, velocity: -vy / _sheetHeight);
+      _settleSheet(open, velocity: -vy / _sheetSize);
     }
     _drag = _Drag.none;
     _edgeDrag = false;
@@ -158,7 +201,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     _sheet.animateWith(
       _ClampedSpring(
         SpringSimulation(
-          const SpringDescription(mass: 1, stiffness: 320, damping: 34),
+          const SpringDescription(mass: 1, stiffness: 520, damping: 46),
           _sheet.value,
           target,
           velocity,
@@ -204,14 +247,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => c.stepDay(-1),
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () => c.stepDay(1),
-      },
-      child: Focus(
-        autofocus: true,
-        child: ListenableBuilder(listenable: c, builder: (context, _) => _page(context, c)),
+    return Listener(
+      onPointerDown: (_) => _wake(),
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => c.stepDay(-1),
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () => c.stepDay(1),
+        },
+        child: Focus(
+          autofocus: true,
+          child: ListenableBuilder(listenable: c, builder: (context, _) => _page(context, c)),
+        ),
       ),
     );
   }
@@ -228,7 +274,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         !MediaQuery.disableAnimationsOf(context) &&
         c.on(Feature.skyLife) &&
         (wide || fullSky) &&
-        _resumed;
+        _resumed &&
+        !_powerSave &&
+        !(fullSky && _sheetOpen) &&
+        (_awake || !c.on(Feature.skyRest));
     _syncSky(moving);
     final clock = moving ? _sky : null;
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
@@ -415,7 +464,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       fridayNight: friday && model.fridayNightAt(c.viewNow),
     );
     final card = model.card;
-    final second = card?.altText == null ? null : '${card!.altText} ${fmtCount(card.altTarget! - c.viewNow)}';
+    final second = card?.altText == null
+        ? null
+        : ValueListenableBuilder(
+            valueListenable: c.time,
+            builder: (context, now, _) => SmallLine(text: '${card!.altText} ${fmtCount(card.altTarget! - now)}'),
+          );
     final hints = c.on(Feature.hints);
     final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;
     final nafile = c.on(Feature.nafile) ? model.nafile : null;
@@ -451,7 +505,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
               expand: true,
               child: NextCard(
                 model: model,
-                now: c.viewNow,
+                time: c.time,
                 mode: SkyMode.full,
                 clock: clock,
                 countdownWeight: c.countdownWeight,
@@ -464,7 +518,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
             PrayerPulse(
               target: model.card?.target,
               now: c.now,
-              enabled: clock != null && c.isToday && c.on(Feature.pulse),
+              // a moment of light even while the sky rests: it lasts a few seconds, once per prayer time
+              enabled: widget.skyMotion && !MediaQuery.disableAnimationsOf(context) && c.isToday && c.on(Feature.pulse),
             ),
             Column(
               children: [
@@ -498,7 +553,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
-                                  if (second != null) ...[SmallLine(text: second), const SizedBox(height: 4)],
+                                  if (second != null) ...[second, const SizedBox(height: 4)],
                                   if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
                                   if (hints) SwipeHint(onTap: () => _settleSheet(true)),
                                 ],
@@ -510,30 +565,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                       Positioned.fill(
                         child: ClipRect(
                           child: LayoutBuilder(
-                            builder: (context, box) => AnimatedBuilder(
-                              animation: _sheet,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.bottomCenter,
-                                child: SizedBox(
-                                  width: box.maxWidth,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(bottom: bottomInset),
-                                    child: SkyTimesSheet(key: _sheetKey, controller: c),
+                            // the sheet is always laid out, so it is ready (and its height known) for the first
+                            // swipe; it is painted only while open, and moves as one finished picture
+                            builder: (context, box) => RepaintBoundary(
+                              child: AnimatedBuilder(
+                                animation: _sheet,
+                                child: RepaintBoundary(
+                                  child: _MeasureSize(
+                                    onSize: (size) {
+                                      if (size.height > 0) _sheetSize = size.height;
+                                    },
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.bottomCenter,
+                                      child: SizedBox(
+                                        width: box.maxWidth,
+                                        child: Padding(
+                                          padding: EdgeInsets.only(bottom: bottomInset),
+                                          child: SkyTimesSheet(controller: c),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
+                                builder: (context, sheet) {
+                                  final v = _sheet.value;
+                                  return Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(maxHeight: box.maxHeight),
+                                      child: Offstage(
+                                        offstage: v == 0,
+                                        child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              builder: (context, sheet) {
-                                final v = _sheet.value;
-                                if (v == 0) return const SizedBox.shrink();
-                                return Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(maxHeight: box.maxHeight),
-                                    child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
-                                  ),
-                                );
-                              },
                             ),
                           ),
                         ),
@@ -547,6 +615,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         ),
       ),
     );
+  }
+}
+
+/// Tells [onSize] the size its child was laid out at.
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  const _MeasureSize({required this.onSize, required super.child});
+
+  final ValueChanged<Size> onSize;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderMeasureSize(onSize);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderMeasureSize renderObject) => renderObject.onSize = onSize;
+}
+
+class _RenderMeasureSize extends RenderProxyBox {
+  _RenderMeasureSize(this.onSize);
+
+  ValueChanged<Size> onSize;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    onSize(size);
   }
 }
 

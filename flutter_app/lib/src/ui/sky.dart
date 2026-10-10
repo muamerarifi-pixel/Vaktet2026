@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../logic/prayer.dart';
 import 'colors.dart';
@@ -17,51 +17,47 @@ enum SkyMode {
   full,
 }
 
-/// Drives the drift of the haze and clouds, the twinkling stars and the turning sun rays.
+/// The clock of everything that moves slowly on the sky: the drifting clouds, the twinkling stars, the birds,
+/// and the digits of the countdown as they fade.
 ///
-/// Ticks with the screen (vsync), so the sky moves at the display's frame rate, and stops by itself while the
-/// app is out of sight. The time keeps counting across [stop] / [start], so nothing jumps when the app returns.
+/// It steps 20 times a second on a plain timer. A ticker tied to the screen would ask for a new picture on every
+/// refresh (60–120 a second) even when nothing has moved, and every picture costs battery; slow motion looks just
+/// as smooth at 20. There is one clock for the whole app, so the sky and the fading digits share the same
+/// pictures.
+///
+/// It runs only while someone holds it (the moving sky, a digit that is fading), and its time stands still in
+/// between, so nothing jumps when it starts again.
 class SkyClock extends ChangeNotifier {
-  SkyClock(TickerProvider vsync) {
-    _ticker = vsync.createTicker(_onTick);
+  SkyClock._();
+
+  static final SkyClock shared = SkyClock._();
+
+  static const Duration step = Duration(milliseconds: 50);
+
+  final Set<Object> _holders = {};
+  Timer? _timer;
+  int _steps = 0;
+
+  /// The clock's own time: it only moves while the clock runs.
+  double get seconds => _steps * step.inMicroseconds / 1e6;
+
+  bool get running => _timer != null;
+
+  bool isHeldBy(Object who) => _holders.contains(who);
+
+  /// Keeps the clock running until [who] lets go.
+  void hold(Object who) {
+    if (!_holders.add(who) || _timer != null) return;
+    _timer = Timer.periodic(step, (_) {
+      _steps++;
+      notifyListeners();
+    });
   }
 
-  late final Ticker _ticker;
-  Duration _base = Duration.zero;
-  Duration _elapsed = Duration.zero;
-  Duration _painted = Duration.zero;
-
-  /// The sky drifts slowly, so 20 pictures a second look just as smooth as 60 or 120, for a fraction of the work
-  /// and the battery. (The swipe-up sheet and the buttons still move at the display's full rate.)
-  static const Duration _frame = Duration(milliseconds: 50);
-
-  double get seconds => (_base + _elapsed).inMicroseconds / 1e6;
-
-  void _onTick(Duration elapsed) {
-    _elapsed = elapsed;
-    if (elapsed - _painted < _frame && elapsed >= _painted) return;
-    _painted = elapsed;
-    notifyListeners();
-  }
-
-  bool get running => _ticker.isActive;
-
-  void start() {
-    if (!_ticker.isActive) _ticker.start();
-  }
-
-  void stop() {
-    if (!_ticker.isActive) return;
-    _ticker.stop();
-    _base += _elapsed;
-    _elapsed = Duration.zero;
-    _painted = Duration.zero;
-  }
-
-  @override
-  void dispose() {
-    _ticker.dispose();
-    super.dispose();
+  void release(Object who) {
+    if (!_holders.remove(who) || _holders.isNotEmpty) return;
+    _timer?.cancel();
+    _timer = null;
   }
 }
 
@@ -131,6 +127,9 @@ class _Star {
 
   /// How far the star dims at the bottom of its twinkle.
   final double depth;
+
+  /// Only the brighter stars twinkle where the eye can see it; the faint ones are drawn once and kept.
+  bool get twinkles => r > .7 || bright > .55;
 }
 
 /// The same stars on every start (a fixed seed): mostly tiny and faint, a handful a little brighter,
@@ -274,6 +273,73 @@ const List<(double, double, double)> _puffs = [
   (.02, .14, .44),
 ];
 
+/// The day's clouds, each painted once into an image of its own, so that a frame only moves a few images across
+/// the sky instead of painting dozens of soft circles. They are painted again only when the hour changes their
+/// look (about once a minute) or the screen changes size.
+class _CloudImages {
+  static Object? _key;
+  static List<ui.Image> _images = const [];
+
+  static List<ui.Image> of(double w, SkyScene scene, Color Function(Color)? dim) {
+    final key = (w, scene.cloudCover, scene.cloudThin, scene.cloudSunset, dim != null);
+    if (key == _key) return _images;
+    for (final image in _images) {
+      image.dispose();
+    }
+    _key = key;
+    return _images = _paint(w, scene, dim ?? (c) => c);
+  }
+
+  static List<ui.Image> _paint(double w, SkyScene scene, Color Function(Color) k) {
+    final cover = scene.cloudCover, thin = scene.cloudThin, sunset = scene.cloudSunset;
+    final strength = .3 * (.55 + .45 * cover);
+    const white = Color(0xFFFFFFFF);
+    final tint = Color.lerp(white, const Color(0xFFFFB09A), sunset)!;
+    final rim = Color.lerp(white, const Color(0xFFFFD08A), sunset)!;
+    final shown = cover * _clouds.length;
+    final paint = Paint();
+    final images = <ui.Image>[];
+    for (var i = 0; i < _clouds.length; i++) {
+      final fade = (shown - i).clamp(0.0, 1.0);
+      if (fade <= 0) break;
+      final (_, scale0, _, _) = _clouds[i];
+      final cw = w * .55 * scale0 * (.75 + .45 * cover);
+      final iw = (cw * 2.4 * (1 + .3 * thin)).ceil(), ih = (cw * 1.5).ceil();
+      final centre = Offset(iw / 2, ih / 2);
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      // thin morning clouds are flattened into wisps
+      canvas.translate(centre.dx, centre.dy);
+      canvas.scale(1 + .3 * thin, 1 - .55 * thin);
+      canvas.translate(-centre.dx, -centre.dy);
+      final a = strength * (.75 + .25 * scale0) * fade;
+      for (final (dx, dy, r) in _puffs) {
+        final c = centre.translate(dx * cw, dy * cw);
+        final radius = r * cw;
+        if (sunset > .05) {
+          // the low sun lights the underside
+          final rc = c.translate(0, radius * .18);
+          final col = k(rim.withValues(alpha: a * .8 * sunset));
+          paint.shader = ui.Gradient.radial(rc, radius, [col, col.withValues(alpha: 0)], const [0, 1]);
+          canvas.drawCircle(rc, radius, paint);
+        }
+        final col = k(tint.withValues(alpha: a));
+        paint.shader = ui.Gradient.radial(
+          c,
+          radius,
+          [col, col.withValues(alpha: col.a * .55), col.withValues(alpha: 0)],
+          const [0, .45, 1],
+        );
+        canvas.drawCircle(c, radius, paint);
+      }
+      final picture = recorder.endRecording();
+      images.add(picture.toImageSync(iw, ih));
+      picture.dispose();
+    }
+    return images;
+  }
+}
+
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
 double _smooth01(double x) {
@@ -319,12 +385,6 @@ SkyPalette _paletteFor(SkyBlend b) {
     _lastPalette = blendPalettes(b);
   }
   return _lastPalette!;
-}
-
-/// A value that goes 0 → 1 → 0 with ease-in-out, like a CSS `alternate` animation.
-double _alternate(double seconds, double duration) {
-  final cycle = (seconds / duration) % 2.0;
-  return Curves.easeInOut.transform(cycle <= 1 ? cycle : 2 - cycle);
 }
 
 /// A gentle 0 → 1 → 0 wave with period [period].
@@ -379,11 +439,10 @@ class SkyPainter extends CustomPainter {
     required this.dark,
     required this.radius,
     this.clock,
-    this.lift,
     this.options = const SkyOptions(),
   }) : super(
          repaint: switch (layer) {
-           SkyLayer.motion => Listenable.merge([clock, lift]),
+           SkyLayer.motion => clock,
            SkyLayer.land || SkyLayer.back || SkyLayer.front => null,
          },
        );
@@ -399,11 +458,9 @@ class SkyPainter extends CustomPainter {
   final bool dark;
   final double radius;
 
-  /// Null when animations are off.
+  /// The clock while the sky moves; null while it is still (switched off, resting, or out of sight). Still, it
+  /// shows the moment it stopped at.
   final SkyClock? clock;
-
-  /// Full screen: how far the prayer-times sheet is open; the sun or moon rises with the countdown.
-  final Animation<double>? lift;
 
   final SkyOptions options;
 
@@ -420,8 +477,7 @@ class SkyPainter extends CustomPainter {
   }
 
   /// How much of a disc at [c] shows above the hills: 1 above, fading to 0 once it is behind them.
-  double _aboveHills(Size size, Offset c, double r) =>
-      (1 - (c.dy + .2 * (lift?.value ?? 0) * size.height - _horizon(size) + r) / (3 * r)).clamp(0.0, 1.0);
+  double _aboveHills(Size size, Offset c, double r) => (1 - (c.dy - _horizon(size) + r) / (3 * r)).clamp(0.0, 1.0);
 
   /// A point on the arc the sun and the moon travel, at [p] (0 rising – 1 setting; outside that, below the hills).
   Offset _arc(Size size, double p) {
@@ -430,7 +486,7 @@ class SkyPainter extends CustomPainter {
     final sn = math.sin(math.pi * p);
     // climbs quickly out of the hills and then stays high, above the countdown
     final rise = sn <= 0 ? sn : math.pow(sn, .45).toDouble();
-    final y = horizon - (horizon - peak) * rise - .2 * (lift?.value ?? 0) * size.height;
+    final y = horizon - (horizon - peak) * rise;
     // low in the sky it stays near the edges, clear of the countdown
     return Offset((.5 - .42 * math.cos(math.pi * p)) * size.width, y);
   }
@@ -450,23 +506,25 @@ class SkyPainter extends CustomPainter {
             ..shader = ui.Gradient.linear(Offset.zero, Offset(0, h), [for (final c in pal.colors) _k(c)], pal.stops),
         );
         _hourTint(canvas, size);
+        _haze(canvas, size, pal);
         _horizonHaze(canvas, size, pal);
         if (_full) {
           _faintStars(canvas, size, pal);
           _milkyWay(canvas, size, pal);
+          _paintStars(canvas, size, pal, 0, twinkling: false);
         }
       case SkyLayer.motion:
-        final t = clock?.seconds ?? 0.0;
+        // still, the sky shows the moment it stopped at
+        final t = SkyClock.shared.seconds;
         final live = clock != null;
         final life = options.life;
-        _haze(canvas, size, pal, t);
-        _paintStars(canvas, size, pal, t);
+        _paintStars(canvas, size, pal, t, twinkling: true);
         if (_full && live && life) _shootingStar(canvas, size, pal, t);
         _horizonGlow(canvas, size);
         _paintMoon(canvas, size, t);
         _paintSun(canvas, size, pal, t);
         if (_full) _brightStar(canvas, size, t);
-        if (_full && life) _paintClouds(canvas, size, pal, t);
+        if (_full && life) _paintClouds(canvas, size, t);
         if (_full && live && life) {
           _birds(canvas, size, t);
           _plane(canvas, size, t);
@@ -503,19 +561,13 @@ class SkyPainter extends CustomPainter {
     }
   }
 
-  /// Two soft clouds of colour that drift and turn slowly.
-  void _haze(Canvas canvas, Size size, SkyPalette pal, double t) {
+  /// Two soft clouds of colour over the sky. They stay where they are: drifting, they were too slow to see and
+  /// cost a large picture on every frame.
+  void _haze(Canvas canvas, Size size, SkyPalette pal) {
     final w = size.width, h = size.height;
     final box = Rect.fromLTWH(-.35 * w, -.35 * h, 1.7 * w, 1.7 * h);
-    final e = _alternate(t, 26);
-    final shift = Offset(_lerp(-.04, .04, e) * box.width, _lerp(-.02, .03, e) * box.height);
-    canvas.save();
-    canvas.translate(box.center.dx + shift.dx, box.center.dy + shift.dy);
-    canvas.rotate(_lerp(0, 7, e) * math.pi / 180);
-    canvas.translate(-box.center.dx, -box.center.dy);
     _cloud(canvas, box, .24, .32, .38, .34, _k(pal.hazeA));
     _cloud(canvas, box, .78, .66, .44, .40, _k(pal.hazeB));
-    canvas.restore();
   }
 
   void _cloud(Canvas canvas, Rect box, double cx, double cy, double rx, double ry, Color color) {
@@ -541,56 +593,27 @@ class SkyPainter extends CustomPainter {
 
   /// Clouds that change with the hour: a few thin wisps in the morning, fuller clouds in the afternoon, and
   /// edges lit pink and gold around sunrise and sunset. None at night.
-  void _paintClouds(Canvas canvas, Size size, SkyPalette pal, double t) {
+  ///
+  /// Each cloud is painted once into a picture (again only when the hour changes its look), and a frame just
+  /// moves the pictures across the sky.
+  void _paintClouds(Canvas canvas, Size size, double t) {
     final cover = scene.cloudCover;
     if (cover <= .01) return;
     final w = size.width, h = size.height;
-    final thin = scene.cloudThin, sunset = scene.cloudSunset;
-    final strength = .3 * (.55 + .45 * cover);
-    const white = Color(0xFFFFFFFF);
-    final tint = Color.lerp(white, const Color(0xFFFFB09A), sunset)!;
-    final rim = Color.lerp(white, const Color(0xFFFFD08A), sunset)!;
-    final shown = cover * _clouds.length;
-    final paint = Paint();
-    for (var i = 0; i < _clouds.length; i++) {
-      final fade = (shown - i).clamp(0.0, 1.0);
-      if (fade <= 0) break;
+    final images = _CloudImages.of(w, scene, dark ? _k : null);
+    final paint = Paint()..filterQuality = FilterQuality.low;
+    for (var i = 0; i < images.length; i++) {
+      final image = images[i];
       final (cy, scale0, crossing, offset) = _clouds[i];
-      final scale = scale0 * (.75 + .45 * cover);
-      final cw = w * .55 * scale;
+      final cw = w * .55 * scale0 * (.75 + .45 * cover);
       final span = w + 2 * cw;
       final cx = ((offset + t / crossing) % 1.0) * span - cw;
-      final centre = Offset(cx, cy * h * .7);
-      canvas.save();
-      // thin morning clouds are flattened into wisps
-      canvas.translate(centre.dx, centre.dy);
-      canvas.scale(1 + .3 * thin, 1 - .55 * thin);
-      canvas.translate(-centre.dx, -centre.dy);
-      for (final (dx, dy, r) in _puffs) {
-        final c = centre.translate(dx * cw, dy * cw);
-        final radius = r * cw;
-        final a = strength * (.75 + .25 * scale0) * fade;
-        if (sunset > .05) {
-          // the low sun lights the underside
-          final rc = c.translate(0, radius * .18);
-          final col = _k(rim.withValues(alpha: a * .8 * sunset));
-          paint.shader = ui.Gradient.radial(rc, radius, [col, col.withValues(alpha: 0)], const [0, 1]);
-          canvas.drawCircle(rc, radius, paint);
-        }
-        final col = _k(tint.withValues(alpha: a));
-        paint.shader = ui.Gradient.radial(
-          c,
-          radius,
-          [col, col.withValues(alpha: col.a * .55), col.withValues(alpha: 0)],
-          const [0, .45, 1],
-        );
-        canvas.drawCircle(c, radius, paint);
-      }
-      canvas.restore();
+      canvas.drawImage(image, Offset(cx - image.width / 2, cy * h * .7 - image.height / 2), paint);
     }
   }
 
-  void _paintStars(Canvas canvas, Size size, SkyPalette pal, double t) {
+  /// The stars: the [twinkling] ones on every frame, the others once, at their average brightness.
+  void _paintStars(Canvas canvas, Size size, SkyPalette pal, double t, {required bool twinkling}) {
     if (pal.stars <= 0) return;
     final w = size.width, h = size.height;
     final paint = Paint()..isAntiAlias = true;
@@ -605,10 +628,11 @@ class SkyPainter extends CustomPainter {
       final count = friday ? _fieldStars.length : _baseStars + (_deepStars * boost).round();
       for (var i = 0; i < count; i++) {
         final st = _fieldStars[i];
+        if (st.twinkles != twinkling) continue;
         final p = Offset(st.x * w, st.y * floor);
-        // a soft twinkle: mostly steady, with gentle dips, every star on its own beat
+        // a soft twinkle: mostly steady, with gentle dips, every star on its own beat (on average, a wave² of 3/8)
         final wave = _wave(t, st.period, st.phase);
-        final tw = 1 - st.depth * .7 * wave * wave;
+        final tw = 1 - st.depth * .7 * (twinkling ? wave * wave : .375);
         final extra = i >= _baseStars + _deepStars ? 1.0 : (i >= _baseStars ? boost : 1.0);
         final a =
             (pal.stars *
@@ -632,6 +656,7 @@ class SkyPainter extends CustomPainter {
       return;
     }
 
+    if (!twinkling) return;
     final boxH = h * .70;
     var i = 0;
     for (final (sx, sy, r) in _stars) {
@@ -731,7 +756,6 @@ class SkyPainter extends CustomPainter {
     final above = _aboveHills(size, c, 14);
     if (above <= 0) return;
     Color a(double o) => s.withValues(alpha: o * above);
-    if (_full) _sunRays(canvas, size, c, s, t);
     final breathe = _full ? 1 + .05 * _wave(t, 6) : 1.0;
     canvas.drawCircle(
       c,
@@ -761,7 +785,7 @@ class SkyPainter extends CustomPainter {
     if (k < .015) {
       if (!night) return;
       // new moon: the dark disc, just caught by a little light
-      final c = Offset(.86 * size.width, _horizon(size) - (_full ? 46 : 20) - .2 * (lift?.value ?? 0) * size.height);
+      final c = Offset(.86 * size.width, _horizon(size) - (_full ? 46 : 20));
       canvas.drawCircle(
         c,
         r * 4,
@@ -1090,38 +1114,6 @@ class SkyPainter extends CustomPainter {
     }
   }
 
-  /// A few faint, soft beams that turn very slowly around the sun and breathe in and out.
-  void _sunRays(Canvas canvas, Size size, Offset c, Color sun, double t) {
-    final reach = size.shortestSide * .95;
-    void beams(int count, double turn, double width, double alpha) {
-      final path = Path();
-      for (var i = 0; i < count; i++) {
-        final a = turn + i * 2 * math.pi / count;
-        final half = width * (i.isEven ? 1 : .55);
-        path
-          ..moveTo(c.dx, c.dy)
-          ..lineTo(c.dx + reach * math.cos(a - half), c.dy + reach * math.sin(a - half))
-          ..lineTo(c.dx + reach * math.cos(a + half), c.dy + reach * math.sin(a + half))
-          ..close();
-      }
-      canvas.drawPath(
-        path,
-        Paint()
-          ..blendMode = BlendMode.screen
-          ..shader = ui.Gradient.radial(
-            c,
-            reach,
-            [sun.withValues(alpha: alpha), sun.withValues(alpha: alpha * .3), sun.withValues(alpha: 0)],
-            const [0, .25, .8],
-          ),
-      );
-    }
-
-    final strength = phase == SkyPhase.noon ? .06 : .08;
-    beams(8, t * .02, .07, strength * (.7 + .3 * _wave(t, 10)));
-    beams(6, -t * .013 + .5, .05, strength * .6 * (.7 + .3 * _wave(t, 13, 1.3)));
-  }
-
   void _hills(Canvas canvas, Size size, SkyPalette pal) {
     final w = size.width, h = size.height;
     final hh = _full ? math.min(.20 * h, 170.0) : math.min(.26 * h, 64.0);
@@ -1249,7 +1241,6 @@ class SkyPainter extends CustomPainter {
       old.dark != dark ||
       old.radius != radius ||
       old.clock != clock ||
-      old.lift != lift ||
       old.scene != scene ||
       old.options != options ||
       (layer == SkyLayer.motion &&
@@ -1264,15 +1255,15 @@ class SkyCard extends StatelessWidget {
     required this.mode,
     required this.clock,
     required this.child,
-    this.lift,
     this.options = const SkyOptions(),
   });
 
   final TodayModel model;
   final SkyMode mode;
+
+  /// The clock while the sky moves, or null while it is still.
   final SkyClock? clock;
   final Widget child;
-  final Animation<double>? lift;
   final SkyOptions options;
 
   @override
@@ -1296,7 +1287,6 @@ class SkyCard extends StatelessWidget {
             dark: dark,
             radius: radius,
             clock: clock,
-            lift: lift,
             options: options,
           ),
         ),
