@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet-kosove-1.vercel.app)
 
-<sub>Android 1.8 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -47,6 +47,14 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 <tr><td align="center"><img src="docs/screenshots/v1.7/19_month.jpg" width="200" alt="Muaji"><br><sub>Muaji</sub></td><td align="center"><img src="docs/screenshots/v1.7/20_settings.jpg" width="200" alt="Cilësimet"><br><sub>Cilësimet</sub></td><td></td></tr>
 </table>
 </div>
+
+## Të reja në versionin 1.9
+
+⚡ **I shpejtë dhe i rrjedhshëm në çdo telefon** – aplikacioni kërkon shpejtësinë më të lartë të ekranit (90 ose 120 Hz, aty ku telefoni e ka), dhe qielli e shifrat lëvizin në çdo rifreskim të tij, jo më 20 herë në sekondë. Pjesët e qiellit që nuk lëvizin (ngjyrat, yjet e zbehtë, Kashta e Kumtrit, malet, liqeni, mjegulla, dielli) vizatohen një herë si pamje, kështu çdo kuadër mbetet i lehtë edhe në telefona të thjeshtë.
+
+👆 **Vaktet ndjekin gishtin pa u dridhur** – telefoni i ndien prekjet 120–240 herë në sekondë, jo njëkohësisht me ekranin; tani pozicioni i gishtit gjendet për çdo kuadër mes dy prekjeve, dhe vaktet ngjiten me hapa të barabartë. Koha e mbetur ngjitet pa u zvogëluar dhe mbetet mbi xhamin e turbullt, pa u ndërtuar përsëri kur nis rrëshqitja.
+
+🔋 **Pa kursim baterie** – qielli nuk pushon më pas 30 sekondave, as kur telefoni kursen baterinë, as nën vaktet: lëviz gjithmonë kur shihet, dhe ndalet vetëm kur aplikacioni nuk është në ekran. Cilësimi **Qielli pushon** u hoq.
 
 ## Të reja në versionin 1.8
 

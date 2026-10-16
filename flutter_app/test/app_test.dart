@@ -84,12 +84,14 @@ void main() {
     expect(sizeOf('0'), closeTo(sizeOf('1') * CountdownNumber.secondsScale, .01));
     now += 61 * 1000;
     controller.tick();
-    // the digits that change fade into the new ones: halfway, both are there
+    // the digits that change fade into the new ones: halfway, both are there, half see-through
     await tester.pump();
     await tester.pump(CountdownNumber.fade ~/ 2);
-    final fading = find.descendant(of: _countdown('01:12:59'), matching: find.byType(Opacity));
-    expect(fading, findsWidgets);
-    // the fade steps with the sky's 20-a-second clock, not with every refresh of the screen
+    final old = find.descendant(of: _countdown('01:12:59'), matching: find.text('4'));
+    expect(old, findsOneWidget);
+    final see = tester.widgetList<FadeTransition>(find.ancestor(of: old, matching: find.byType(FadeTransition)));
+    expect(see.any((f) => f.opacity.value > 0 && f.opacity.value < 1), isTrue);
+    expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('2')), findsOneWidget);
     await tester.pump(CountdownNumber.fade * 2);
     expect(_countdown('01:12:59'), findsOneWidget);
     expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('4')), findsNothing); // faded out
@@ -316,24 +318,31 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('the remaining time sits on frosted glass, which rests while the prayer times move', (tester) async {
+  testWidgets('the remaining time sits on frosted glass, which blurs on while the prayer times move', (tester) async {
     await _open(tester);
     await tester.pumpAndSettle();
     final glass = find.byType(FrostedGlass);
     expect(glass, findsOneWidget);
     expect(tester.widget<FrostedGlass>(glass).live, isTrue);
     expect(find.descendant(of: glass, matching: _countdown('01:14:00')), findsOneWidget);
-    expect(find.byType(BackdropFilter), findsOneWidget);
-    // while the sheet is up, the glass is drawn without a live blur and the sky is a still picture
+    BackdropFilter blur() => tester.widget<BackdropFilter>(find.byType(BackdropFilter));
+    expect(blur().enabled, isTrue);
+    Rect countdownAt() => tester.getRect(find.descendant(of: glass, matching: _countdown('01:14:00')));
+    final before = countdownAt();
+    // as the sheet comes up, the countdown moves up out of its way on the same glass, which keeps blurring
     final finger = await tester.startGesture(const Offset(195, 600));
     await finger.moveBy(const Offset(0, -40));
     await tester.pump();
     await finger.moveBy(const Offset(0, -40));
     await tester.pump();
-    expect(tester.widget<FrostedGlass>(glass).live, isFalse);
-    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.text('VAKTET E SOTME'), findsOneWidget);
+    expect(tester.widget<FrostedGlass>(glass).live, isTrue);
+    expect(blur().enabled, isTrue);
+    expect(countdownAt().center.dy, lessThan(before.center.dy - 5));
+    expect(countdownAt().width, closeTo(before.width, .01)); // only moved, never shrunk
     await finger.up();
     await tester.pumpAndSettle();
+    expect(find.text('VAKTET E SOTME'), findsNothing); // a short swipe springs back shut
     expect(tester.takeException(), isNull);
     await _close(tester);
     // switched off, the countdown stands on the sky alone
@@ -355,9 +364,14 @@ void main() {
     expect(find.text('19:52'), findsWidgets); // Jacia, the next one
     expect(find.text('Rrëshqit lart për vaktet'), findsNothing); // the strip takes the hint's place
     expect(find.text('VAKTET E SOTME'), findsNothing);
+    bool stripBlurs() =>
+        tester.widget<FrostedGlass>(find.ancestor(of: find.text('Lindja'), matching: find.byType(FrostedGlass))).live;
+    expect(stripBlurs(), isTrue);
     await tester.tap(find.text('Ikindia'));
     await tester.pumpAndSettle();
     expect(find.text('VAKTET E SOTME'), findsOneWidget);
+    // faded out under the sheet, it is plain tinted glass (a blur can't see through a fading layer)
+    expect(stripBlurs(), isFalse);
     expect(tester.takeException(), isNull);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();

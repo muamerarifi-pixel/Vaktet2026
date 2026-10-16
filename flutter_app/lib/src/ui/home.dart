@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../logic/format.dart';
 import '../state/app_controller.dart';
 import 'colors.dart';
+import 'finger.dart';
 import 'month_view.dart';
 import 'next_card.dart';
 import 'pulse.dart';
@@ -30,9 +30,6 @@ class HomePage extends StatefulWidget {
   /// Whether the sky moves (tests turn it off, so the screen can settle).
   final bool skyMotion;
 
-  /// How long the sky moves after the last touch before it rests (see [Feature.skyRest]).
-  static const Duration restAfter = Duration(seconds: 30);
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -45,32 +42,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
   late final AnimationController _sheet = AnimationController(vsync: this)..addListener(_sheetMoved);
 
-  /// While the sheet is up, the sky behind it is one still picture, and the sheet moves as a picture too: each
-  /// frame of the swipe then only moves two images, instead of drawing the whole sky (gradients, mountains, mist)
-  /// and the sheet again at the screen's 60–120 frames a second.
-  final SnapshotController _skySnap = SnapshotController();
-  final SnapshotController _sheetSnap = SnapshotController();
+  /// Whether any of the sheet shows (open, or on its way). Only the few things that change with it listen, so
+  /// a swipe never builds the screen again: its frames only move what is already there.
+  final ValueNotifier<bool> _sheetShown = ValueNotifier(false);
+
+  /// The glass of the countdown and of the times on the sky blur one shared picture of the sky behind them.
+  final BackdropKey _backdrop = BackdropKey();
 
   /// How tall the sheet is on the screen, so it follows the finger exactly.
   double _sheetSize = 380;
 
+  /// While a finger drags the sheet, the sheet is put where the finger is on every frame of the screen (not on
+  /// every touch, which come out of step with the frames; see [FingerTrack]).
+  late final _follow = createTicker(_followFinger);
+  final FingerTrack _finger = FingerTrack();
+
+  /// Where the sheet and the finger were when the drag began.
+  double _dragFromValue = 0;
+  double _dragFromY = 0;
+
   /// Whether the app is in front (the sky's clock stops while it is not).
   bool _resumed = true;
 
-  /// The sky moves for a while after each touch, and then rests (if [Feature.skyRest] is on).
-  bool _awake = true;
-  Timer? _restTimer;
-
-  /// The phone's battery saver: the sky stays still while it is on.
-  bool _powerSave = false;
-  StreamSubscription<dynamic>? _powerSaveSub;
-
-  /// The prayer-times sheet is open, or on its way (the sky stands still under it).
-  bool _sheetUp = false;
-
-  /// Runs the sky's clock only while a moving sky is on the screen: not behind the month or the open prayer
-  /// times, not while the app is hidden or the phone saves battery, not when the living sky is switched off, and
-  /// not once it has rested. Otherwise nothing is drawn between the seconds.
+  /// Runs the sky's clock while a moving sky is on the screen (not behind the month, not while the app is out
+  /// of sight, not when the living sky is switched off).
   void _syncSky(bool want) {
     if (want == _sky.isHeldBy(this)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -79,26 +74,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     });
   }
 
-  /// A touch anywhere wakes the sky, and it rests again [HomePage.restAfter] later.
-  void _wake() {
-    if (!widget.skyMotion) return;
-    _restTimer?.cancel();
-    _restTimer = Timer(HomePage.restAfter, () {
-      if (mounted) setState(() => _awake = false);
-    });
-    if (!_awake) setState(() => _awake = true);
-  }
-
-  void _sheetMoved() {
-    final v = _sheet.value;
-    final up = v > 0;
-    _skySnap.allowSnapshotting = up;
-    // fully open, the sheet is live again (the next prayer's line can change)
-    _sheetSnap.allowSnapshotting = up && v < 1;
-    // the sky pauses at once, before its picture is taken, so nothing in it moves on under the sheet
-    if (up) _sky.release(this);
-    if (up != _sheetUp) setState(() => _sheetUp = up);
-  }
+  void _sheetMoved() => _sheetShown.value = _sheet.value > 0;
 
   /// Each change of layout gets a key of its own, so going back to a layout that is still fading out
   /// (a quick tap back and forth) never puts two pages with the same key on the screen.
@@ -110,15 +86,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller.start();
-    if (widget.skyMotion) {
-      _wake();
-      _powerSaveSub = const EventChannel('vaktet/power_save').receiveBroadcastStream().listen(
-        (on) {
-          if (mounted && on is bool && on != _powerSave) setState(() => _powerSave = on);
-        },
-        onError: (Object _) {}, // not on Android: never mind
-      );
-    }
   }
 
   @override
@@ -135,11 +102,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.stop();
     _sky.release(this);
-    _restTimer?.cancel();
-    _powerSaveSub?.cancel();
+    _follow.dispose();
     _sheet.dispose();
-    _skySnap.dispose();
-    _sheetSnap.dispose();
+    _sheetShown.dispose();
     super.dispose();
   }
 
@@ -147,13 +112,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _resumed = true;
       widget.controller.start();
-      _wake();
+      if (!_resumed) setState(() => _resumed = true);
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
-      _resumed = false;
       widget.controller.stop();
       _sky.release(this);
+      if (_resumed) setState(() => _resumed = false);
     }
   }
 
@@ -175,25 +139,55 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     _drag = _Drag.none;
   }
 
+  void _startVerticalDrag(DragStartDetails d) => _finger.start(d.sourceTimeStamp, d.globalPosition.dy);
+
   void _updateVerticalDrag(DragUpdateDetails d) {
     final dy = d.primaryDelta!;
     if (_drag == _Drag.none) {
       // the first movement decides: up (or an open sheet) moves the sheet; a swipe down on the sky does nothing
       final sheet = _sheet.value > 0 || _sheet.isAnimating || dy < 0;
       _drag = sheet && !_edgeDrag ? _Drag.sheet : _Drag.ignored;
+      if (_drag == _Drag.sheet) {
+        // caught on its way: it goes on from where it is now
+        _sheet.stop();
+        _dragFromValue = _sheet.value;
+        _dragFromY = d.globalPosition.dy - dy;
+        if (!_follow.isActive) _follow.start();
+      }
     }
-    if (_drag == _Drag.sheet) {
-      _sheet.stop();
-      _sheet.value = (_sheet.value - dy / _sheetSize).clamp(0.0, 1.0);
-    }
+    if (_drag == _Drag.sheet) _finger.add(d.sourceTimeStamp, d.globalPosition.dy);
   }
 
-  /// A flick decides; otherwise it goes to whichever side is nearer.
+  /// How far open the sheet is with the finger at [y].
+  double _openAt(double y) => (_dragFromValue - (y - _dragFromY) / _sheetSize).clamp(0.0, 1.0);
+
+  /// On each frame of a drag: the sheet goes where the finger is for that frame.
+  void _followFinger(Duration _) {
+    final y = _finger.at(WidgetsBinding.instance.currentSystemFrameTimeStamp);
+    if (y == null) return;
+    final v = _openAt(y);
+    if (v != _sheet.value) _sheet.value = v;
+  }
+
+  /// A flick decides; otherwise it goes to whichever side is nearer (where the finger let go, not where the
+  /// last frame showed it). The spring starts from where the sheet is on the screen, so nothing jumps.
   void _endVerticalDrag(DragEndDetails d) {
     final vy = d.velocity.pixelsPerSecond.dy;
     if (_drag == _Drag.sheet) {
-      final open = vy.abs() > 300 ? vy < 0 : _sheet.value > .4;
+      _follow.stop();
+      final last = _finger.last;
+      final at = last == null ? _sheet.value : _openAt(last);
+      final open = vy.abs() > 300 ? vy < 0 : at > .4;
       _settleSheet(open, velocity: -vy / _sheetSize);
+    }
+    _drag = _Drag.none;
+    _edgeDrag = false;
+  }
+
+  void _cancelVerticalDrag() {
+    if (_drag == _Drag.sheet) {
+      _follow.stop();
+      _settleSheet(_sheet.value > .4);
     }
     _drag = _Drag.none;
     _edgeDrag = false;
@@ -261,17 +255,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    return Listener(
-      onPointerDown: (_) => _wake(),
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => c.stepDay(-1),
-          const SingleActivator(LogicalKeyboardKey.arrowRight): () => c.stepDay(1),
-        },
-        child: Focus(
-          autofocus: true,
-          child: ListenableBuilder(listenable: c, builder: (context, _) => _page(context, c)),
-        ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => c.stepDay(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () => c.stepDay(1),
+      },
+      child: Focus(
+        autofocus: true,
+        child: ListenableBuilder(listenable: c, builder: (context, _) => _page(context, c)),
       ),
     );
   }
@@ -283,17 +274,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final model = c.model;
     // on a phone, today is the sky itself; the times and the tips are swiped up over it, the date opens the month
     final fullSky = !wide && c.view == HomeView.today;
+    // the sky moves whenever it is on the screen, under the prayer times too
     final live =
         widget.skyMotion &&
         !MediaQuery.disableAnimationsOf(context) &&
         c.on(Feature.skyLife) &&
         (wide || fullSky) &&
-        _resumed &&
-        !_powerSave &&
-        (_awake || !c.on(Feature.skyRest));
-    // under the prayer times the sky only pauses: it keeps its clock, so nothing in it jumps or vanishes
-    final moving = live && !(fullSky && _sheetUp);
-    _syncSky(moving);
+        _resumed;
+    _syncSky(live);
     final clock = live ? _sky : null;
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
@@ -492,10 +480,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final glass = c.on(Feature.glass);
     // the day's times on the sky itself (not on very short screens, where they would crowd the countdown)
     final strip = c.on(Feature.timesOnSky) && MediaQuery.sizeOf(context).height >= 600;
-    return AnimatedBuilder(
-      animation: _sheet,
-      builder: (context, child) => PopScope(
-        canPop: _sheet.value == 0,
+    return ValueListenableBuilder(
+      valueListenable: _sheetShown,
+      builder: (context, shown, child) => PopScope(
+        canPop: !shown,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _settleSheet(false);
         },
@@ -504,8 +492,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onVerticalDragDown: _downVertical,
+        onVerticalDragStart: _startVerticalDrag,
         onVerticalDragUpdate: _updateVerticalDrag,
         onVerticalDragEnd: _endVerticalDrag,
+        onVerticalDragCancel: _cancelVerticalDrag,
         // swipe left for the next day, right for the day before: its sky, moon, sun and season at this hour
         onHorizontalDragDown: c.on(Feature.daySwipe) ? _downSide : null,
         onHorizontalDragUpdate: c.on(Feature.daySwipe) ? _updateSideDrag : null,
@@ -513,98 +503,101 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         onTap: () {
           if (_sheet.value > 0) _settleSheet(false);
         },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // another day: its sky fades in over the last one
-            FadeSwap(
-              value: c.selected.epochDay,
-              duration: const Duration(milliseconds: 280),
-              expand: true,
-              child: NextCard(
-                model: model,
-                time: c.time,
-                mode: SkyMode.full,
-                clock: clock,
-                countdownWeight: c.countdownWeight,
-                countdownFont: c.countdownFont.family,
-                gold: friday && model.friday,
-                reveal: _sheet,
-                options: options,
-                glass: glass,
-                liveGlass: !_sheetUp,
-                skySnapshot: _skySnap,
+        child: BackdropGroup(
+          backdropKey: _backdrop,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // another day: its sky fades in over the last one
+              FadeSwap(
+                value: c.selected.epochDay,
+                duration: const Duration(milliseconds: 280),
+                expand: true,
+                child: NextCard(
+                  model: model,
+                  time: c.time,
+                  mode: SkyMode.full,
+                  clock: clock,
+                  countdownWeight: c.countdownWeight,
+                  countdownFont: c.countdownFont.family,
+                  gold: friday && model.friday,
+                  reveal: _sheet,
+                  options: options,
+                  glass: glass,
+                ),
               ),
-            ),
-            PrayerPulse(
-              target: model.card?.target,
-              now: c.now,
-              // a moment of light even while the sky rests: it lasts a few seconds, once per prayer time
-              enabled: widget.skyMotion && !MediaQuery.disableAnimationsOf(context) && c.isToday && c.on(Feature.pulse),
-            ),
-            Column(
-              children: [
-                header,
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(16, 4, 16, 10 + bottomInset),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            FadeTransition(
-                              opacity: fadeOut,
-                              child: DateRow(controller: c, onSky: true, onTapDate: _openMonth),
-                            ),
-                            if (!c.isToday)
+              PrayerPulse(
+                target: model.card?.target,
+                now: c.now,
+                // a moment of light when a prayer time comes: it lasts a few seconds
+                enabled: widget.skyMotion && !MediaQuery.disableAnimationsOf(context) && c.isToday && c.on(Feature.pulse),
+              ),
+              Column(
+                children: [
+                  header,
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(16, 4, 16, 10 + bottomInset),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                               FadeTransition(
                                 opacity: fadeOut,
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: PillButton(label: 'Kthehu te sot', onTap: c.selectToday, onSky: true),
+                                child: DateRow(controller: c, onSky: true, onTapDate: _openMonth),
+                              ),
+                              if (!c.isToday)
+                                FadeTransition(
+                                  opacity: fadeOut,
+                                  child: Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: PillButton(label: 'Kthehu te sot', onTap: c.selectToday, onSky: true),
+                                    ),
                                   ),
                                 ),
+                              const Spacer(),
+                              FadeTransition(
+                                opacity: fadeOut,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
+                                    if (second != null) ...[second, const SizedBox(height: 4)],
+                                    if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
+                                    if (strip)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        // it fades out as the sheet comes up, and a blur can't see the sky
+                                        // through a fading layer: it is plain tinted glass meanwhile
+                                        child: ValueListenableBuilder(
+                                          valueListenable: _sheetShown,
+                                          builder: (context, shown, _) => SkyTimesStrip(
+                                            controller: c,
+                                            live: glass && !shown,
+                                            handle: hints,
+                                            onTap: () => _settleSheet(true),
+                                          ),
+                                        ),
+                                      )
+                                    else if (hints)
+                                      SwipeHint(onTap: () => _settleSheet(true)),
+                                  ],
+                                ),
                               ),
-                            const Spacer(),
-                            FadeTransition(
-                              opacity: fadeOut,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
-                                  if (second != null) ...[second, const SizedBox(height: 4)],
-                                  if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
-                                  if (strip)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: SkyTimesStrip(
-                                        controller: c,
-                                        live: glass && !_sheetUp,
-                                        handle: hints,
-                                        onTap: () => _settleSheet(true),
-                                      ),
-                                    )
-                                  else if (hints)
-                                    SwipeHint(onTap: () => _settleSheet(true)),
-                                ],
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      Positioned.fill(
-                        child: ClipRect(
-                          child: LayoutBuilder(
-                            // the sheet is always laid out, so it is ready (and its height known) for the first
-                            // swipe; it is painted only while open, and moves as one finished picture
-                            builder: (context, box) => RepaintBoundary(
-                              child: AnimatedBuilder(
-                                animation: _sheet,
-                                child: SnapshotWidget(
-                                  controller: _sheetSnap,
-                                  mode: SnapshotMode.permissive,
+                        Positioned.fill(
+                          child: ClipRect(
+                            child: LayoutBuilder(
+                              // the sheet is always laid out, so it is ready (and its height known) for the first
+                              // swipe; it is painted only while open, and moves as one finished picture (drawn
+                              // once, then only moved on each frame of the swipe)
+                              builder: (context, box) => RepaintBoundary(
+                                child: AnimatedBuilder(
+                                  animation: _sheet,
                                   child: RepaintBoundary(
                                     child: _MeasureSize(
                                       onSize: (size) {
@@ -623,31 +616,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                                       ),
                                     ),
                                   ),
-                                ),
-                                builder: (context, sheet) {
-                                  final v = _sheet.value;
-                                  return Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(maxHeight: box.maxHeight),
-                                      child: Offstage(
-                                        offstage: v == 0,
-                                        child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
+                                  builder: (context, sheet) {
+                                    final v = _sheet.value;
+                                    return Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(maxHeight: box.maxHeight),
+                                        child: Offstage(
+                                          offstage: v == 0,
+                                          child: FractionalTranslation(translation: Offset(0, 1 - v), child: sheet),
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

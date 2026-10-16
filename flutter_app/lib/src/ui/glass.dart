@@ -49,8 +49,9 @@ class Glass extends StatelessWidget {
 /// Real frosted glass, for the countdown and the times on the sky: the sky behind is blurred and a little more
 /// vivid, under a light wash that is brighter at the top left, with an edge that catches the light.
 ///
-/// [live] blurs what is behind; without it (while the prayer-times sheet moves, when the sky is a still picture)
-/// the same glass is drawn as a denser tint, which costs nothing per frame.
+/// [live] blurs what is behind; without it (while the glass fades out, where a blur can't see the sky) the same
+/// glass is drawn as a denser tint. The widgets are the same either way, so switching never builds what is on
+/// the glass again. Glass under a [BackdropGroup] shares one picture of the sky with the other glass there.
 class FrostedGlass extends StatelessWidget {
   const FrostedGlass({
     super.key,
@@ -83,38 +84,35 @@ class FrostedGlass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shape = BorderRadius.circular(radius);
-    final body = DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: shape,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: live
-              ? const [Color(0x33FFFFFF), Color(0x14FFFFFF), Color(0x0AFFFFFF)]
-              : const [Color(0x40FFFFFF), Color(0x24FFFFFF), Color(0x1AFFFFFF)],
-          stops: const [0, .55, 1],
-        ),
-      ),
-      child: CustomPaint(
-        foregroundPainter: _GlassEdge(radius: radius, gold: gold),
-        child: Padding(padding: padding, child: child),
-      ),
-    );
-    if (!live) {
-      // the still version: a soft dark wash stands in for the blur
-      return DecoratedBox(
-        decoration: BoxDecoration(color: const Color(0x1F0A0E1E), borderRadius: shape),
-        child: body,
-      );
-    }
     return ClipRRect(
       borderRadius: shape,
-      child: BackdropFilter(
+      child: BackdropFilter.grouped(
+        enabled: live,
         filter: ui.ImageFilter.compose(
           outer: _vivid,
           inner: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
         ),
-        child: body,
+        child: DecoratedBox(
+          // without the blur, a soft dark wash stands in for it
+          decoration: BoxDecoration(color: live ? null : const Color(0x1F0A0E1E), borderRadius: shape),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: shape,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: live
+                    ? const [Color(0x33FFFFFF), Color(0x14FFFFFF), Color(0x0AFFFFFF)]
+                    : const [Color(0x40FFFFFF), Color(0x24FFFFFF), Color(0x1AFFFFFF)],
+                stops: const [0, .55, 1],
+              ),
+            ),
+            child: CustomPaint(
+              foregroundPainter: _GlassEdge(radius: radius, gold: gold),
+              child: Padding(padding: padding, child: child),
+            ),
+          ),
+        ),
       ),
     );
   }

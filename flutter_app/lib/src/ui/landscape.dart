@@ -16,7 +16,8 @@ import 'colors.dart';
 /// warmed on the side of the low sun at sunrise and sunset. No snow and no ice: the calendar cannot know the
 /// weather.
 ///
-/// Nothing here moves: it is painted only when the light changes (about once a minute), so it costs no battery.
+/// Nothing here moves: it is painted into a still picture of the sky (StillSky, in sky.dart), again only when the
+/// light changes (about once a minute).
 ///
 /// Laid out in a box at the bottom of the screen: x from 0 to 400 across, v from 0 (the top of the box) to 100
 /// (the bottom of the screen); the far range rises a little above the box.
