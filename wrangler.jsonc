@@ -1,0 +1,17 @@
+// Vaktet on Cloudflare: the website is the files in the root of this repository (index.html, app.js, …),
+// served as static assets. Every push to main is deployed by Workers Builds to
+// https://vaktet.muamer-arifi.workers.dev
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vaktet",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": ".",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  }
+}

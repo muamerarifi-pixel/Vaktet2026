@@ -11,7 +11,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
 [![Shkarko për Android](https://img.shields.io/badge/Shkarko_për_Android-APK-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)
 &nbsp;
-[![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet-kosove-1.vercel.app)
+[![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
 <sub>Android 1.9 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
@@ -130,7 +130,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 Versioni i ri instalohet mbi të vjetrin. Nëse të del „App not installed”, çinstalo një herë versionin e vjetër dhe instalo të riun.
 
 **iPhone, laptop ose çdo pajisje tjetër**
-1. Hap [vaktet-kosove-1.vercel.app](https://vaktet-kosove-1.vercel.app).
+1. Hap [vaktet.muamer-arifi.workers.dev](https://vaktet.muamer-arifi.workers.dev).
 2. Nga menyja e shfletuesit zgjidh **„Shto në ekranin kryesor"** / **„Install app"**.
 3. Pas hapjes së parë punon edhe pa internet.
 
@@ -154,6 +154,7 @@ Deçan · Dragash (Sharr) · Drenas · Ferizaj · Gjakovë · Gjilan · Istog ·
 | `tips.js` | Këshillat e përditshme |
 | `sw.js` | Puna pa internet |
 | `manifest.webmanifest` | Instalimi si aplikacion |
+| `wrangler.jsonc`, `_headers`, `.assetsignore` | Publikimi në Cloudflare dhe rregullat e cache-it |
 | `vercel.json` | Rregullat e cache-it për Vercel |
 | `fonts/`, `icons/` | Shkronja Figtree (licenca OFL) dhe ikonat |
 
@@ -166,7 +167,10 @@ https://dituriaislame.com/wp-content/uploads/2026/01/takvimi2026vaktet.pdf
 - 29 shkurti (vitet e brishta) përdor kohët e 28 shkurtit.
 - Dallimet e qyteteve sipas Takvimit: Prishtina, Ferizaj, Gjilani, Podujeva, Vushtrria −1 min; Sharri (Dragash) +2 min. Qytetet e tjera përdorin kohët bazë.
 
-### Publikimi në Vercel
+### Publikimi në Cloudflare
+Faqja është në **https://vaktet.muamer-arifi.workers.dev** (Cloudflare Workers, si skedarë statikë). Çdo ndryshim në degën `main` publikohet vetë nga Workers Builds (`npx wrangler deploy`, sipas `wrangler.jsonc`); `.assetsignore` e mban jashtë faqes aplikacionin Android, dokumentet dhe skedarët e publikimit.
+
+### Publikimi në Vercel (si mundësi tjetër)
 1. Hapni vercel.com → Add New → Project → importoni këtë repository nga GitHub.
 2. Framework Preset: **Other**. Nuk ka build – është faqe statike.
 3. Deploy.
