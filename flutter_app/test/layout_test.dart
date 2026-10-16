@@ -74,6 +74,18 @@ void main() {
           }
         }
 
+        // the day's times on the sky, at the largest text size
+        for (final entry in instants.entries) {
+          SharedPreferences.setMockInitialValues({'city': 'dragash', 'f_timesOnSky': true, 'fontScale': 1.25});
+          final controller = AppController(
+            prefs: await SharedPreferences.getInstance(),
+            clock: () => entry.value.millisecondsSinceEpoch,
+          );
+          await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
+          await tester.pump(const Duration(milliseconds: 50));
+          expect(tester.takeException(), isNull, reason: 'times on the sky ${entry.key}');
+        }
+
         // the month tab and the settings
         SharedPreferences.setMockInitialValues({'city': 'dragash'});
         final controller = AppController(

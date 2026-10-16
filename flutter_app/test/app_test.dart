@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/logic/day.dart';
 import 'package:vaktet/src/state/app_controller.dart';
+import 'package:vaktet/src/ui/glass.dart';
 import 'package:vaktet/src/ui/next_card.dart';
 
 import 'test_fonts.dart';
@@ -312,6 +313,62 @@ void main() {
     expect(find.text('Imsaku'), findsNothing);
     expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
     handle.dispose();
+    await _close(tester);
+  });
+
+  testWidgets('the remaining time sits on frosted glass, which rests while the prayer times move', (tester) async {
+    await _open(tester);
+    await tester.pumpAndSettle();
+    final glass = find.byType(FrostedGlass);
+    expect(glass, findsOneWidget);
+    expect(tester.widget<FrostedGlass>(glass).live, isTrue);
+    expect(find.descendant(of: glass, matching: _countdown('01:14:00')), findsOneWidget);
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    // while the sheet is up, the glass is drawn without a live blur and the sky is a still picture
+    final finger = await tester.startGesture(const Offset(195, 600));
+    await finger.moveBy(const Offset(0, -40));
+    await tester.pump();
+    await finger.moveBy(const Offset(0, -40));
+    await tester.pump();
+    expect(tester.widget<FrostedGlass>(glass).live, isFalse);
+    expect(find.byType(BackdropFilter), findsNothing);
+    await finger.up();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await _close(tester);
+    // switched off, the countdown stands on the sky alone
+    await _open(tester, prefs: {'f_glass': false});
+    await tester.pumpAndSettle();
+    expect(find.byType(FrostedGlass), findsNothing);
+    expect(_countdown('01:14:00'), findsOneWidget);
+    await _close(tester);
+  });
+
+  testWidgets('the times on the sky: all of the day, without swiping; a tap opens the sheet', (tester) async {
+    final handle = tester.ensureSemantics();
+    final c = await _open(tester, prefs: {'f_timesOnSky': true});
+    await tester.pumpAndSettle();
+    expect(c.on(Feature.timesOnSky), isTrue);
+    for (final name in ['Imsaku', 'Sabahu', 'Lindja', 'Dreka', 'Ikindia', 'Akshami', 'Jacia']) {
+      expect(find.text(name), findsWidgets, reason: name); // Jacia is also the countdown's prayer
+    }
+    expect(find.text('19:52'), findsWidgets); // Jacia, the next one
+    expect(find.text('Rrëshqit lart për vaktet'), findsNothing); // the strip takes the hint's place
+    expect(find.text('VAKTET E SOTME'), findsNothing);
+    await tester.tap(find.text('Ikindia'));
+    await tester.pumpAndSettle();
+    expect(find.text('VAKTET E SOTME'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('VAKTET E SOTME'), findsNothing);
+    handle.dispose();
+    await _close(tester);
+    // a short screen keeps the hint instead
+    await _open(tester, prefs: {'f_timesOnSky': true}, size: const Size(320, 568));
+    await tester.pumpAndSettle();
+    expect(find.text('Lindja'), findsNothing);
+    expect(find.text('Rrëshqit lart për vaktet'), findsOneWidget);
     await _close(tester);
   });
 

@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet-kosove-1.vercel.app)
 
-<sub>Android 1.7 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.8 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -47,6 +47,14 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 <tr><td align="center"><img src="docs/screenshots/v1.7/19_month.jpg" width="200" alt="Muaji"><br><sub>Muaji</sub></td><td align="center"><img src="docs/screenshots/v1.7/20_settings.jpg" width="200" alt="Cilësimet"><br><sub>Cilësimet</sub></td><td></td></tr>
 </table>
 </div>
+
+## Të reja në versionin 1.8
+
+🫧 **Vaktet rrëshqasin pa ngecje** – sapo vaktet nisin të ngjiten, qielli pushon dhe tregohet si një pamje e vetme, dhe vetë vaktet lëvizin si pamje: çdo kuadër lëviz vetëm dy pamje, jo gjithë qiellin me male e mjegull. Asgjë në qiell nuk kërcen apo zhduket kur ato hapen.
+
+🔮 **Koha e mbetur mbi xham** – shifrat qëndrojnë mbi një xham të vërtetë që e turbullon qiellin pas tyre, me një buzë që kap dritën (në ar të premteve). Mund ta fikësh te Cilësimet → **Xhami i turbullt**.
+
+🕌 **Vaktet pa rrëshqitur** – te Cilësimet → **Vaktet pa rrëshqitur**: të shtatë vaktet e ditës shihen në fund të qiellit, në një shirit xhami, me vaktin e ardhshëm të ndriçuar. Një prekje hap gjithë vaktet me alarmin dhe këshillat.
 
 ## Të reja në versionin 1.7
 

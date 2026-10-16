@@ -41,7 +41,19 @@ class NextCard extends StatelessWidget {
     this.countdownWeight = 900,
     this.countdownFont,
     this.gold = false,
+    this.glass = false,
+    this.liveGlass = true,
+    this.skySnapshot,
   });
+
+  /// Full screen only: the remaining time sits on frosted glass.
+  final bool glass;
+
+  /// The glass blurs the sky behind it (off while the prayer-times sheet moves; see [FrostedGlass.live]).
+  final bool liveGlass;
+
+  /// While allowed, the sky is shown as one still picture (see [SkyCard.snapshot]).
+  final SnapshotController? skySnapshot;
 
   /// The countdown's own font (null: the app's font).
   final String? countdownFont;
@@ -87,11 +99,13 @@ class NextCard extends StatelessWidget {
         reveal: reveal,
         family: countdownFont,
         gold: gold,
+        glass: glass,
+        liveGlass: liveGlass,
       ),
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, options: options, child: content),
+      child: SkyCard(model: model, mode: mode, clock: clock, options: options, snapshot: skySnapshot, child: content),
     );
   }
 }
@@ -565,6 +579,8 @@ class _FullScreen extends StatelessWidget {
     this.reveal,
     this.family,
     this.gold = false,
+    this.glass = false,
+    this.liveGlass = true,
   });
 
   final NextCardModel card;
@@ -574,6 +590,8 @@ class _FullScreen extends StatelessWidget {
   final Animation<double>? reveal;
   final String? family;
   final bool gold;
+  final bool glass;
+  final bool liveGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -581,7 +599,20 @@ class _FullScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: LayoutBuilder(
         builder: (context, box) {
-          final size = (box.maxWidth * .205).clamp(0.0, 124.0);
+          // on glass the digits are a little smaller, so the glass keeps a margin on narrow phones
+          final size = (box.maxWidth * (glass ? .18 : .205)).clamp(0.0, 124.0);
+          final number = ValueListenableBuilder(
+            valueListenable: time,
+            builder: (context, now, _) => CountdownNumber(
+              text: fmtCount(card.target - now),
+              size: size,
+              weight: weight,
+              center: true,
+              full: true,
+              family: family,
+              gold: gold,
+            ),
+          );
           final layout = Column(
             children: [
               Expanded(
@@ -603,18 +634,17 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ValueListenableBuilder(
-                    valueListenable: time,
-                    builder: (context, now, _) => CountdownNumber(
-                      text: fmtCount(card.target - now),
-                      size: size,
-                      weight: weight,
-                      center: true,
-                      full: true,
-                      family: family,
+                  if (glass)
+                    FrostedGlass(
+                      live: liveGlass,
                       gold: gold,
-                    ),
-                  ),
+                      radius: size * .34,
+                      sigma: 20,
+                      padding: EdgeInsets.fromLTRB(size * .26, size * .1, size * .26, size * .14),
+                      child: number,
+                    )
+                  else
+                    number,
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
                     height: 0,

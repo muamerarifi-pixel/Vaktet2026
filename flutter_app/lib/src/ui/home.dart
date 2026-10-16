@@ -43,7 +43,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   final SkyClock _sky = SkyClock.shared;
 
   /// How far the prayer-times sheet of the full-screen sky is open, 0–1.
-  late final AnimationController _sheet = AnimationController(vsync: this)..addStatusListener(_sheetStatus);
+  late final AnimationController _sheet = AnimationController(vsync: this)..addListener(_sheetMoved);
+
+  /// While the sheet is up, the sky behind it is one still picture, and the sheet moves as a picture too: each
+  /// frame of the swipe then only moves two images, instead of drawing the whole sky (gradients, mountains, mist)
+  /// and the sheet again at the screen's 60–120 frames a second.
+  final SnapshotController _skySnap = SnapshotController();
+  final SnapshotController _sheetSnap = SnapshotController();
 
   /// How tall the sheet is on the screen, so it follows the finger exactly.
   double _sheetSize = 380;
@@ -59,8 +65,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
   bool _powerSave = false;
   StreamSubscription<dynamic>? _powerSaveSub;
 
-  /// The prayer times cover the sky.
-  bool _sheetOpen = false;
+  /// The prayer-times sheet is open, or on its way (the sky stands still under it).
+  bool _sheetUp = false;
 
   /// Runs the sky's clock only while a moving sky is on the screen: not behind the month or the open prayer
   /// times, not while the app is hidden or the phone saves battery, not when the living sky is switched off, and
@@ -83,9 +89,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     if (!_awake) setState(() => _awake = true);
   }
 
-  void _sheetStatus(AnimationStatus status) {
-    final open = status == AnimationStatus.completed;
-    if (open != _sheetOpen) setState(() => _sheetOpen = open);
+  void _sheetMoved() {
+    final v = _sheet.value;
+    final up = v > 0;
+    _skySnap.allowSnapshotting = up;
+    // fully open, the sheet is live again (the next prayer's line can change)
+    _sheetSnap.allowSnapshotting = up && v < 1;
+    // the sky pauses at once, before its picture is taken, so nothing in it moves on under the sheet
+    if (up) _sky.release(this);
+    if (up != _sheetUp) setState(() => _sheetUp = up);
   }
 
   /// Each change of layout gets a key of its own, so going back to a layout that is still fading out
@@ -126,6 +138,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     _restTimer?.cancel();
     _powerSaveSub?.cancel();
     _sheet.dispose();
+    _skySnap.dispose();
+    _sheetSnap.dispose();
     super.dispose();
   }
 
@@ -269,17 +283,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final model = c.model;
     // on a phone, today is the sky itself; the times and the tips are swiped up over it, the date opens the month
     final fullSky = !wide && c.view == HomeView.today;
-    final moving =
+    final live =
         widget.skyMotion &&
         !MediaQuery.disableAnimationsOf(context) &&
         c.on(Feature.skyLife) &&
         (wide || fullSky) &&
         _resumed &&
         !_powerSave &&
-        !(fullSky && _sheetOpen) &&
         (_awake || !c.on(Feature.skyRest));
+    // under the prayer times the sky only pauses: it keeps its clock, so nothing in it jumps or vanishes
+    final moving = live && !(fullSky && _sheetUp);
     _syncSky(moving);
-    final clock = moving ? _sky : null;
+    final clock = live ? _sky : null;
     if (!fullSky && (_sheet.value != 0 || _sheet.isAnimating)) {
       // the sheet starts closed the next time the sky fills the screen
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -474,6 +489,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;
     final nafile = c.on(Feature.nafile) ? model.nafile : null;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final glass = c.on(Feature.glass);
+    // the day's times on the sky itself (not on very short screens, where they would crowd the countdown)
+    final strip = c.on(Feature.timesOnSky) && MediaQuery.sizeOf(context).height >= 600;
     return AnimatedBuilder(
       animation: _sheet,
       builder: (context, child) => PopScope(
@@ -513,6 +531,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                 gold: friday && model.friday,
                 reveal: _sheet,
                 options: options,
+                glass: glass,
+                liveGlass: !_sheetUp,
+                skySnapshot: _skySnap,
               ),
             ),
             PrayerPulse(
@@ -555,7 +576,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                                   if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
                                   if (second != null) ...[second, const SizedBox(height: 4)],
                                   if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
-                                  if (hints) SwipeHint(onTap: () => _settleSheet(true)),
+                                  if (strip)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: SkyTimesStrip(
+                                        controller: c,
+                                        live: glass && !_sheetUp,
+                                        handle: hints,
+                                        onTap: () => _settleSheet(true),
+                                      ),
+                                    )
+                                  else if (hints)
+                                    SwipeHint(onTap: () => _settleSheet(true)),
                                 ],
                               ),
                             ),
@@ -570,19 +602,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                             builder: (context, box) => RepaintBoundary(
                               child: AnimatedBuilder(
                                 animation: _sheet,
-                                child: RepaintBoundary(
-                                  child: _MeasureSize(
-                                    onSize: (size) {
-                                      if (size.height > 0) _sheetSize = size.height;
-                                    },
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.bottomCenter,
-                                      child: SizedBox(
-                                        width: box.maxWidth,
-                                        child: Padding(
-                                          padding: EdgeInsets.only(bottom: bottomInset),
-                                          child: SkyTimesSheet(controller: c),
+                                child: SnapshotWidget(
+                                  controller: _sheetSnap,
+                                  mode: SnapshotMode.permissive,
+                                  child: RepaintBoundary(
+                                    child: _MeasureSize(
+                                      onSize: (size) {
+                                        if (size.height > 0) _sheetSize = size.height;
+                                      },
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.bottomCenter,
+                                        child: SizedBox(
+                                          width: box.maxWidth,
+                                          child: Padding(
+                                            padding: EdgeInsets.only(bottom: bottomInset),
+                                            child: SkyTimesSheet(controller: c),
+                                          ),
                                         ),
                                       ),
                                     ),

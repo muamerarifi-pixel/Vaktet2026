@@ -1256,6 +1256,7 @@ class SkyCard extends StatelessWidget {
     required this.clock,
     required this.child,
     this.options = const SkyOptions(),
+    this.snapshot,
   });
 
   final TodayModel model;
@@ -1265,6 +1266,10 @@ class SkyCard extends StatelessWidget {
   final SkyClock? clock;
   final Widget child;
   final SkyOptions options;
+
+  /// While it allows it, the sky's layers are drawn once into a picture and that picture is shown (the
+  /// prayer-times sheet moving over a still sky): one image a frame instead of the whole sky.
+  final SnapshotController? snapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -1293,9 +1298,22 @@ class SkyCard extends StatelessWidget {
       ),
     );
 
+    final layers = [layer(SkyLayer.back), layer(SkyLayer.motion), layer(SkyLayer.land), layer(SkyLayer.front)];
+    final snap = snapshot;
     Widget card = Stack(
       fit: full ? StackFit.expand : StackFit.loose,
-      children: [layer(SkyLayer.back), layer(SkyLayer.motion), layer(SkyLayer.land), layer(SkyLayer.front), child],
+      children: snap == null
+          ? [...layers, child]
+          : [
+              Positioned.fill(
+                child: SnapshotWidget(
+                  controller: snap,
+                  mode: SnapshotMode.permissive,
+                  child: Stack(fit: StackFit.expand, children: layers),
+                ),
+              ),
+              child,
+            ],
     );
     if (!full) card = ClipRRect(borderRadius: BorderRadius.circular(radius), child: card);
     if (full) return card;
