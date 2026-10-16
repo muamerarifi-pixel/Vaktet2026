@@ -1,0 +1,12 @@
+# Not part of the website: the Android app, CI, docs and deploy files (the same as .vercelignore).
+.git
+.github
+.wrangler
+node_modules
+flutter_app
+docs
+README.md
+vercel.json
+.vercelignore
+wrangler.jsonc
+.assetsignore

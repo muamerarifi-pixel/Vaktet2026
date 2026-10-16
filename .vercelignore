@@ -2,3 +2,6 @@
 flutter_app
 .github
 docs
+_headers
+wrangler.jsonc
+.assetsignore
