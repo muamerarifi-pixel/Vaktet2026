@@ -24,17 +24,14 @@ const List<Shadow> _countShadow = [
   Shadow(color: Color(0x1F000000), offset: Offset(0, 1), blurRadius: 2),
 ];
 /// The frosted-glass digits on the full-screen sky: a soft shadow on the sky behind them.
-const List<Shadow> _glassShadow = [
-  Shadow(color: Color(0x33000000), offset: Offset(0, 3), blurRadius: 16),
-  Shadow(color: Color(0x1F000000), offset: Offset(0, 1), blurRadius: 2.5),
-];
+const List<Shadow> _glassShadow = [Shadow(color: Color(0x2E000000), offset: Offset(0, 4), blurRadius: 18)];
 
 /// The light on the glass: brightest at the top, softer through the middle, catching a little light again at the
-/// bottom edge (the digits' see-through fill and bright rim are multiplied by it).
+/// bottom edge (the digits' see-through fill is multiplied by it).
 const LinearGradient _glassSheen = LinearGradient(
   begin: Alignment(-.35, -1),
   end: Alignment(.35, 1),
-  colors: [Color(0xFFFFFFFF), Color(0xE6FFFFFF), Color(0xBFFFFFFF), Color(0xF2FFFFFF)],
+  colors: [Color(0xFFFFFFFF), Color(0xEDFFFFFF), Color(0xD1FFFFFF), Color(0xF7FFFFFF)],
   stops: [0, .4, .66, 1],
 );
 
@@ -56,6 +53,7 @@ class NextCard extends StatelessWidget {
     this.countdownWeight = 900,
     this.countdownFont,
     this.gold = false,
+    this.frosted = false,
   });
 
   /// The countdown's own font (null: the app's font).
@@ -63,6 +61,9 @@ class NextCard extends StatelessWidget {
 
   /// The countdown is gold (Fridays).
   final bool gold;
+
+  /// Full screen: the countdown's digits are frosted glass.
+  final bool frosted;
 
   /// What the sky shows (picked in the settings).
   final SkyOptions options;
@@ -102,6 +103,7 @@ class NextCard extends StatelessWidget {
         reveal: reveal,
         family: countdownFont,
         gold: gold,
+        frosted: frosted,
       ),
     };
     return Semantics(
@@ -242,6 +244,7 @@ class CountdownNumber extends StatelessWidget {
     this.full = false,
     this.family,
     this.gold = false,
+    this.frosted = false,
   });
 
   /// The seconds' size next to the hours and minutes.
@@ -263,14 +266,17 @@ class CountdownNumber extends StatelessWidget {
   /// Polished gold (Fridays).
   final bool gold;
 
+  /// On the full-screen sky: frosted-glass digits instead of plain white ones.
+  final bool frosted;
+
   @override
   Widget build(BuildContext context) {
-    // on the full-screen sky the digits themselves are frosted glass: milky and see-through, with a bright rim
-    final glass = full && !gold;
+    // on the full-screen sky the digits themselves can be frosted glass: milky and see-through, no outline
+    final glass = full && !gold && frosted;
     var base = vt(
       size,
       weight.toDouble(),
-      color: glass ? const Color(0xBDFFFFFF) : _white,
+      color: glass ? const Color(0xCCFFFFFF) : _white,
       ls: family == null ? (full ? -.03 : -.025) : 0,
       height: 1,
       shadows: gold
@@ -292,16 +298,6 @@ class CountdownNumber extends StatelessWidget {
       letterSpacing: (base.letterSpacing ?? 0) * secondsScale,
       shadows: gold || glass ? base.shadows : (full ? _countShadow : null),
     );
-    // the glass's rim: the same letters again, as a fine bright outline
-    TextStyle? rim(TextStyle style, Color color) => glass
-        ? style.copyWith(
-            shadows: const [],
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = (style.fontSize! * .016).clamp(.8, 2.2)
-              ..color = color,
-          )
-        : null;
     final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : fade;
     Widget digits(String part, TextStyle style) {
       final cell = _widestDigit(style, scaler);
@@ -309,29 +305,13 @@ class CountdownNumber extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
-        children: [
-          for (final d in part.split(''))
-            _FadeDigit(
-              digit: d,
-              style: style,
-              rim: rim(style, const Color(0xF2FFFFFF)),
-              width: cell,
-              duration: duration,
-            ),
-        ],
+        children: [for (final d in part.split('')) _FadeDigit(digit: d, style: style, width: cell, duration: duration)],
       );
     }
 
     Widget colon(TextStyle style) => Padding(
       padding: EdgeInsets.symmetric(horizontal: style.fontSize! * (family == null ? .01 : .04)),
-      child: glass
-          ? Stack(
-              children: [
-                Text(':', style: style.copyWith(color: const Color(0x73FFFFFF))),
-                _RimText(':', rim(style, const Color(0x99FFFFFF))!),
-              ],
-            )
-          : Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+      child: Text(':', style: style.copyWith(color: glass ? const Color(0x80FFFFFF) : const Color(0x8CFFFFFF))),
     );
 
     final parts = text.split(':');
@@ -368,51 +348,16 @@ class CountdownNumber extends StatelessWidget {
   }
 }
 
-/// The frosted glass's bright outline over a digit (or the colon): laid out exactly as the [Text] of the digit
-/// itself, but as plain [RichText], so the digit is still one piece of text for whatever looks for it.
-class _RimText extends StatelessWidget {
-  const _RimText(this.text, this.style);
-
-  final String text;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    final inherited = DefaultTextStyle.of(context);
-    var effective = style.inherit ? inherited.style.merge(style) : style;
-    if (MediaQuery.boldTextOf(context)) effective = effective.merge(const TextStyle(fontWeight: FontWeight.bold));
-    return RichText(
-      text: TextSpan(text: text, style: effective),
-      textAlign: TextAlign.center,
-      softWrap: false,
-      overflow: effective.overflow ?? inherited.overflow,
-      maxLines: inherited.maxLines,
-      textScaler: MediaQuery.textScalerOf(context),
-      textWidthBasis: inherited.textWidthBasis,
-      textHeightBehavior: inherited.textHeightBehavior ?? DefaultTextHeightBehavior.maybeOf(context),
-    );
-  }
-}
-
 /// One digit of the countdown in its cell: when it changes, the old one fades out as the new one fades in, on
 /// every refresh of the screen.
 ///
 /// The two digits stand in the same places at rest and while they fade, so a fade only changes how see-through
 /// they are: nothing is built or laid out again on its frames.
 class _FadeDigit extends StatefulWidget {
-  const _FadeDigit({
-    required this.digit,
-    required this.style,
-    required this.width,
-    required this.duration,
-    this.rim,
-  });
+  const _FadeDigit({required this.digit, required this.style, required this.width, required this.duration});
 
   final String digit;
   final TextStyle style;
-
-  /// The frosted glass's bright outline, drawn over the digit (null: none).
-  final TextStyle? rim;
   final double width;
   final Duration duration;
 
@@ -452,12 +397,7 @@ class _FadeDigitState extends State<_FadeDigit> with SingleTickerProviderStateMi
     super.dispose();
   }
 
-  Widget _text(String d) {
-    final fill = Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
-    final rim = widget.rim;
-    if (rim == null) return fill;
-    return Stack(children: [fill, _RimText(d, rim)]);
-  }
+  Text _text(String d) => Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
 
   @override
   Widget build(BuildContext context) {
@@ -643,6 +583,7 @@ class _FullScreen extends StatelessWidget {
     this.reveal,
     this.family,
     this.gold = false,
+    this.frosted = false,
   });
 
   final NextCardModel card;
@@ -652,6 +593,7 @@ class _FullScreen extends StatelessWidget {
   final Animation<double>? reveal;
   final String? family;
   final bool gold;
+  final bool frosted;
 
   @override
   Widget build(BuildContext context) {
@@ -670,6 +612,7 @@ class _FullScreen extends StatelessWidget {
               full: true,
               family: family,
               gold: gold,
+              frosted: frosted,
             ),
           );
           final layout = Column(

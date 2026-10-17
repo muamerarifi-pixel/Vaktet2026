@@ -342,6 +342,11 @@ void main() {
     expect(find.text('VAKTET E SOTME'), findsNothing); // a short swipe springs back shut
     expect(tester.takeException(), isNull);
     await _close(tester);
+    // switched off in the settings: the plain white digits
+    await _open(tester, prefs: {'f_frostedDigits': false});
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: _countdown('01:14:00'), matching: find.byType(ShaderMask)), findsNothing);
+    await _close(tester);
   });
 
   testWidgets('the times on the sky: all of the day, without swiping; a tap opens the sheet', (tester) async {

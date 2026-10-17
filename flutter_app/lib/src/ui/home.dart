@@ -520,6 +520,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                   countdownWeight: c.countdownWeight,
                   countdownFont: c.countdownFont.family,
                   gold: friday && model.friday,
+                  frosted: c.on(Feature.frostedDigits),
                   reveal: _sheet,
                   options: options,
                 ),
