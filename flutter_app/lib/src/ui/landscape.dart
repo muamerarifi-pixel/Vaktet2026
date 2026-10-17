@@ -457,7 +457,7 @@ class Landscape {
   // ---------- The big tree ----------
 
   /// Where the big tree stands on the left shore, across (0–400).
-  static const double _treeX = 74;
+  static const double _treeX = 70;
 
   /// The big tree on the left shore, its foot in the shore: a dark shape against the sky at night (a little lit by
   /// a bright moon), in the leaves of the season by day — bare in winter, budding in March, fresh green in April,
@@ -477,17 +477,22 @@ class Landscape {
 
     canvas.save();
     canvas.translate(x(_treeX), y(83.6));
-    canvas.scale(u);
+    canvas.scale(u * .8);
 
     // the trunk and the branches (all that shows in winter)
     final bark = dim(Color.lerp(shore, const Color(0xFF5B4838), .45 * _day)!);
+    // the foot: roots spreading into the ground (every shape wound the same way, so none cuts a hole in another)
     final wood = Path()
-      ..addPolygon(const [Offset(-6.5, 2), Offset(-3.6, -7), Offset(3.6, -7), Offset(6.5, 2)], true);
+      ..moveTo(-10, 3)
+      ..quadraticBezierTo(-4, .5, -3.3, -9)
+      ..lineTo(3.3, -9)
+      ..quadraticBezierTo(4, .5, 10, 3)
+      ..close();
     for (final (a, b, wa, wb) in tree.limbs) {
       final d = b - a;
       final n = Offset(-d.dy, d.dx) / d.distance;
       wood
-        ..addPolygon([a + n * (wa / 2), b + n * (wb / 2), b - n * (wb / 2), a - n * (wa / 2)], true)
+        ..addPolygon([a - n * (wa / 2), b - n * (wb / 2), b + n * (wb / 2), a + n * (wa / 2)], true)
         ..addOval(Rect.fromCircle(center: b, radius: wb / 2));
     }
     // darker down the trunk, into the shore at its foot
@@ -502,20 +507,20 @@ class Landscape {
         ).createShader(const Rect.fromLTRB(-60, -130, 60, 2)),
     );
 
-    // the crown: the clumps still in leaf at this time of the year
+    // the crown: the leaves still on the tree at this time of the year, in small clusters with the sky between
     final leaves = scene.treeLeaves;
     if (leaves > 0) {
-      final grow = .62 + .38 * leaves;
+      final grow = .75 + .25 * leaves;
       final shown = [
-        for (final c in tree.clumps)
-          if (c.$3 < leaves * 1.02) (c.$1, c.$2 * grow, c.$4),
+        for (final l in tree.leaves)
+          if (l.$3 < leaves * 1.02) (l.$1, l.$2 * grow, l.$4, l.$5),
       ];
       if (shown.isNotEmpty) {
         final leaf = Color(scene.treeLeaf);
         final body = Color.lerp(shore, leaf, .6 * _day)!;
         final crown = Path();
         var box = Rect.fromCircle(center: shown.first.$1, radius: shown.first.$2);
-        for (final (c, r, _) in shown) {
+        for (final (c, r, _, _) in shown) {
           final o = Rect.fromCircle(center: c, radius: r);
           crown.addOval(o);
           box = box.expandToInclude(o);
@@ -529,22 +534,29 @@ class Landscape {
               colors: [dim(body), dim(Color.lerp(body, shore, .55)!)],
             ).createShader(box),
         );
-        // each clump catches the light on its side towards the sun (or the moon)
-        if (lit > .02) {
-          final bright = Color.lerp(Color.lerp(shore, leaf, .9 * _day + .1)!, glow, .28 + .2 * warm)!;
-          final tones = [
-            Color.lerp(bright, const Color(0xFFF0D060), .14)!,
-            bright,
-            Color.lerp(bright, const Color(0xFFB84A2A), .12)!,
-          ];
-          final paths = [Path(), Path(), Path()];
-          for (final (c, r, tone) in shown) {
-            paths[tone < -.35 ? 0 : (tone > .35 ? 2 : 1)].addOval(
-              Rect.fromCircle(center: c + Offset(side * .28, -.34) * r, radius: r * .62),
+        // the leaves facing the light catch it, those turned away and underneath sink into shade
+        final bright = Color.lerp(Color.lerp(shore, leaf, .9 * _day + .1)!, glow, .28 + .2 * warm)!;
+        final tones = [
+          Color.lerp(bright, const Color(0xFFF0D060), .14)!,
+          bright,
+          Color.lerp(bright, const Color(0xFFB84A2A), .12)!,
+        ];
+        final paths = List.generate(6, (_) => Path());
+        final shade = Path();
+        for (final (c, r, tone, rel) in shown) {
+          final facing = rel.dx * side * .7 - rel.dy * .7;
+          if (facing < -.25) {
+            shade.addOval(Rect.fromCircle(center: c + Offset(-side * .2, .25) * r, radius: r * .75));
+          } else if (facing > .05) {
+            paths[(facing > .4 ? 3 : 0) + (tone < -.35 ? 0 : (tone > .35 ? 2 : 1))].addOval(
+              Rect.fromCircle(center: c + Offset(side * .3, -.35) * r, radius: r * .62),
             );
           }
-          for (var i = 0; i < 3; i++) {
-            canvas.drawPath(paths[i], Paint()..color = dim(tones[i]).withValues(alpha: lit * .6));
+        }
+        canvas.drawPath(shade, Paint()..color = dim(shore).withValues(alpha: .3 * _day));
+        if (lit > .02) {
+          for (var i = 0; i < 6; i++) {
+            canvas.drawPath(paths[i], Paint()..color = dim(tones[i % 3]).withValues(alpha: lit * (i < 3 ? .4 : .72)));
           }
         }
       }
@@ -591,7 +603,7 @@ Path khatam(Offset c, double r) {
 /// its limbs (from, to, width at each end) and the clumps of leaves on them (centre, radius, when in the year it is
 /// in leaf 0–1: the lowest values are the last to fall and the first to come, and a tone -1 … 1 for a little
 /// variety in colour).
-final ({List<(Offset, Offset, double, double)> limbs, List<(Offset, double, double, double)> clumps}) _bigTree =
+final ({List<(Offset, Offset, double, double)> limbs, List<(Offset, double, double, double, Offset)> leaves}) _bigTree =
     () {
       final rnd = math.Random(5150);
       final limbs = <(Offset, Offset, double, double)>[];
@@ -632,6 +644,23 @@ final ({List<(Offset, Offset, double, double)> limbs, List<(Offset, double, doub
           rnd.nextDouble() * 2 - 1,
         ));
       }
-      return (limbs: limbs, clumps: clumps);
+      // each clump: a dozen small clusters of leaves, loosely around it, with the sky showing between them
+      final centre = clumps.map((c) => c.$1).reduce((a, b) => a + b) / clumps.length.toDouble();
+      final far = clumps.map((c) => (c.$1 - centre).distance + c.$2).reduce(math.max);
+      final leaves = <(Offset, double, double, double, Offset)>[];
+      for (final (c, r, order, tone) in clumps) {
+        for (var k = 0; k < 12; k++) {
+          final a = rnd.nextDouble() * 2 * math.pi;
+          final p = c + Offset(math.cos(a), math.sin(a) * .85) * (math.sqrt(rnd.nextDouble()) * r * .85);
+          leaves.add((
+            p,
+            r * (.24 + rnd.nextDouble() * .16),
+            (order + (rnd.nextDouble() - .5) * .16).clamp(0.0, 1.0),
+            tone + (rnd.nextDouble() - .5) * .7,
+            (p - centre) / far,
+          ));
+        }
+      }
+      return (limbs: limbs, leaves: leaves);
     }();
 
