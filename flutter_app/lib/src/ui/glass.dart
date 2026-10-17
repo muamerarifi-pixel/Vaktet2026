@@ -61,10 +61,14 @@ class FrostedGlass extends StatelessWidget {
     this.sigma = 18,
     this.padding = EdgeInsets.zero,
     this.gold = false,
+    this.tint,
   });
 
   final Widget child;
   final bool live;
+
+  /// A colour laid under the glass's light wash, so what is on it reads over any sky (the prayer-times sheet).
+  final Color? tint;
   final double radius;
   final double sigma;
   final EdgeInsetsGeometry padding;
@@ -94,7 +98,10 @@ class FrostedGlass extends StatelessWidget {
         ),
         child: DecoratedBox(
           // without the blur, a soft dark wash stands in for it
-          decoration: BoxDecoration(color: live ? null : const Color(0x1F0A0E1E), borderRadius: shape),
+          decoration: BoxDecoration(
+            color: live ? tint : Color.alphaBlend(const Color(0x1F0A0E1E), tint ?? const Color(0x00000000)),
+            borderRadius: shape,
+          ),
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: shape,

@@ -239,6 +239,7 @@ class Landscape {
     canvas.drawPicture(picture);
     _lake(canvas, picture);
     _shore(canvas);
+    _tree(canvas);
     picture.dispose();
   }
 
@@ -453,6 +454,94 @@ class Landscape {
     canvas.drawPath(path, Paint()..color = color);
   }
 
+  // ---------- The big tree ----------
+
+  /// Where the big tree stands on the left shore, across (0–400).
+  static const double _treeX = 66;
+
+  /// The big tree on the left shore, its foot in the shore: a dark shape against the sky at night (a little lit by
+  /// a bright moon), in the leaves of the season by day — bare in winter, budding in March, fresh green in April,
+  /// deep green in summer, gold and orange in October, thinning in November — lit on the side of the sun, warm
+  /// when the sun is low. Painted with the rest of the land, only when the light changes.
+  void _tree(Canvas canvas) {
+    final tree = _bigTree;
+    final shore = _layer(Color.lerp(_ink, Colors.black, .35)!, .96);
+    // where the light comes from: the sun by day, the moon at night, across (-1 left … 1 right of the tree)
+    final treeAt = _treeX / 400;
+    final lightAt = _day > .3 ? sunX : (scene.moon.up ? scene.moon.x : treeAt);
+    final side = ((lightAt - treeAt) * 4).clamp(-1.0, 1.0);
+    final glow = _day > .3
+        ? Color.lerp(const Color(0xFFFFF3DC), const Color(0xFFFFB067), warm)!
+        : const Color(0xFFB9C7E8);
+    final lit = (_day * (.55 + .2 * warm) + .35 * moonlight).clamp(0.0, 1.0);
+
+    canvas.save();
+    canvas.translate(x(_treeX), y(83.6));
+    canvas.scale(u);
+
+    // the trunk and the branches (all that shows in winter)
+    final bark = dim(Color.lerp(shore, const Color(0xFF5B4838), .45 * _day)!);
+    final wood = Path()
+      ..addPolygon(const [Offset(-6.5, 2), Offset(-3.6, -7), Offset(3.6, -7), Offset(6.5, 2)], true);
+    for (final (a, b, wa, wb) in tree.limbs) {
+      final d = b - a;
+      final n = Offset(-d.dy, d.dx) / d.distance;
+      wood
+        ..addPolygon([a + n * (wa / 2), b + n * (wb / 2), b - n * (wb / 2), a - n * (wa / 2)], true)
+        ..addOval(Rect.fromCircle(center: b, radius: wb / 2));
+    }
+    canvas.drawPath(wood, Paint()..color = bark);
+
+    // the crown: the clumps still in leaf at this time of the year
+    final leaves = scene.treeLeaves;
+    if (leaves > 0) {
+      final grow = .62 + .38 * leaves;
+      final shown = [
+        for (final c in tree.clumps)
+          if (c.$3 < leaves * 1.02) (c.$1, c.$2 * grow, c.$4),
+      ];
+      if (shown.isNotEmpty) {
+        final leaf = Color(scene.treeLeaf);
+        final body = Color.lerp(shore, leaf, .6 * _day)!;
+        final crown = Path();
+        var box = Rect.fromCircle(center: shown.first.$1, radius: shown.first.$2);
+        for (final (c, r, _) in shown) {
+          final o = Rect.fromCircle(center: c, radius: r);
+          crown.addOval(o);
+          box = box.expandToInclude(o);
+        }
+        canvas.drawPath(
+          crown,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment(side, -1),
+              end: Alignment(-side, 1),
+              colors: [dim(body), dim(Color.lerp(body, shore, .55)!)],
+            ).createShader(box),
+        );
+        // each clump catches the light on its side towards the sun (or the moon)
+        if (lit > .02) {
+          final bright = Color.lerp(Color.lerp(shore, leaf, .9 * _day + .1)!, glow, .28 + .2 * warm)!;
+          final tones = [
+            Color.lerp(bright, const Color(0xFFF0D060), .14)!,
+            bright,
+            Color.lerp(bright, const Color(0xFFB84A2A), .12)!,
+          ];
+          final paths = [Path(), Path(), Path()];
+          for (final (c, r, tone) in shown) {
+            paths[tone < -.35 ? 0 : (tone > .35 ? 2 : 1)].addOval(
+              Rect.fromCircle(center: c + Offset(side * .3, -.38) * r, radius: r * .58),
+            );
+          }
+          for (var i = 0; i < 3; i++) {
+            canvas.drawPath(paths[i], Paint()..color = dim(tones[i]).withValues(alpha: lit * .8));
+          }
+        }
+      }
+    }
+    canvas.restore();
+  }
+
   /// A pine: tiers of branches narrowing to the top.
   static Path _pine(Offset base, double height, double width) {
     final path = Path();
@@ -487,3 +576,52 @@ Path khatam(Offset c, double r) {
   }
   return path;
 }
+
+/// The big tree, in units of the landscape box with its foot at (0, 0) and up negative, the same on every start:
+/// its limbs (from, to, width at each end) and the clumps of leaves on them (centre, radius, when in the year it is
+/// in leaf 0–1: the lowest values are the last to fall and the first to come, and a tone -1 … 1 for a little
+/// variety in colour).
+final ({List<(Offset, Offset, double, double)> limbs, List<(Offset, double, double, double)> clumps}) _bigTree =
+    () {
+      final rnd = math.Random(5150);
+      final limbs = <(Offset, Offset, double, double)>[];
+      final clumps = <(Offset, double, double, double)>[];
+      void grow(Offset from, double angle, double len, double width, int depth) {
+        final bend = (rnd.nextDouble() - .5) * .22;
+        final to = from + Offset(math.cos(angle + bend), math.sin(angle + bend)) * len;
+        final end = math.max(width * .64, .5);
+        limbs.add((from, to, width, end));
+        if (depth >= 2) {
+          clumps.add((to, 7 + rnd.nextDouble() * 4, rnd.nextDouble(), rnd.nextDouble() * 2 - 1));
+          if (depth == 3) {
+            clumps.add((Offset.lerp(from, to, .45)!, 6.5 + rnd.nextDouble() * 3, rnd.nextDouble(), rnd.nextDouble() * 2 - 1));
+          }
+        }
+        if (depth == 4) return;
+        final n = depth == 0 ? 3 : 2 + (rnd.nextDouble() < .4 ? 1 : 0);
+        for (var i = 0; i < n; i++) {
+          var a = angle + (i - (n - 1) / 2) * (depth == 0 ? .6 : .48) + (rnd.nextDouble() - .5) * .22;
+          a += (-math.pi / 2 - a) * .22; // the higher, the more towards the sky
+          grow(to, a, len * (.64 + rnd.nextDouble() * .1), end, depth + 1);
+        }
+      }
+
+      grow(Offset.zero, -math.pi / 2 + .05, 46, 6.4, 0);
+      // two lower limbs, out to each side
+      grow(const Offset(.4, -30), -math.pi / 2 - .95, 21, 3.2, 2);
+      grow(const Offset(.9, -36), -math.pi / 2 + .9, 19, 3, 2);
+      // and the inside of the crown, so it is full in summer
+      final rest = clumps.map((c) => c.$1).toList();
+      final mid = rest.reduce((a, b) => a + b) / rest.length.toDouble();
+      for (var i = 0; i < 7; i++) {
+        final a = i / 7 * 2 * math.pi;
+        clumps.insert(0, (
+          mid + Offset(math.cos(a) * 14, math.sin(a) * 9 + 4),
+          10 + rnd.nextDouble() * 3,
+          rnd.nextDouble(),
+          rnd.nextDouble() * 2 - 1,
+        ));
+      }
+      return (limbs: limbs, clumps: clumps);
+    }();
+
