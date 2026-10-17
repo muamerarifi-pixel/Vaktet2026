@@ -64,10 +64,11 @@ jobs:
       - name: Test
         run: flutter test test/tree_preview_test.dart
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: preview
-          path: flutter_app/build/preview.png
+      - name: Commit the preview
+        run: |
+          git config user.name ci && git config user.email ci@example.com
+          git checkout -b preview/img
+          git add -f build/preview.png && git commit -m img -q && git push -f origin preview/img
 
       - run: exit 1
 
