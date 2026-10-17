@@ -589,10 +589,9 @@ class SkyTimesSheet extends StatelessWidget {
         boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 10))],
       ),
       // frosted glass: the sky blurred behind, under a dark tint so the times read over the brightest day
-      child: FrostedGlass(
+      child: SheetGlass(
         radius: 26,
         sigma: 22,
-        tint: const Color(0x730B1024),
         padding: const EdgeInsets.all(8),
       child: Column(
         mainAxisSize: MainAxisSize.min,

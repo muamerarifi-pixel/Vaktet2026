@@ -457,7 +457,7 @@ class Landscape {
   // ---------- The big tree ----------
 
   /// Where the big tree stands on the left shore, across (0–400).
-  static const double _treeX = 66;
+  static const double _treeX = 74;
 
   /// The big tree on the left shore, its foot in the shore: a dark shape against the sky at night (a little lit by
   /// a bright moon), in the leaves of the season by day — bare in winter, budding in March, fresh green in April,
@@ -490,7 +490,17 @@ class Landscape {
         ..addPolygon([a + n * (wa / 2), b + n * (wb / 2), b - n * (wb / 2), a - n * (wa / 2)], true)
         ..addOval(Rect.fromCircle(center: b, radius: wb / 2));
     }
-    canvas.drawPath(wood, Paint()..color = bark);
+    // darker down the trunk, into the shore at its foot
+    canvas.drawPath(
+      wood,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [bark, bark, dim(shore)],
+          stops: const [0, .72, 1],
+        ).createShader(const Rect.fromLTRB(-60, -130, 60, 2)),
+    );
 
     // the crown: the clumps still in leaf at this time of the year
     final leaves = scene.treeLeaves;
@@ -530,11 +540,11 @@ class Landscape {
           final paths = [Path(), Path(), Path()];
           for (final (c, r, tone) in shown) {
             paths[tone < -.35 ? 0 : (tone > .35 ? 2 : 1)].addOval(
-              Rect.fromCircle(center: c + Offset(side * .3, -.38) * r, radius: r * .58),
+              Rect.fromCircle(center: c + Offset(side * .28, -.34) * r, radius: r * .62),
             );
           }
           for (var i = 0; i < 3; i++) {
-            canvas.drawPath(paths[i], Paint()..color = dim(tones[i]).withValues(alpha: lit * .8));
+            canvas.drawPath(paths[i], Paint()..color = dim(tones[i]).withValues(alpha: lit * .6));
           }
         }
       }

@@ -325,7 +325,8 @@ void main() {
     expect(glass, findsOneWidget);
     expect(tester.widget<FrostedGlass>(glass).live, isTrue);
     expect(find.descendant(of: glass, matching: _countdown('01:14:00')), findsOneWidget);
-    BackdropFilter blur() => tester.widget<BackdropFilter>(find.byType(BackdropFilter));
+    BackdropFilter blur() =>
+        tester.widget<BackdropFilter>(find.descendant(of: glass, matching: find.byType(BackdropFilter)));
     expect(blur().enabled, isTrue);
     Rect countdownAt() => tester.getRect(find.descendant(of: glass, matching: _countdown('01:14:00')));
     final before = countdownAt();

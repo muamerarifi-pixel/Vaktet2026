@@ -125,6 +125,18 @@ class FrostedGlass extends StatelessWidget {
   }
 }
 
+/// The frosted glass of the prayer-times sheet: the same glass, under a dark tint so the times read over any sky.
+class SheetGlass extends FrostedGlass {
+  const SheetGlass({
+    super.key,
+    required super.child,
+    super.radius,
+    super.sigma,
+    super.padding,
+    super.tint = const Color(0x730B1024),
+  });
+}
+
 /// The glass's rim: bright where the light falls (top left), fading along the sides, with a little light again
 /// at the bottom right, and a fine highlight just inside the top edge.
 class _GlassEdge extends CustomPainter {
