@@ -137,7 +137,7 @@ class _Sheet extends StatelessWidget {
               title: 'Madhësia e kohës së mbetur',
               hint: 'Sa të mëdha janë shifrat e kohës deri te vakti tjetër.',
               child: Segmented<double>(
-                options: const [('E vogël', .8), ('Normale', 1.0), ('E madhe', 1.15), ('Më e madhe', 1.3)],
+                options: const [('80%', .8), ('100%', 1.0), ('115%', 1.15), ('130%', 1.3)],
                 value: c.countdownSize,
                 onChanged: c.setCountdownSize,
               ),
