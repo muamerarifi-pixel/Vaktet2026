@@ -263,8 +263,8 @@ class Landscape {
     // by day the side facing the sun is a little lighter and the other a little darker; at noon, neither
     final side = (sunX - .5) * 2 * _day;
     if (side.abs() > .05) {
-      final lit = Colors.white.withValues(alpha: .09 * side.abs());
-      final shade = Colors.black.withValues(alpha: .07 * side.abs());
+      final lit = Colors.white.withValues(alpha: .045 * side.abs());
+      final shade = Colors.black.withValues(alpha: .05 * side.abs());
       final (left, right) = side < 0 ? (lit, shade) : (shade, lit);
       canvas.drawPath(
         outline,
@@ -277,24 +277,17 @@ class Landscape {
           ),
       );
     }
-    // the low sun lights the haze on its side, and catches the edge of the ridge
+    // the low sun catches the edge of the ridge (only that: a glow over the range washed it out)
     final glow = warm * (.4 + .6 * daylight);
     if (glow > .02) {
-      final c = Offset(sunX * w, y(-8));
       final sun = dim(Color.lerp(pal.sun, Colors.white, .15)!);
-      canvas.drawPath(
-        outline,
-        Paint()
-          ..blendMode = BlendMode.screen
-          ..shader = ui.Gradient.radial(c, w * .6, [sun.withValues(alpha: .3 * glow), sun.withValues(alpha: 0)]),
-      );
       canvas.drawPath(
         Path()..addPolygon([for (var i = 0; i < _far.length; i++) Offset(x(i * 2.0), y(_far[i]))], false),
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = .8
           ..strokeJoin = StrokeJoin.round
-          ..color = sun.withValues(alpha: .35 * glow),
+          ..color = sun.withValues(alpha: .22 * glow),
       );
     }
     _mistBand(canvas, next + 1, 1);

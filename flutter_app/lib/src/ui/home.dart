@@ -477,8 +477,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;
     final nafile = c.on(Feature.nafile) ? model.nafile : null;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    // the day's times on the sky itself (not on very short screens, where they would crowd the countdown)
-    final strip = c.on(Feature.timesOnSky) && MediaQuery.sizeOf(context).height >= 600;
     return ValueListenableBuilder(
       valueListenable: _sheetShown,
       builder: (context, shown, child) => PopScope(
@@ -518,9 +516,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                   mode: SkyMode.full,
                   clock: clock,
                   countdownWeight: c.countdownWeight,
+                  countdownSize: c.countdownSize,
                   countdownFont: c.countdownFont.family,
                   gold: friday && model.friday,
-                  frosted: c.on(Feature.frostedDigits),
                   reveal: _sheet,
                   options: options,
                 ),
@@ -565,17 +563,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                                     if (alarm != null) ...[HomeAlarm(alarm: alarm), const SizedBox(height: 8)],
                                     if (second != null) ...[second, const SizedBox(height: 4)],
                                     if (nafile != null) ...[SmallLine(text: nafile.text), const SizedBox(height: 4)],
-                                    if (strip)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: SkyTimesStrip(
-                                          controller: c,
-                                          handle: hints,
-                                          onTap: () => _settleSheet(true),
-                                        ),
-                                      )
-                                    else if (hints)
-                                      SwipeHint(onTap: () => _settleSheet(true)),
+                                    if (hints) SwipeHint(onTap: () => _settleSheet(true)),
                                   ],
                                 ),
                               ),

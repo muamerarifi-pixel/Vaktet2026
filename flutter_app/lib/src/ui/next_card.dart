@@ -23,18 +23,6 @@ const List<Shadow> _countShadow = [
   Shadow(color: Color(0x38000000), offset: Offset(0, 2), blurRadius: 24),
   Shadow(color: Color(0x1F000000), offset: Offset(0, 1), blurRadius: 2),
 ];
-/// The frosted-glass digits on the full-screen sky: a soft shadow on the sky behind them.
-const List<Shadow> _glassShadow = [Shadow(color: Color(0x2E000000), offset: Offset(0, 4), blurRadius: 18)];
-
-/// The light on the glass: brightest at the top, softer through the middle, catching a little light again at the
-/// bottom edge (the digits' see-through fill is multiplied by it).
-const LinearGradient _glassSheen = LinearGradient(
-  begin: Alignment(-.35, -1),
-  end: Alignment(.35, 1),
-  colors: [Color(0xFFFFFFFF), Color(0xEDFFFFFF), Color(0xD1FFFFFF), Color(0xF7FFFFFF)],
-  stops: [0, .4, .66, 1],
-);
-
 const List<Shadow> _countShadowFull = [
   Shadow(color: Color(0x47000000), offset: Offset(0, 2), blurRadius: 30),
   Shadow(color: Color(0x29000000), offset: Offset(0, 1), blurRadius: 3),
@@ -53,7 +41,7 @@ class NextCard extends StatelessWidget {
     this.countdownWeight = 900,
     this.countdownFont,
     this.gold = false,
-    this.frosted = false,
+    this.countdownSize = 1.0,
   });
 
   /// The countdown's own font (null: the app's font).
@@ -62,8 +50,8 @@ class NextCard extends StatelessWidget {
   /// The countdown is gold (Fridays).
   final bool gold;
 
-  /// Full screen: the countdown's digits are frosted glass.
-  final bool frosted;
+  /// Full screen: how big the countdown is (1 = normal).
+  final double countdownSize;
 
   /// What the sky shows (picked in the settings).
   final SkyOptions options;
@@ -103,7 +91,7 @@ class NextCard extends StatelessWidget {
         reveal: reveal,
         family: countdownFont,
         gold: gold,
-        frosted: frosted,
+        scale: countdownSize,
       ),
     };
     return Semantics(
@@ -244,7 +232,6 @@ class CountdownNumber extends StatelessWidget {
     this.full = false,
     this.family,
     this.gold = false,
-    this.frosted = false,
   });
 
   /// The seconds' size next to the hours and minutes.
@@ -266,22 +253,17 @@ class CountdownNumber extends StatelessWidget {
   /// Polished gold (Fridays).
   final bool gold;
 
-  /// On the full-screen sky: frosted-glass digits instead of plain white ones.
-  final bool frosted;
-
   @override
   Widget build(BuildContext context) {
-    // on the full-screen sky the digits themselves can be frosted glass: milky and see-through, no outline
-    final glass = full && !gold && frosted;
     var base = vt(
       size,
       weight.toDouble(),
-      color: glass ? const Color(0xCCFFFFFF) : _white,
+      color: _white,
       ls: family == null ? (full ? -.03 : -.025) : 0,
       height: 1,
       shadows: gold
           ? const [Shadow(color: Color(0x66E9C46A), blurRadius: 18)]
-          : (glass ? _glassShadow : (full ? _countShadowFull : _countShadow)),
+          : (full ? _countShadowFull : _countShadow),
     );
     if (family != null) {
       base = base.copyWith(
@@ -296,7 +278,7 @@ class CountdownNumber extends StatelessWidget {
     final small = base.copyWith(
       fontSize: size * secondsScale,
       letterSpacing: (base.letterSpacing ?? 0) * secondsScale,
-      shadows: gold || glass ? base.shadows : (full ? _countShadow : null),
+      shadows: gold ? base.shadows : (full ? _countShadow : null),
     );
     final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : fade;
     Widget digits(String part, TextStyle style) {
@@ -311,7 +293,12 @@ class CountdownNumber extends StatelessWidget {
 
     Widget colon(TextStyle style) => Padding(
       padding: EdgeInsets.symmetric(horizontal: style.fontSize! * (family == null ? .01 : .04)),
-      child: Text(':', style: style.copyWith(color: glass ? const Color(0x80FFFFFF) : const Color(0x8CFFFFFF))),
+      // the font sets its colon low, for small letters: raised to the middle of the digits, its two dots sit
+      // evenly between their top and their bottom
+      child: Transform.translate(
+        offset: Offset(0, -style.fontSize! * .1),
+        child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+      ),
     );
 
     final parts = text.split(':');
@@ -334,13 +321,6 @@ class CountdownNumber extends StatelessWidget {
       number = ShaderMask(
         blendMode: BlendMode.srcIn,
         shaderCallback: (bounds) => _goldShine.createShader(bounds),
-        child: number,
-      );
-    } else if (glass) {
-      // the light on the glass, over the fill and the rim (and, faintly, the shadow), keeping their colours
-      number = ShaderMask(
-        blendMode: BlendMode.modulate,
-        shaderCallback: (bounds) => _glassSheen.createShader(bounds),
         child: number,
       );
     }
@@ -583,7 +563,7 @@ class _FullScreen extends StatelessWidget {
     this.reveal,
     this.family,
     this.gold = false,
-    this.frosted = false,
+    this.scale = 1.0,
   });
 
   final NextCardModel card;
@@ -593,7 +573,9 @@ class _FullScreen extends StatelessWidget {
   final Animation<double>? reveal;
   final String? family;
   final bool gold;
-  final bool frosted;
+
+  /// How big the countdown is (1 = normal), from the settings.
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +583,7 @@ class _FullScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: LayoutBuilder(
         builder: (context, box) {
-          final size = (box.maxWidth * .205).clamp(0.0, 124.0);
+          final size = (box.maxWidth * .205 * scale).clamp(0.0, 124.0 * scale);
           final number = ValueListenableBuilder(
             valueListenable: time,
             builder: (context, now, _) => CountdownNumber(
@@ -612,7 +594,6 @@ class _FullScreen extends StatelessWidget {
               full: true,
               family: family,
               gold: gold,
-              frosted: frosted,
             ),
           );
           final layout = Column(

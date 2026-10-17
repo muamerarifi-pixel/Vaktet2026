@@ -17,7 +17,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(prefs: prefs, clock: () => 0);
       for (final f in Feature.values) {
-        expect(c.on(f), f != Feature.timesOnSky, reason: f.name);
+        expect(c.on(f), isTrue, reason: f.name);
       }
       final before = c.settingsVersion.value;
       c.setFeature(Feature.nafile, false);
