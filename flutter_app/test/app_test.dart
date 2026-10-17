@@ -568,13 +568,17 @@ void main() {
 
   testWidgets('Friday: the countdown is gold; the night before, the sky is full of stars', (tester) async {
     // Friday 9 October 2026, 11:00 in Kosovo
+    final gold = find.byWidgetPredicate((w) => w is ShaderMask && w.blendMode == BlendMode.srcIn);
+    final frosted = find.byWidgetPredicate((w) => w is ShaderMask && w.blendMode == BlendMode.modulate);
     var c = await _open(tester, at: DateTime.utc(2026, 10, 9, 9).millisecondsSinceEpoch);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(gold, findsOneWidget);
+    expect(frosted, findsNothing);
     await _close(tester);
     c.dispose();
-    // Saturday: plain white
+    // Saturday: frosted glass, not gold
     c = await _open(tester);
-    expect(find.byType(ShaderMask), findsNothing);
+    expect(gold, findsNothing);
+    expect(frosted, findsOneWidget);
     await _close(tester);
     c.dispose();
     // Thursday 8 October 2026 at 21:00 is Friday night; at 15:00 it is not yet

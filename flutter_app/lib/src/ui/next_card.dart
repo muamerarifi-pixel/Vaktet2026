@@ -328,7 +328,7 @@ class CountdownNumber extends StatelessWidget {
           ? Stack(
               children: [
                 Text(':', style: style.copyWith(color: const Color(0x73FFFFFF))),
-                Text(':', style: rim(style, const Color(0x99FFFFFF))),
+                _RimText(':', rim(style, const Color(0x99FFFFFF))!),
               ],
             )
           : Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
@@ -365,6 +365,32 @@ class CountdownNumber extends StatelessWidget {
       );
     }
     return FittedBox(fit: BoxFit.scaleDown, alignment: center ? Alignment.center : Alignment.centerLeft, child: number);
+  }
+}
+
+/// The frosted glass's bright outline over a digit (or the colon): laid out exactly as the [Text] of the digit
+/// itself, but as plain [RichText], so the digit is still one piece of text for whatever looks for it.
+class _RimText extends StatelessWidget {
+  const _RimText(this.text, this.style);
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final inherited = DefaultTextStyle.of(context);
+    var effective = style.inherit ? inherited.style.merge(style) : style;
+    if (MediaQuery.boldTextOf(context)) effective = effective.merge(const TextStyle(fontWeight: FontWeight.bold));
+    return RichText(
+      text: TextSpan(text: text, style: effective),
+      textAlign: TextAlign.center,
+      softWrap: false,
+      overflow: effective.overflow ?? inherited.overflow,
+      maxLines: inherited.maxLines,
+      textScaler: MediaQuery.textScalerOf(context),
+      textWidthBasis: inherited.textWidthBasis,
+      textHeightBehavior: inherited.textHeightBehavior ?? DefaultTextHeightBehavior.maybeOf(context),
+    );
   }
 }
 
@@ -430,12 +456,7 @@ class _FadeDigitState extends State<_FadeDigit> with SingleTickerProviderStateMi
     final fill = Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
     final rim = widget.rim;
     if (rim == null) return fill;
-    return Stack(
-      children: [
-        fill,
-        Text(d, style: rim, textAlign: TextAlign.center, softWrap: false),
-      ],
-    );
+    return Stack(children: [fill, _RimText(d, rim)]);
   }
 
   @override
