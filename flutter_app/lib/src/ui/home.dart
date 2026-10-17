@@ -477,7 +477,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     final alarm = c.on(Feature.homeAlarm) ? model.homeAlarm : null;
     final nafile = c.on(Feature.nafile) ? model.nafile : null;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final glass = c.on(Feature.glass);
     // the day's times on the sky itself (not on very short screens, where they would crowd the countdown)
     final strip = c.on(Feature.timesOnSky) && MediaQuery.sizeOf(context).height >= 600;
     return ValueListenableBuilder(
@@ -523,7 +522,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                   gold: friday && model.friday,
                   reveal: _sheet,
                   options: options,
-                  glass: glass,
                 ),
               ),
               PrayerPulse(
@@ -569,16 +567,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                                     if (strip)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
-                                        // it fades out as the sheet comes up, and a blur can't see the sky
-                                        // through a fading layer: it is plain tinted glass meanwhile
-                                        child: ValueListenableBuilder(
-                                          valueListenable: _sheetShown,
-                                          builder: (context, shown, _) => SkyTimesStrip(
-                                            controller: c,
-                                            live: glass && !shown,
-                                            handle: hints,
-                                            onTap: () => _settleSheet(true),
-                                          ),
+                                        child: SkyTimesStrip(
+                                          controller: c,
+                                          handle: hints,
+                                          onTap: () => _settleSheet(true),
                                         ),
                                       )
                                     else if (hints)

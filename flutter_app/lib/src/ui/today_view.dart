@@ -801,13 +801,10 @@ class SwipeHint extends StatelessWidget {
 /// with a column for each prayer, the next one lit and those already past dimmed. A tap (or a swipe up) opens the
 /// whole sheet, with the alarm, the notes and the tips.
 class SkyTimesStrip extends StatelessWidget {
-  const SkyTimesStrip({super.key, required this.controller, required this.onTap, this.live = true, this.handle = true});
+  const SkyTimesStrip({super.key, required this.controller, required this.onTap, this.handle = true});
 
   final AppController controller;
   final VoidCallback onTap;
-
-  /// The glass blurs the sky behind it (see [FrostedGlass.live]).
-  final bool live;
 
   /// A small handle on top, a hint that the strip can be swiped up.
   final bool handle;
@@ -840,7 +837,7 @@ class SkyTimesStrip extends StatelessWidget {
       onTap: onTap,
       label: 'Vaktet e ditës: $label. Shfaq të gjitha',
       child: FrostedGlass(
-        live: live,
+        live: false,
         radius: 22,
         sigma: 16,
         padding: EdgeInsets.fromLTRB(6, handle ? 5 : 8, 6, 8),

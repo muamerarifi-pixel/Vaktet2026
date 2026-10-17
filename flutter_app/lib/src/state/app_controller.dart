@@ -49,11 +49,6 @@ enum Feature {
   homeAlarm('Alarmi për sabah në ekran', 'Pas jacisë e deri në imsak, alarmi shihet pa rrëshqitur lart.', true),
   nafile('Sugjerime për namaze nafile', 'Duha, Evvabini dhe Tehexhudi, me shkronja të vogla kur u vjen koha.', true),
   tips('Këshillat e ditës', 'Dy këshilla për çdo ditë, nën vaktet.', true),
-  glass(
-    'Xhami i turbullt',
-    'Koha e mbetur (dhe vaktet në qiell) mbi një xham që e turbullon qiellin pas tyre.',
-    true,
-  ),
   timesOnSky(
     'Vaktet pa rrëshqitur',
     'Vaktet e ditës shihen në fund të qiellit, pa i rrëshqitur lart; një prekje i hap me këshillat.',

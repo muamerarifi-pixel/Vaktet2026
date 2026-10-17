@@ -23,6 +23,21 @@ const List<Shadow> _countShadow = [
   Shadow(color: Color(0x38000000), offset: Offset(0, 2), blurRadius: 24),
   Shadow(color: Color(0x1F000000), offset: Offset(0, 1), blurRadius: 2),
 ];
+/// The frosted-glass digits on the full-screen sky: a soft shadow on the sky behind them.
+const List<Shadow> _glassShadow = [
+  Shadow(color: Color(0x33000000), offset: Offset(0, 3), blurRadius: 16),
+  Shadow(color: Color(0x1F000000), offset: Offset(0, 1), blurRadius: 2.5),
+];
+
+/// The light on the glass: brightest at the top, softer through the middle, catching a little light again at the
+/// bottom edge (the digits' see-through fill and bright rim are multiplied by it).
+const LinearGradient _glassSheen = LinearGradient(
+  begin: Alignment(-.35, -1),
+  end: Alignment(.35, 1),
+  colors: [Color(0xFFFFFFFF), Color(0xE6FFFFFF), Color(0xBFFFFFFF), Color(0xF2FFFFFF)],
+  stops: [0, .4, .66, 1],
+);
+
 const List<Shadow> _countShadowFull = [
   Shadow(color: Color(0x47000000), offset: Offset(0, 2), blurRadius: 30),
   Shadow(color: Color(0x29000000), offset: Offset(0, 1), blurRadius: 3),
@@ -41,11 +56,7 @@ class NextCard extends StatelessWidget {
     this.countdownWeight = 900,
     this.countdownFont,
     this.gold = false,
-    this.glass = false,
   });
-
-  /// Full screen only: the remaining time sits on frosted glass.
-  final bool glass;
 
   /// The countdown's own font (null: the app's font).
   final String? countdownFont;
@@ -91,7 +102,6 @@ class NextCard extends StatelessWidget {
         reveal: reveal,
         family: countdownFont,
         gold: gold,
-        glass: glass,
       ),
     };
     return Semantics(
@@ -255,15 +265,17 @@ class CountdownNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // on the full-screen sky the digits themselves are frosted glass: milky and see-through, with a bright rim
+    final glass = full && !gold;
     var base = vt(
       size,
       weight.toDouble(),
-      color: _white,
+      color: glass ? const Color(0xBDFFFFFF) : _white,
       ls: family == null ? (full ? -.03 : -.025) : 0,
       height: 1,
       shadows: gold
           ? const [Shadow(color: Color(0x66E9C46A), blurRadius: 18)]
-          : (full ? _countShadowFull : _countShadow),
+          : (glass ? _glassShadow : (full ? _countShadowFull : _countShadow)),
     );
     if (family != null) {
       base = base.copyWith(
@@ -278,8 +290,18 @@ class CountdownNumber extends StatelessWidget {
     final small = base.copyWith(
       fontSize: size * secondsScale,
       letterSpacing: (base.letterSpacing ?? 0) * secondsScale,
-      shadows: gold ? base.shadows : (full ? _countShadow : null),
+      shadows: gold || glass ? base.shadows : (full ? _countShadow : null),
     );
+    // the glass's rim: the same letters again, as a fine bright outline
+    TextStyle? rim(TextStyle style, Color color) => glass
+        ? style.copyWith(
+            shadows: const [],
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = (style.fontSize! * .016).clamp(.8, 2.2)
+              ..color = color,
+          )
+        : null;
     final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : fade;
     Widget digits(String part, TextStyle style) {
       final cell = _widestDigit(style, scaler);
@@ -287,13 +309,29 @@ class CountdownNumber extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
-        children: [for (final d in part.split('')) _FadeDigit(digit: d, style: style, width: cell, duration: duration)],
+        children: [
+          for (final d in part.split(''))
+            _FadeDigit(
+              digit: d,
+              style: style,
+              rim: rim(style, const Color(0xF2FFFFFF)),
+              width: cell,
+              duration: duration,
+            ),
+        ],
       );
     }
 
     Widget colon(TextStyle style) => Padding(
       padding: EdgeInsets.symmetric(horizontal: style.fontSize! * (family == null ? .01 : .04)),
-      child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+      child: glass
+          ? Stack(
+              children: [
+                Text(':', style: style.copyWith(color: const Color(0x73FFFFFF))),
+                Text(':', style: rim(style, const Color(0x99FFFFFF))),
+              ],
+            )
+          : Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
     );
 
     final parts = text.split(':');
@@ -318,6 +356,13 @@ class CountdownNumber extends StatelessWidget {
         shaderCallback: (bounds) => _goldShine.createShader(bounds),
         child: number,
       );
+    } else if (glass) {
+      // the light on the glass, over the fill and the rim (and, faintly, the shadow), keeping their colours
+      number = ShaderMask(
+        blendMode: BlendMode.modulate,
+        shaderCallback: (bounds) => _glassSheen.createShader(bounds),
+        child: number,
+      );
     }
     return FittedBox(fit: BoxFit.scaleDown, alignment: center ? Alignment.center : Alignment.centerLeft, child: number);
   }
@@ -329,10 +374,19 @@ class CountdownNumber extends StatelessWidget {
 /// The two digits stand in the same places at rest and while they fade, so a fade only changes how see-through
 /// they are: nothing is built or laid out again on its frames.
 class _FadeDigit extends StatefulWidget {
-  const _FadeDigit({required this.digit, required this.style, required this.width, required this.duration});
+  const _FadeDigit({
+    required this.digit,
+    required this.style,
+    required this.width,
+    required this.duration,
+    this.rim,
+  });
 
   final String digit;
   final TextStyle style;
+
+  /// The frosted glass's bright outline, drawn over the digit (null: none).
+  final TextStyle? rim;
   final double width;
   final Duration duration;
 
@@ -372,7 +426,17 @@ class _FadeDigitState extends State<_FadeDigit> with SingleTickerProviderStateMi
     super.dispose();
   }
 
-  Text _text(String d) => Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
+  Widget _text(String d) {
+    final fill = Text(d, style: widget.style, textAlign: TextAlign.center, softWrap: false);
+    final rim = widget.rim;
+    if (rim == null) return fill;
+    return Stack(
+      children: [
+        fill,
+        Text(d, style: rim, textAlign: TextAlign.center, softWrap: false),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -558,7 +622,6 @@ class _FullScreen extends StatelessWidget {
     this.reveal,
     this.family,
     this.gold = false,
-    this.glass = false,
   });
 
   final NextCardModel card;
@@ -568,7 +631,6 @@ class _FullScreen extends StatelessWidget {
   final Animation<double>? reveal;
   final String? family;
   final bool gold;
-  final bool glass;
 
   @override
   Widget build(BuildContext context) {
@@ -576,8 +638,7 @@ class _FullScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: LayoutBuilder(
         builder: (context, box) {
-          // on glass the digits are a little smaller, so the glass keeps a margin on narrow phones
-          final size = (box.maxWidth * (glass ? .18 : .205)).clamp(0.0, 124.0);
+          final size = (box.maxWidth * .205).clamp(0.0, 124.0);
           final number = ValueListenableBuilder(
             valueListenable: time,
             builder: (context, now, _) => CountdownNumber(
@@ -611,16 +672,7 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (glass)
-                    FrostedGlass(
-                      gold: gold,
-                      radius: size * .34,
-                      sigma: 20,
-                      padding: EdgeInsets.fromLTRB(size * .26, size * .1, size * .26, size * .14),
-                      child: number,
-                    )
-                  else
-                    number,
+                  number,
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
                     height: 0,

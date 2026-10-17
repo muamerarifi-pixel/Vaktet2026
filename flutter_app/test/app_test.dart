@@ -318,39 +318,29 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('the remaining time sits on frosted glass, which blurs on while the prayer times move', (tester) async {
+  testWidgets('the remaining time is frosted glass itself, with no card behind it, and moves out of the sheet\'s way', (
+    tester,
+  ) async {
     await _open(tester);
     await tester.pumpAndSettle();
-    final glass = find.byType(FrostedGlass);
-    expect(glass, findsOneWidget);
-    expect(tester.widget<FrostedGlass>(glass).live, isTrue);
-    expect(find.descendant(of: glass, matching: _countdown('01:14:00')), findsOneWidget);
-    BackdropFilter blur() =>
-        tester.widget<BackdropFilter>(find.descendant(of: glass, matching: find.byType(BackdropFilter)));
-    expect(blur().enabled, isTrue);
-    Rect countdownAt() => tester.getRect(find.descendant(of: glass, matching: _countdown('01:14:00')));
+    expect(find.byType(FrostedGlass), findsNothing);
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.descendant(of: _countdown('01:14:00'), matching: find.byType(ShaderMask)), findsOneWidget);
+    Rect countdownAt() => tester.getRect(_countdown('01:14:00'));
     final before = countdownAt();
-    // as the sheet comes up, the countdown moves up out of its way on the same glass, which keeps blurring
+    // as the sheet comes up, the countdown moves up out of its way
     final finger = await tester.startGesture(const Offset(195, 600));
     await finger.moveBy(const Offset(0, -40));
     await tester.pump();
     await finger.moveBy(const Offset(0, -40));
     await tester.pump();
     expect(find.text('VAKTET E SOTME'), findsOneWidget);
-    expect(tester.widget<FrostedGlass>(glass).live, isTrue);
-    expect(blur().enabled, isTrue);
     expect(countdownAt().center.dy, lessThan(before.center.dy - 5));
     expect(countdownAt().width, closeTo(before.width, .01)); // only moved, never shrunk
     await finger.up();
     await tester.pumpAndSettle();
     expect(find.text('VAKTET E SOTME'), findsNothing); // a short swipe springs back shut
     expect(tester.takeException(), isNull);
-    await _close(tester);
-    // switched off, the countdown stands on the sky alone
-    await _open(tester, prefs: {'f_glass': false});
-    await tester.pumpAndSettle();
-    expect(find.byType(FrostedGlass), findsNothing);
-    expect(_countdown('01:14:00'), findsOneWidget);
     await _close(tester);
   });
 
@@ -367,7 +357,7 @@ void main() {
     expect(find.text('VAKTET E SOTME'), findsNothing);
     bool stripBlurs() =>
         tester.widget<FrostedGlass>(find.ancestor(of: find.text('Lindja'), matching: find.byType(FrostedGlass))).live;
-    expect(stripBlurs(), isTrue);
+    expect(stripBlurs(), isFalse); // plain tinted glass: no blur behind the times
     await tester.tap(find.text('Ikindia'));
     await tester.pumpAndSettle();
     expect(find.text('VAKTET E SOTME'), findsOneWidget);
