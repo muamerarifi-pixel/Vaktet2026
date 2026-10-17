@@ -133,6 +133,15 @@ class _Sheet extends StatelessWidget {
                 weightOf: (w) => w.toDouble(),
               ),
             ),
+            _Field(
+              title: 'Madhësia e kohës së mbetur',
+              hint: 'Sa të mëdha janë shifrat e kohës deri te vakti tjetër.',
+              child: Segmented<double>(
+                options: const [('80%', .8), ('100%', 1.0), ('115%', 1.15), ('130%', 1.3)],
+                value: c.countdownSize,
+                onChanged: c.setCountdownSize,
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.only(top: 20, bottom: 2),
               child: Text('Veçoritë', style: vt(15, 800, color: colors.ink, height: 1.5)),

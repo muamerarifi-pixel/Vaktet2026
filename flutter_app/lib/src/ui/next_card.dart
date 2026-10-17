@@ -41,6 +41,7 @@ class NextCard extends StatelessWidget {
     this.countdownWeight = 900,
     this.countdownFont,
     this.gold = false,
+    this.countdownSize = 1.0,
   });
 
   /// The countdown's own font (null: the app's font).
@@ -48,6 +49,9 @@ class NextCard extends StatelessWidget {
 
   /// The countdown is gold (Fridays).
   final bool gold;
+
+  /// Full screen: how big the countdown is (1 = normal).
+  final double countdownSize;
 
   /// What the sky shows (picked in the settings).
   final SkyOptions options;
@@ -87,6 +91,7 @@ class NextCard extends StatelessWidget {
         reveal: reveal,
         family: countdownFont,
         gold: gold,
+        scale: countdownSize,
       ),
     };
     return Semantics(
@@ -288,7 +293,12 @@ class CountdownNumber extends StatelessWidget {
 
     Widget colon(TextStyle style) => Padding(
       padding: EdgeInsets.symmetric(horizontal: style.fontSize! * (family == null ? .01 : .04)),
-      child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+      // the font sets its colon low, for small letters: raised to the middle of the digits, its two dots sit
+      // evenly between their top and their bottom
+      child: Transform.translate(
+        offset: Offset(0, -style.fontSize! * .1),
+        child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+      ),
     );
 
     final parts = text.split(':');
@@ -318,10 +328,11 @@ class CountdownNumber extends StatelessWidget {
   }
 }
 
-/// One digit of the countdown in its cell: when it changes, the old one fades out as the new one fades in.
+/// One digit of the countdown in its cell: when it changes, the old one fades out as the new one fades in, on
+/// every refresh of the screen.
 ///
-/// The fade steps with the sky's own clock (20 pictures a second), not with every refresh of the screen, so a
-/// fading digit costs no more pictures than the sky already draws.
+/// The two digits stand in the same places at rest and while they fade, so a fade only changes how see-through
+/// they are: nothing is built or laid out again on its frames.
 class _FadeDigit extends StatefulWidget {
   const _FadeDigit({required this.digit, required this.style, required this.width, required this.duration});
 
@@ -334,46 +345,35 @@ class _FadeDigit extends StatefulWidget {
   State<_FadeDigit> createState() => _FadeDigitState();
 }
 
-class _FadeDigitState extends State<_FadeDigit> {
-  static final SkyClock _clock = SkyClock.shared;
+class _FadeDigitState extends State<_FadeDigit> with SingleTickerProviderStateMixin {
+  late final AnimationController _fade = AnimationController(vsync: this, duration: widget.duration, value: 1)
+    ..addStatusListener((status) {
+      if (status == AnimationStatus.completed && _old != null) setState(() => _old = null);
+    });
+  late final Animation<double> _in = CurvedAnimation(parent: _fade, curve: Curves.easeOut);
+  late final Animation<double> _out = ReverseAnimation(CurvedAnimation(parent: _fade, curve: Curves.easeIn));
 
   /// The digit fading out, while it fades.
   String? _old;
-  double _start = 0;
-  double _t = 1;
 
   @override
   void didUpdateWidget(_FadeDigit old) {
     super.didUpdateWidget(old);
     if (old.digit == widget.digit) return;
-    if (widget.duration == Duration.zero) return _finish();
+    if (widget.duration == Duration.zero) {
+      _old = null;
+      _fade.value = 1;
+      return;
+    }
     // a digit that changes again while it is still fading starts a new fade from the one now shown
     _old = old.digit;
-    _start = _clock.seconds;
-    _t = 0;
-    if (!_clock.isHeldBy(this)) {
-      _clock.addListener(_step);
-      _clock.hold(this);
-    }
-  }
-
-  void _step() {
-    final t = (_clock.seconds - _start) / (widget.duration.inMicroseconds / 1e6);
-    if (t >= 1) return setState(_finish);
-    setState(() => _t = t);
-  }
-
-  void _finish() {
-    _old = null;
-    _t = 1;
-    _clock.removeListener(_step);
-    _clock.release(this);
+    _fade.duration = widget.duration;
+    _fade.forward(from: 0);
   }
 
   @override
   void dispose() {
-    _clock.removeListener(_step);
-    _clock.release(this);
+    _fade.dispose();
     super.dispose();
   }
 
@@ -384,15 +384,13 @@ class _FadeDigitState extends State<_FadeDigit> {
     final old = _old;
     return SizedBox(
       width: widget.width,
-      child: old == null
-          ? _text(widget.digit)
-          : Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(opacity: 1 - Curves.easeIn.transform(_t), child: _text(old)),
-                Opacity(opacity: Curves.easeOut.transform(_t), child: _text(widget.digit)),
-              ],
-            ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          FadeTransition(opacity: _out, child: old == null ? const SizedBox.shrink() : _text(old)),
+          FadeTransition(opacity: _in, child: _text(widget.digit)),
+        ],
+      ),
     );
   }
 }
@@ -565,6 +563,7 @@ class _FullScreen extends StatelessWidget {
     this.reveal,
     this.family,
     this.gold = false,
+    this.scale = 1.0,
   });
 
   final NextCardModel card;
@@ -575,13 +574,28 @@ class _FullScreen extends StatelessWidget {
   final String? family;
   final bool gold;
 
+  /// How big the countdown is (1 = normal), from the settings.
+  final double scale;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: LayoutBuilder(
         builder: (context, box) {
-          final size = (box.maxWidth * .205).clamp(0.0, 124.0);
+          final size = (box.maxWidth * .205 * scale).clamp(0.0, 124.0 * scale);
+          final number = ValueListenableBuilder(
+            valueListenable: time,
+            builder: (context, now, _) => CountdownNumber(
+              text: fmtCount(card.target - now),
+              size: size,
+              weight: weight,
+              center: true,
+              full: true,
+              family: family,
+              gold: gold,
+            ),
+          );
           final layout = Column(
             children: [
               Expanded(
@@ -603,18 +617,7 @@ class _FullScreen extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ValueListenableBuilder(
-                    valueListenable: time,
-                    builder: (context, now, _) => CountdownNumber(
-                      text: fmtCount(card.target - now),
-                      size: size,
-                      weight: weight,
-                      center: true,
-                      full: true,
-                      family: family,
-                      gold: gold,
-                    ),
-                  ),
+                  number,
                   // the label hangs below the digits without taking room, so the digits stay centred
                   SizedBox(
                     height: 0,
@@ -645,18 +648,15 @@ class _FullScreen extends StatelessWidget {
           );
           final r = reveal;
           if (r == null) return layout;
+          // While the prayer times are swiped up, it moves up out of their way as one finished picture. It is only
+          // moved, never shrunk: the screen then keeps the soft shadows of its text from frame to frame, instead
+          // of blurring them all again at every new size. And it is the same widget at rest and moving, so
+          // nothing in it is built again when a swipe starts or ends.
           return AnimatedBuilder(
             animation: r,
-            // moved and shrunk as one finished picture while the prayer times are swiped up
             child: RepaintBoundary(child: layout),
-            builder: (context, child) {
-              final v = r.value;
-              if (v == 0) return child!;
-              return Transform.translate(
-                offset: Offset(0, -box.maxHeight * .2 * v),
-                child: Transform.scale(scale: 1 - .14 * v, child: child),
-              );
-            },
+            builder: (context, child) =>
+                Transform.translate(offset: Offset(0, -box.maxHeight * .2 * r.value), child: child),
           );
         },
       ),

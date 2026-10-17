@@ -584,13 +584,15 @@ class SkyTimesSheet extends StatelessWidget {
     final now = c.viewNow;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       decoration: BoxDecoration(
-        color: const Color(0xEB0B1024),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0x2EFFFFFF)),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))],
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 10))],
       ),
+      // frosted glass: the sky blurred behind, under a dark tint so the times read over the brightest day
+      child: SheetGlass(
+        radius: 26,
+        sigma: 22,
+        padding: const EdgeInsets.all(8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -631,6 +633,7 @@ class SkyTimesSheet extends StatelessWidget {
           if (c.on(Feature.tips)) TipsSection(controller: c, onSky: true),
           const SizedBox(height: 4),
         ],
+      ),
       ),
     );
   }

@@ -34,19 +34,12 @@ enum Feature {
   ),
   landscape(
     'Malet dhe liqeni',
-    'Male në largësi e kodra me pyje në mjegull, në dritën e orës, dhe një liqen që i pasqyron. '
-        'Nuk lëvizin, nuk harxhojnë bateri.',
+    'Male në largësi e kodra me pyje në mjegull, në dritën e orës, dhe një liqen që i pasqyron.',
     true,
   ),
   skyLife(
     'Qiell i gjallë',
-    'Yjet vezullojnë, retë lundrojnë, kalojnë zogj e avionë. Fikeni për të kursyer baterinë.',
-    true,
-  ),
-  skyRest(
-    'Qielli pushon',
-    '30 sekonda pas prekjes së fundit (dhe kur telefoni kursen baterinë) qielli ndalet; koha e mbetur vazhdon. '
-        'Një prekje e zgjon.',
+    'Yjet vezullojnë, retë lundrojnë, kalojnë zogj e avionë.',
     true,
   ),
   hijri('Shfaq datën hixhri', 'Data hixhri nën datën e sotme dhe në muaj.', true),
@@ -106,6 +99,8 @@ class AppController extends ChangeNotifier {
     );
     final weight = prefs.getInt(_kCountWeight) ?? 900;
     countdownWeight = countdownWeights.contains(weight) ? weight : 900;
+    final countSize = prefs.getDouble(_kCountSize) ?? 1.0;
+    countdownSize = countdownSizes.contains(countSize) ? countSize : 1.0;
     lookNotifier = ValueNotifier<Look>(_look);
     final adj = prefs.getInt(_kHijri) ?? 0;
     hijriAdj = adj.clamp(-2, 2);
@@ -130,6 +125,7 @@ class AppController extends ChangeNotifier {
   static const _kFontScale = 'fontScale';
   static const _kCountWeight = 'countdownWeight';
   static const _kCountFont = 'countdownFont';
+  static const _kCountSize = 'countdownSize';
 
   static const List<int> alarmChoices = [15, 30, 45, 60];
 
@@ -138,6 +134,9 @@ class AppController extends ChangeNotifier {
 
   /// Thickness of the big countdown digits.
   static const List<int> countdownWeights = [300, 500, 700, 900];
+
+  /// Size of the big countdown (1 = normal).
+  static const List<double> countdownSizes = [.8, 1.0, 1.15, 1.3];
 
   final SharedPreferences _prefs;
   final int Function() _clock;
@@ -150,6 +149,7 @@ class AppController extends ChangeNotifier {
   late double fontScale;
   late int countdownWeight;
   late CountdownFont countdownFont;
+  late double countdownSize;
 
   /// Changes only when the theme or the text look does (the app rebuilds from this, not from every tick).
   late final ValueNotifier<Look> lookNotifier;
@@ -310,6 +310,12 @@ class AppController extends ChangeNotifier {
   void setCountdownFont(CountdownFont f) {
     countdownFont = f;
     _prefs.setString(_kCountFont, f.name);
+    _settingChanged();
+  }
+
+  void setCountdownSize(double v) {
+    countdownSize = v;
+    _prefs.setDouble(_kCountSize, v);
     _settingChanged();
   }
 
