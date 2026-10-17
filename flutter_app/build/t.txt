@@ -1,0 +1,137 @@
+Resolving dependencies...
+Downloading packages...
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  shared_preferences 2.5.5 (2.5.6 available)
+  shared_preferences_android 2.4.28 (2.5.0 available)
+  shared_preferences_foundation 2.5.7 (2.6.0 available)
+  test_api 0.7.12 (0.7.15 available)
+  vector_math 2.4.0 (2.4.3 available)
+  vm_service 15.3.0 (15.4.0 available)
+Got dependencies!
+8 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart
+00:00 +0: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: Moon phase eclipses fall on new and full moons
+00:00 +1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart: the Hijri date follows the BIK Takvim
+00:00 +2: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: Moon phase waxing after the new moon, waning after the full moon
+00:00 +3: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart: the great nights and days of 1447–1448 fall where the Takvim puts them
+00:00 +4: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart: the great nights and days of 1447–1448 fall where the Takvim puts them
+00:00 +5: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart: the great nights and days of 1447–1448 fall where the Takvim puts them
+00:00 +6: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: Hours of the sky every hour looks a little different
+00:00 +7: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart: the other notes of the Takvim
+00:00 +8: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: Hours of the sky lights in the villages at night, mist and birds in the morning, fireflies only in summer
+00:00 +9: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/calendar_test.dart: Kosovo: official holidays, Easter and the day off after a weekend holiday
+00:00 +10: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: Hours of the sky the scene changes only about once every 15 seconds (the sky is not repainted every second)
+00:00 +11: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: Hours of the sky the scene changes only about once every 15 seconds (the sky is not repainted every second)
+00:00 +12: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: The sky through the day the colours melt from one prayer time into the next instead of jumping
+00:00 +13: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: The sky through the day the sun rises and sets behind the hills
+00:00 +14: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: The sky through the day clouds: thin in the morning, fuller in the afternoon, coloured at sunset, none at night
+00:00 +15: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/sky_scene_test.dart: The sky through the day the wooded hills follow the seasons, and never with snow
+00:01 +16: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Features every feature is on at first (but the times on the sky), and switching one off is remembered
+00:01 +17: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Prayer pulse runs once when the countdown reaches its prayer time, then fades away
+00:01 +18: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Prayer pulse not when the countdown changes for another reason (city, day)
+00:01 +19: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Prayer pulse not when the phone asks for less motion
+00:01 +20: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion (setUpAll)
+00:01 +20: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion the sky moves with every refresh of the screen
+00:01 +21: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion the sky moves with every refresh of the screen
+00:01 +22: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion the sky moves with every refresh of the screen
+00:01 +23: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion the sky moves with every refresh of the screen
+00:01 +24: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion the sky moves with every refresh of the screen
+00:02 +25: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: (setUpAll)
+00:02 +25: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/motion_test.dart: Motion it never rests: a minute and more without a touch, it still moves
+00:02 +26: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:02 +27: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:03 +28: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:03 +29: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +30: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +31: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +32: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +33: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +34: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +35: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +36: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +37: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +38: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +39: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +40: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:04 +41: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:05 +42: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:05 +43: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:05 +44: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:05 +45: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:05 +46: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:07 +47: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:07 +48: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:07 +49: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:07 +50: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:08 +51: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:08 +52: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:08 +53: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.0
+00:08 +54: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/app_test.dart: another day shows its own sky at this hour, its times, and a way back to today
+00:09 +55: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:09 +56: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:10 +57: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:10 +58: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:10 +59: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:11 +60: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:11 +61: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:11 +62: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:12 +63: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:13 +63: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/app_test.dart: settings: font, text size and countdown thickness
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 2 widgets with text "E madhe": [
+  Text("E madhe", inherit: true, color: Color(alpha: 1.0000, red: 0.3569, green: 0.4157, blue:
+0.3922, colorSpace: ColorSpace.sRGB), size: 14.0, weight: 700, letterSpacing: 0.0, height: 1.5x,
+decoration: TextDecoration.none, softWrap: no wrapping except at line break characters,
+dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+  Text("E madhe", inherit: true, color: Color(alpha: 1.0000, red: 0.3569, green: 0.4157, blue:
+0.3922, colorSpace: ColorSpace.sRGB), size: 14.0, weight: 700, letterSpacing: 0.0, height: 1.5x,
+decoration: TextDecoration.none, softWrap: no wrapping except at line break characters,
+dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+]" (used in a call to "tap()") ambiguously found multiple matching widgets. The "tap()" method needs
+a single target.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2100:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure> (file:///home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/app_test.dart:401:18)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  settings: font, text size and countdown thickness
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:13 +63 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 320x568, text ×1.3
+00:13 +63 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/app_test.dart: settings: font, text size and countdown thickness [E]
+  Test failed. See exception logs above.
+  The test description was: settings: font, text size and countdown thickness
+  
+00:13 +64 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/app_test.dart: a tap on the date opens the month; its headings stay while the days scroll
+00:14 +65 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:14 +66 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:15 +67 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:15 +68 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:15 +69 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:16 +70 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:16 +71 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:16 +72 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.0
+00:17 +73 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 360x640, text ×1.3
+00:21 +74 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 412x915, text ×1.0
+00:27 +75 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 412x915, text ×1.3
+00:32 +76 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 768x1024, text ×1.0
+00:41 +77 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 768x1024, text ×1.3
+00:50 +78 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 1280x800, text ×1.0
+00:53 +79 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: no overflow at 1280x800, text ×1.3
+00:56 +80 -1: /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/layout_test.dart: (tearDownAll)
+00:56 +80 -1: Some tests failed.
+
+Failing tests:
+  /home/runner/work/Vaktet2026/Vaktet2026/flutter_app/test/app_test.dart: settings: font, text size and countdown thickness
