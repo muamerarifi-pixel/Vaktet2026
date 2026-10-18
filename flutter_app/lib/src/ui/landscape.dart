@@ -89,6 +89,9 @@ class Landscape {
     return Color.lerp(Color.lerp(night, day, _day)!, const Color(0xFF3A4458), .25 * moonlight)!;
   }();
 
+  /// Snow close by: white by day, grey-blue at night, a little brighter under the moon.
+  late final Color _snow = Color.lerp(_ink, const Color(0xFFF2F5FA), (.3 + .62 * _day + .3 * moonlight).clamp(0.0, .95))!;
+
   /// Bare rock far away: blue-grey by day, as dark as the rest at night.
   late final Color _rock = Color.lerp(_ink, const Color(0xFF4A5566), .55 * _day)!;
 
@@ -445,6 +448,21 @@ class Landscape {
       path.addPath(_pine(Offset(x(X), y(baseV + 1)), ht * u * .6, ht * u * .16), Offset.zero);
     }
     canvas.drawPath(path, Paint()..color = color);
+    // in winter, snow along the bank
+    final snow = scene.treeSnow;
+    if (snow > .02) {
+      final bank = Path()
+        ..moveTo(x(-10), y(84))
+        ..cubicTo(x(60), y(80), x(120), y(87), x(200), y(86))
+        ..cubicTo(x(280), y(85), x(340), y(79), x(410), y(83));
+      canvas.drawPath(
+        bank,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.4 * u * snow
+          ..color = dim(_snow).withValues(alpha: .9),
+      );
+    }
   }
 
   // ---------- The big tree ----------
@@ -471,6 +489,24 @@ class Landscape {
     canvas.save();
     canvas.translate(x(_treeX), y(83.6));
     canvas.scale(u * .8);
+
+    // the ground under it: the fallen leaves of autumn
+    final fallen = scene.treeFallen;
+    if (fallen > .02) {
+      final leaf = Color(scene.treeLeaf);
+      final looks = [
+        Color.lerp(shore, leaf, .25 + .6 * _day)!,
+        Color.lerp(shore, const Color(0xFFB5552C), .25 + .55 * _day)!,
+        Color.lerp(shore, const Color(0xFFD9A030), .25 + .55 * _day)!,
+      ];
+      final heaps = [Path(), Path(), Path()];
+      for (final (p, r, order, tone) in tree.fallen) {
+        if (order < fallen) heaps[tone].addOval(Rect.fromCenter(center: p, width: r * 2, height: r * .9));
+      }
+      for (var i = 0; i < 3; i++) {
+        canvas.drawPath(heaps[i], Paint()..color = dim(looks[i]));
+      }
+    }
 
     // the trunk and the branches (all that shows in winter)
     final bark = dim(Color.lerp(shore, const Color(0xFF5B4838), .45 * _day)!);
@@ -499,6 +535,21 @@ class Landscape {
           stops: const [0, .72, 1],
         ).createShader(const Rect.fromLTRB(-60, -130, 60, 2)),
     );
+    // snow lying along the top of the branches, more on the level ones
+    final snow = scene.treeSnow;
+    if (snow > .02) {
+      final caps = Path();
+      for (var (a, b, wa, wb) in tree.limbs) {
+        if (b.dx < a.dx) (a, b, wa, wb) = (b, a, wb, wa); // every cap wound the same way
+        final d = b - a;
+        final level = d.dx.abs() / d.distance;
+        if (level < .2) continue;
+        final ta = wa * (.5 + .5 * level) * snow, tb = wb * (.5 + .5 * level) * snow;
+        final ua = Offset(0, -wa * .42), ub = Offset(0, -wb * .42);
+        caps.addPolygon([a + ua, b + ub, b + ub - Offset(0, tb), a + ua - Offset(0, ta)], true);
+      }
+      canvas.drawPath(caps, Paint()..color = dim(_snow));
+    }
 
     // the crown: the leaves still on the tree at this time of the year, in small clusters with the sky between
     final leaves = scene.treeLeaves;
@@ -554,6 +605,34 @@ class Landscape {
         }
       }
     }
+    // spring: white and pink blossoms, on the bare twigs first, then among the new leaves
+    final blossom = scene.treeBlossom;
+    if (blossom > .02) {
+      final seen = (.25 + .7 * _day + .25 * moonlight).clamp(0.0, 1.0);
+      final white = dim(Color.lerp(shore, const Color(0xFFFFF7FA), seen)!);
+      final pink = dim(Color.lerp(shore, const Color(0xFFF4A9C4), seen)!);
+      final w = Path(), p = Path();
+      for (final (c, r, order, rose) in tree.blossoms) {
+        if (order < blossom) (rose ? p : w).addOval(Rect.fromCircle(center: c, radius: r));
+      }
+      canvas.drawPath(p, Paint()..color = pink);
+      canvas.drawPath(w, Paint()..color = white);
+    }
+    // late summer: ripe red fruit among the leaves
+    final fruit = scene.treeFruit;
+    if (fruit > .02 && leaves > .5) {
+      final red = dim(Color.lerp(shore, const Color(0xFFC9302C), .2 + .7 * _day)!);
+      final shine = dim(Color.lerp(shore, const Color(0xFFFF9A84), .15 + .6 * _day)!);
+      final f = Path(), s = Path();
+      for (final (c, r, order) in tree.fruits) {
+        if (order < fruit) {
+          f.addOval(Rect.fromCircle(center: c, radius: r));
+          s.addOval(Rect.fromCircle(center: c + Offset(-r * .3, -r * .35), radius: r * .35));
+        }
+      }
+      canvas.drawPath(f, Paint()..color = red);
+      canvas.drawPath(s, Paint()..color = shine);
+    }
     canvas.restore();
   }
 
@@ -596,7 +675,14 @@ Path khatam(Offset c, double r) {
 /// its limbs (from, to, width at each end) and the clumps of leaves on them (centre, radius, when in the year it is
 /// in leaf 0–1: the lowest values are the last to fall and the first to come, and a tone -1 … 1 for a little
 /// variety in colour).
-final ({List<(Offset, Offset, double, double)> limbs, List<(Offset, double, double, double, Offset)> leaves}) _bigTree =
+final ({
+  List<(Offset, Offset, double, double)> limbs,
+  List<(Offset, double, double, double, Offset)> leaves,
+  List<(Offset, double, double, bool)> blossoms,
+  List<(Offset, double, double)> fruits,
+  List<(Offset, double, double, int)> fallen,
+})
+_bigTree =
     () {
       final rnd = math.Random(5150);
       final limbs = <(Offset, Offset, double, double)>[];
@@ -654,6 +740,41 @@ final ({List<(Offset, Offset, double, double)> limbs, List<(Offset, double, doub
           ));
         }
       }
-      return (limbs: limbs, leaves: leaves);
+      // what the seasons add (centre, radius, when in the season it shows 0–1, …), from their own random numbers
+      // so the tree itself keeps its shape
+      final extra = math.Random(7171);
+      final blossoms = <(Offset, double, double, bool)>[];
+      for (final (c, r, _, _) in clumps) {
+        for (var k = 0; k < 8; k++) {
+          final a = extra.nextDouble() * 2 * math.pi;
+          final p = c + Offset(math.cos(a), math.sin(a)) * (math.sqrt(extra.nextDouble()) * r * 1.05);
+          blossoms.add((p, 1.0 + extra.nextDouble() * .9, extra.nextDouble(), extra.nextDouble() < .45));
+        }
+      }
+      for (final (a, b, _, wb) in limbs) {
+        if (wb > 2) continue;
+        for (var k = 0; k < 2; k++) {
+          final p = Offset.lerp(a, b, .4 + extra.nextDouble() * .6)!;
+          final jitter = Offset((extra.nextDouble() - .5) * 2.4, (extra.nextDouble() - .5) * 2.4);
+          blossoms.add((p + jitter, .9 + extra.nextDouble() * .7, extra.nextDouble(), extra.nextDouble() < .45));
+        }
+      }
+      final fruits = <(Offset, double, double)>[];
+      for (var k = 0; k < 28; k++) {
+        final (c, r, _, _) = clumps[extra.nextInt(clumps.length)];
+        final a = extra.nextDouble() * 2 * math.pi;
+        fruits.add((c + Offset(math.cos(a), math.sin(a)) * (r * .75 * extra.nextDouble()), 1.5 + extra.nextDouble() * .5, extra.nextDouble()));
+      }
+      final fallen = <(Offset, double, double, int)>[];
+      for (var k = 0; k < 110; k++) {
+        final spread = .25 + .75 * extra.nextDouble();
+        fallen.add((
+          Offset((extra.nextDouble() * 2 - 1) * 50 * spread, .2 + extra.nextDouble() * 9 * spread),
+          .9 + extra.nextDouble() * .8,
+          extra.nextDouble(),
+          extra.nextInt(3),
+        ));
+      }
+      return (limbs: limbs, leaves: leaves, blossoms: blossoms, fruits: fruits, fallen: fallen);
     }();
 

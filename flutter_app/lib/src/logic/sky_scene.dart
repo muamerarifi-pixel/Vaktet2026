@@ -221,6 +221,23 @@ const List<(int, double, int)> treeYear = [
   return (treeYear.first.$2, treeYear.first.$3);
 }
 
+/// What else the tree shows on [day], each 0–1: blossoms (late March – April), fruit (late summer), fallen
+/// leaves on the ground under it (autumn), snow on its branches and along the bank (winter).
+(double, double, double, double) treeExtras(Day day) {
+  final d = dayOfYear(day).toDouble();
+  // 0 until a, up to 1 by b, held until c, back to 0 by e
+  double span(double x, double a, double b, double c, double e) => x <= a || x >= e
+      ? 0
+      : (x < b ? _smooth((x - a) / (b - a)) : (x <= c ? 1 : _smooth((e - x) / (e - c))));
+  final winter = d < 180 ? d + 365 : d; // December to March, in one run
+  return (
+    _q(span(d, 78, 100, 108, 128), 1 / 100),
+    _q(span(d, 213, 236, 266, 290), 1 / 100),
+    _q(span(d, 276, 306, 330, 352), 1 / 100),
+    _q(span(winter, 336, 358, 406, 430), 1 / 100),
+  );
+}
+
 int dayOfYear(Day day) => day.epochDay - Day(day.y, 1, 1).epochDay + 1;
 
 /// The hills' colour on [day], blended between the seasons.
@@ -323,6 +340,10 @@ class SkyScene {
     this.season = 0xFF4E7B4C,
     this.treeLeaves = 1,
     this.treeLeaf = 0xFF5C9442,
+    this.treeBlossom = 0,
+    this.treeFruit = 0,
+    this.treeFallen = 0,
+    this.treeSnow = 0,
   });
 
   /// The colours of the sky, melting from one prayer time into the next.
@@ -346,6 +367,12 @@ class SkyScene {
   /// How much of the big tree's crown is in leaf (0 bare – 1 full), and the leaves' colour (ARGB).
   final double treeLeaves;
   final int treeLeaf;
+
+  /// The tree's blossoms, fruit, fallen leaves under it and snow on it (and along the bank), each 0–1.
+  final double treeBlossom;
+  final double treeFruit;
+  final double treeFallen;
+  final double treeSnow;
 
   /// The temporal hour, 0–24.
   final double hour;
@@ -394,10 +421,28 @@ class SkyScene {
       other.sunProgress == sunProgress &&
       other.season == season &&
       other.treeLeaves == treeLeaves &&
-      other.treeLeaf == treeLeaf;
+      other.treeLeaf == treeLeaf &&
+      other.treeBlossom == treeBlossom &&
+      other.treeFruit == treeFruit &&
+      other.treeFallen == treeFallen &&
+      other.treeSnow == treeSnow;
 
   @override
-  int get hashCode => Object.hash(hour, moon, tint, tintStrength, blend, sunProgress, season, treeLeaves, treeLeaf);
+  int get hashCode => Object.hash(
+    hour,
+    moon,
+    tint,
+    tintStrength,
+    blend,
+    sunProgress,
+    season,
+    treeLeaves,
+    treeLeaf,
+    treeBlossom,
+    treeFruit,
+    treeFallen,
+    treeSnow,
+  );
 }
 
 int _lerpArgb(int a, int b, double t) {
@@ -484,5 +529,9 @@ SkyScene skySceneAt(List<PrayerRow> rows, int now, Day day) {
     season: seasonColor(day),
     treeLeaves: treeSeason(day).$1,
     treeLeaf: treeSeason(day).$2,
+    treeBlossom: treeExtras(day).$1,
+    treeFruit: treeExtras(day).$2,
+    treeFallen: treeExtras(day).$3,
+    treeSnow: treeExtras(day).$4,
   );
 }
