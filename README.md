@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.7 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9.5 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -48,9 +48,19 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 </table>
 </div>
 
-## Të reja në versionin 1.7
+## Të reja në versionin 1.9
 
-🔋 **Më pak bateri** – qielli pushon 30 sekonda pas prekjes së fundit (koha e mbetur vazhdon; një prekje e zgjon), dhe ndalet edhe kur telefoni kursen baterinë ose kur vaktet e mbulojnë. Kur lëviz, vizatohet 20 herë në sekondë dhe jo 60–120 sa ekrani; retë, mjegulla dhe yjet e zbehtë vizatohen një herë e jo në çdo pamje, dhe ekrani ndërtohet përsëri një herë në minutë – vetëm sekondat ndryshojnë çdo sekondë. Mund ta fikësh te Cilësimet → **Qielli pushon**.
+🌳 **Një pemë buzë liqenit, që ndjek stinët** – sythe në mars, gjelbërim i freskët në prill, i thellë në verë, e artë dhe portokalli në tetor, rrallohet në nëntor dhe mbetet lakuriqe në dimër. Ndriçohet nga ana e diellit, skuqet në lindje e në perëndim, dhe natën bëhet siluetë nën hënë.
+
+🧊 **Vaktet në xham të mjegullt** – fleta që rrëshqet lart e turbullon qiellin pas saj, nën një hije të errët, që kohët të lexohen në çdo qiell.
+
+👆 **E butë në çdo telefon** – fleta e vakteve ndjek gishtin pa ngecje, me shpejtësinë e plotë të ekranit (90 ose 120 Hz aty ku ekrani e lejon). Kursimi i baterisë u hoq, prandaj qielli lëviz gjithmonë butë.
+
+🔠 **Madhësia e kohës së mbetur** – 80 %, 100 %, 115 % ose 130 %, te Cilësimet. Dy pikat e orës tani qëndrojnë në mes të shifrave.
+
+🏔️ **Male më të qeta në perëndim** – dielli i ulët nuk e zbardh më vargun e maleve.
+
+## Të reja në versionin 1.7
 
 👆 **Vaktet rrëshqasin butë** – ndjekin gishtin saktë që në rrëshqitjen e parë, hapen e mbyllen më shpejt dhe pa ngecje.
 
@@ -98,7 +108,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
 📅 **Tabela e muajit** dhe **data hixhri**, me korrigjim ±2 ditë nëse shpallja e BIK-ut ndryshon.
 
-🎨 **Si të pëlqen ty** – pamje e çelët, e errët ose automatike; stili dhe madhësia e shkronjave; trashësia dhe shkronjat e kohës së mbetur.
+🎨 **Si të pëlqen ty** – pamje e çelët, e errët ose automatike; stili dhe madhësia e shkronjave; trashësia, shkronjat dhe madhësia e kohës së mbetur.
 
 📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit. Ora verore e dimërore llogaritet vetë, prandaj kohët mbeten të sakta edhe në vitet në vijim.
 
