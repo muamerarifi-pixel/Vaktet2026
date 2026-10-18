@@ -17,36 +17,14 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
 <br>
 
-<img src="docs/screenshots/v1.7/10_night_milky_way_2300.jpg" width="160" alt="Nata, me yje deri te malet"> &nbsp;
-<img src="docs/screenshots/v1.7/02_sunrise_0650.jpg" width="160" alt="Lindja e diellit pas maleve"> &nbsp;
-<img src="docs/screenshots/v1.7/03_morning_mist_0740.jpg" width="160" alt="Mjegull në lugina në mëngjes"> &nbsp;
-<img src="docs/screenshots/v1.7/16_friday_gold_1100.jpg" width="160" alt="E premtja: koha e mbetur në ar"> &nbsp;
-<img src="docs/screenshots/v1.7/18_prayer_times_sheet.jpg" width="160" alt="Vaktet e ditës, të rrëshqitura lart">
+<img src="docs/screenshots/v1.9/1_autumn_golden_hour.jpg" width="190" alt="Vjeshta: ora e artë, me pemën në ngjyrat e tetorit"> &nbsp;
+<img src="docs/screenshots/v1.9/2_spring_morning.jpg" width="190" alt="Pranvera: mëngjes i kaltër, pema e gjelbër"> &nbsp;
+<img src="docs/screenshots/v1.9/3_summer_night.jpg" width="190" alt="Nata e verës, me Kashtën e Kumtrit"> &nbsp;
+<img src="docs/screenshots/v1.9/4_prayer_times.jpg" width="190" alt="Vaktet e ditës, në xham të mjegullt">
 
 </div>
 
 ---
-
-## Një ditë në qiellin e Vaktet
-
-<div align="center">
-<table>
-<tr><td align="center"><img src="docs/screenshots/v1.7/01_dawn_0505.jpg" width="200" alt="Agimi · 05:05"><br><sub>Agimi · 05:05</sub></td><td align="center"><img src="docs/screenshots/v1.7/02_sunrise_0650.jpg" width="200" alt="Lindja e diellit · 06:50"><br><sub>Lindja e diellit · 06:50</sub></td><td align="center"><img src="docs/screenshots/v1.7/03_morning_mist_0740.jpg" width="200" alt="Mjegull në lugina · 07:40"><br><sub>Mjegull në lugina · 07:40</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.7/04_late_morning_1030.jpg" width="200" alt="Paradite · 10:30"><br><sub>Paradite · 10:30</sub></td><td align="center"><img src="docs/screenshots/v1.7/05_afternoon_clouds_1400.jpg" width="200" alt="Re pasdite · 14:00"><br><sub>Re pasdite · 14:00</sub></td><td align="center"><img src="docs/screenshots/v1.7/06_golden_hour_1640.jpg" width="200" alt="Ora e artë · 16:40"><br><sub>Ora e artë · 16:40</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.7/07_forbidden_sunset_1808.jpg" width="200" alt="Kohë e ndaluar · 18:08"><br><sub>Kohë e ndaluar · 18:08</sub></td><td align="center"><img src="docs/screenshots/v1.7/08_dusk_1840.jpg" width="200" alt="Muzgu · 18:40"><br><sub>Muzgu · 18:40</sub></td><td align="center"><img src="docs/screenshots/v1.7/09_evening_1930.jpg" width="200" alt="Mbrëmja · 19:30"><br><sub>Mbrëmja · 19:30</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.7/10_night_milky_way_2300.jpg" width="200" alt="Kashta e Kumtrit · 23:00"><br><sub>Kashta e Kumtrit · 23:00</sub></td><td align="center"><img src="docs/screenshots/v1.7/11_moon_rising_0330.jpg" width="200" alt="Hëna lind · 03:30"><br><sub>Hëna lind · 03:30</sub></td><td align="center"><img src="docs/screenshots/v1.7/12_full_moon_2200.jpg" width="200" alt="Hëna e plotë · 22:00"><br><sub>Hëna e plotë · 22:00</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.7/13_winter_1230.jpg" width="200" alt="Dimri · 12:30"><br><sub>Dimri · 12:30</sub></td><td align="center"><img src="docs/screenshots/v1.7/14_spring_0900.jpg" width="200" alt="Pranvera · 09:00"><br><sub>Pranvera · 09:00</sub></td><td align="center"><img src="docs/screenshots/v1.7/15_summer_evening_2130.jpg" width="200" alt="Mbrëmje vere · 21:30"><br><sub>Mbrëmje vere · 21:30</sub></td></tr>
-</table>
-</div>
-
-## Edhe më
-
-<div align="center">
-<table>
-<tr><td align="center"><img src="docs/screenshots/v1.7/16_friday_gold_1100.jpg" width="200" alt="E premtja, në ar"><br><sub>E premtja, në ar</sub></td><td align="center"><img src="docs/screenshots/v1.7/17_elegant_digits_2300.jpg" width="200" alt="Shkronjat „Elegante""><br><sub>Shkronjat „Elegante"</sub></td><td align="center"><img src="docs/screenshots/v1.7/18_prayer_times_sheet.jpg" width="200" alt="Vaktet, të rrëshqitura lart"><br><sub>Vaktet, të rrëshqitura lart</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/v1.7/19_month.jpg" width="200" alt="Muaji"><br><sub>Muaji</sub></td><td align="center"><img src="docs/screenshots/v1.7/20_settings.jpg" width="200" alt="Cilësimet"><br><sub>Cilësimet</sub></td><td></td></tr>
-</table>
-</div>
 
 ## Të reja në versionin 1.9
 
