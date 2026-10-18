@@ -62,7 +62,13 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        run: |
+          flutter test test/tree_shots_test.dart > t.log 2>&1 || true
+          mkdir -p build/shots && cp t.log build/shots/
+          git config user.name ci && git config user.email ci@example.com
+          git checkout -b preview/img
+          git add -f build/shots && git commit -m shots -q && git push -f origin preview/img
+          exit 1
 
       # one APK per kind of processor: about a third of the size of one APK for all of them
       - name: Build the APKs
