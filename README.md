@@ -26,69 +26,25 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
 ---
 
-## Të reja në versionin 1.9
-
-🌳 **Një pemë buzë liqenit, që ndjek stinët** – sythe në mars, gjelbërim i freskët në prill, i thellë në verë, e artë dhe portokalli në tetor, rrallohet në nëntor dhe mbetet lakuriqe në dimër. Ndriçohet nga ana e diellit, skuqet në lindje e në perëndim, dhe natën bëhet siluetë nën hënë.
-
-🧊 **Vaktet në xham të mjegullt** – fleta që rrëshqet lart e turbullon qiellin pas saj, nën një hije të errët, që kohët të lexohen në çdo qiell.
-
-👆 **E butë në çdo telefon** – fleta e vakteve ndjek gishtin pa ngecje, me shpejtësinë e plotë të ekranit (90 ose 120 Hz aty ku ekrani e lejon). Kursimi i baterisë u hoq, prandaj qielli lëviz gjithmonë butë.
-
-🔠 **Madhësia e kohës së mbetur** – 80 %, 100 %, 115 % ose 130 %, te Cilësimet. Dy pikat e orës tani qëndrojnë në mes të shifrave.
-
-🏔️ **Male më të qeta në perëndim** – dielli i ulët nuk e zbardh më vargun e maleve.
-
-## Të reja në versionin 1.7
-
-👆 **Vaktet rrëshqasin butë** – ndjekin gishtin saktë që në rrëshqitjen e parë, hapen e mbyllen më shpejt dhe pa ngecje.
-
-🏔️ **Më pak shtresa** – para maleve tani janë vetëm dy kodra me pyje, me mjegull mes tyre.
-
-📦 **APK më i vogël** – rreth një e treta e madhësisë së mëparshme.
-
-## Të reja në versionin 1.6
-
-🏔️ **Male si në një fotografi nate** – një varg malesh në largësi, i ulët e shkëmbor, dhe kodra me pyje para tij, me mjegull që shtrihet mes tyre. Ngjyrat vijnë nga qielli i çastit: natën pothuajse të zeza nën një dritë të zbehtë mbi horizont, nën hënën e plotë mjegulla dhe malet ndriçohen pak, ditën malet janë të kaltra nga largësia, dhe në lindje e në perëndim ajri skuqet nga ana e diellit.
-
-❄️ **Pa borë** – as në male, as në pemë, dhe liqeni nuk ngrin më: kalendari nuk e di motin.
-
-✨ **Qielli i natës** – më i errët e më i qetë, me qindra yje të imët deri te malet, një rrip më i çelët ajri mbi horizont dhe Kashta e Kumtrit si re e butë drite.
-
-⏱️ **Sekondat më të vogla** – sa gjysma e orëve e minutave, dhe çdo shifër që ndryshon shuhet butë në tjetrën.
-
-## Nga versionet 1.4 dhe 1.5
-
-🌟 **E premtja** – koha e mbetur shkëlqen në ar, nën datë „Xhuma mubarek"; natën e xhumasë (të enjten pas akshamit) qielli mbushet me yje.
-
-🔢 **Shkronja për kohën e mbetur** – Elegante, Fisnike, Romake, E pastër dhe E gjerë. Shifrat nuk lëvizin kur ndryshojnë.
-
-📅 **Prek datën për muajin** – titujt e vakteve qëndrojnë lart ndërsa ditët rrëshqasin, dhe çdo vakt ka ngjyrën e vet.
-
-🗓️ **Ditët e veçanta** – ditët kombëtare të Kosovës, netët dhe ditët e mëdha islame dhe shënimet e Takvimit të BIK poshtë datës.
-
-⏰ **Alarmi për sabah në ekran** nga jacia deri në imsak, dhe namazet nafile (Duha, Evvabini, Tehexhudi) me shkronja të vogla kur u vjen koha.
-
-⚙️ **Gjithçka sipas teje** – çdo veçori ndizet e fiket te Cilësimet → Veçoritë.
-
 ## Pse Vaktet?
 
-🕌 **Kohët zyrtare të BIK-ut** – jo llogaritje të përafërta. Me dallimet e qyteteve sipas Takvimit (Prishtina −1 min, Sharri +2 min …).
+Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në ekranin tënd: agimi skuqet ngadalë, mesdita është e kaltër, ikindia e artë, nata mbushet me yje, dhe pema buzë liqenit ndërron ngjyrat me stinët. E në mes të tij, sapo e hap, të pret e madhe dhe e qartë koha deri te namazi i ardhshëm.
 
-⏳ **Sa kohë ka mbetur?** – Namazi i ardhshëm dhe numërimi mbrapsht i madh shihen menjëherë, pa kërkuar nëpër tabela.
+🕌 **Kohët zyrtare të BIK-ut** – nga Takvimi i Bashkësisë Islame të Kosovës, për 18 qytete, me dallimin e secilit qytet. Jo llogaritje të përafërta.
 
-🌅 **Një qiell që ndjek orën** – agimi skuqet ngadalë, mesdita është e kaltër, ikindia e artë, muzgu zbehet në blu, nata mbushet me yje. Dielli dhe hëna e vërtetë (në fazën e saj të sotme) lindin e perëndojnë pas maleve; retë ndryshojnë sipas orës, zogjtë dalin në mëngjes e kthehen në mbrëmje, dhe herë pas here bie një yll.
+⏳ **Një vështrim mjafton** – namazi i ardhshëm dhe koha e mbetur shihen menjëherë. Rrëshqit lart për të gjitha vaktet e ditës, alarmin për sabah dhe dy këshilla të reja çdo ditë; prek datën për muajin; rrëshqit anash për ditën tjetër.
 
-⛔ **Kohët e ndaluara** – në lindje, zenit e perëndim të diellit qielli bëhet i kuq dhe të paralajmëron.
+🌅 **Një qiell i gjallë** – dielli dhe hëna e vërtetë, në fazën e saj të sotme, lindin e perëndojnë pas maleve. Retë lundrojnë, zogjtë dalin në mëngjes e kthehen në mbrëmje, mjegulla shtrihet në lugina, dhe në kohët e ndaluara qielli skuqet e të paralajmëron.
 
-🧘 **Vetëm thelbi** – qielli mbush ekranin me kohën e mbetur. Rrëshqit lart për vaktet, alarmin dhe dy këshilla të reja çdo ditë; prek datën për muajin; rrëshqit anash për ditën tjetër ose të mëparshme.
+🌟 **E premtja në ar** – koha e mbetur shkëlqen në ar, dhe natën e xhumasë qielli mbushet me yje.
 
-⏰ **Alarmi për sabah** – të sugjeron orën e alarmit 15, 30, 45 ose 60 minuta para lindjes së diellit.
+📅 **Gjithçka në një vend** – tabela e muajit, data hixhri, ditët kombëtare të Kosovës, netët e mëdha islame dhe shënimet e Takvimit të BIK.
 
-📅 **Tabela e muajit** dhe **data hixhri**, me korrigjim ±2 ditë nëse shpallja e BIK-ut ndryshon.
+🎨 **Si të pëlqen ty** – pamje e çelët ose e errët, shkronja të ndryshme, trashësia dhe madhësia e kohës së mbetur, dhe çdo veçori ndizet e fiket sipas dëshirës.
 
-🎨 **Si të pëlqen ty** – pamje e çelët, e errët ose automatike; stili dhe madhësia e shkronjave; trashësia, shkronjat dhe madhësia e kohës së mbetur.
+⚡ **E butë në çdo telefon** – çdo lëvizje ndjek gishtin pa ngecje, deri në 120 herë në sekondë.
 
-📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit. Ora verore e dimërore llogaritet vetë, prandaj kohët mbeten të sakta edhe në vitet në vijim.
+📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit, dhe ora verore e dimërore llogaritet vetë, vit pas viti.
 
 🔒 **Pa reklama, pa llogari, pa gjurmim** – asnjë e dhënë nuk largohet nga telefoni yt.
 
@@ -106,17 +62,16 @@ Versioni i ri instalohet mbi të vjetrin. Nëse të del „App not installed”,
 2. Nga menyja e shfletuesit zgjidh **„Shto në ekranin kryesor"** / **„Install app"**.
 3. Pas hapjes së parë punon edhe pa internet.
 
-Versioni në shfletues ka ende qiellin e versionit 1.3; risitë e reja vijnë fillimisht në Android.
-
 ## Qytetet
 
 Deçan · Dragash (Sharr) · Drenas · Ferizaj · Gjakovë · Gjilan · Istog · Klinë · Malishevë · Mitrovicë · Pejë · Podujevë · Prishtinë · Prizren · Rahovec · Skënderaj · Suharekë · Vushtrri – dhe kohët bazë për gjithë Kosovën.
 
 ---
 
-## Për zhvilluesit
+<details>
+<summary><b>Për zhvilluesit</b></summary>
 
-### Skedarët
+#### Skedarët
 | Skedari | Çfarë bën |
 |---|---|
 | `index.html` | Faqja |
@@ -130,7 +85,7 @@ Deçan · Dragash (Sharr) · Drenas · Ferizaj · Gjakovë · Gjilan · Istog ·
 | `vercel.json` | Rregullat e cache-it për Vercel |
 | `fonts/`, `icons/` | Shkronja Figtree (licenca OFL) dhe ikonat |
 
-### Burimi i kohëve
+#### Burimi i kohëve
 Kohët janë nga Takvimi zyrtar i Bashkësisë Islame të Kosovës (BIK), 2026:
 https://dituriaislame.com/wp-content/uploads/2026/01/takvimi2026vaktet.pdf
 
@@ -139,10 +94,10 @@ https://dituriaislame.com/wp-content/uploads/2026/01/takvimi2026vaktet.pdf
 - 29 shkurti (vitet e brishta) përdor kohët e 28 shkurtit.
 - Dallimet e qyteteve sipas Takvimit: Prishtina, Ferizaj, Gjilani, Podujeva, Vushtrria −1 min; Sharri (Dragash) +2 min. Qytetet e tjera përdorin kohët bazë.
 
-### Publikimi në Cloudflare
+#### Publikimi në Cloudflare
 Faqja është në **https://vaktet.muamer-arifi.workers.dev** (Cloudflare Workers, si skedarë statikë). Çdo ndryshim në degën `main` publikohet vetë nga Workers Builds (`npx wrangler deploy`, sipas `wrangler.jsonc`); `.assetsignore` e mban jashtë faqes aplikacionin Android, dokumentet dhe skedarët e publikimit.
 
-### Publikimi në Vercel (si mundësi tjetër)
+#### Publikimi në Vercel (si mundësi tjetër)
 1. Hapni vercel.com → Add New → Project → importoni këtë repository nga GitHub.
 2. Framework Preset: **Other**. Nuk ka build – është faqe statike.
 3. Deploy.
@@ -151,12 +106,14 @@ Për ta provuar në kompjuter: `npx serve .` dhe hapni adresën që shfaqet.
 
 Për ta instaluar në telefon: hapni faqen → menyja e shfletuesit → "Shto në ekranin kryesor" / "Install app".
 
-### Aplikacioni Android (Flutter)
+#### Aplikacioni Android (Flutter)
 Dosja [`flutter_app/`](flutter_app/) e përmban aplikacionin Android, të ndërtuar me Flutter. Kohët dhe logjika janë të njëjta me faqen këtu (një test i krahason), dhe punon pa internet.
 
 APK-të ndërtohen automatikisht nga GitHub Actions (skedari `.github/workflows/android-apk.yml`), një për çdo lloj procesori: `vaktet-arm64.apk` dhe `vaktet-arm32.apk`. Hapni **Actions → Android APK → ekzekutimin e fundit** dhe shkarkoni **vaktet-apk**, ose publikoni një version me **Run workflow → Publish a release**. Udhëzimet e plota janë te [`flutter_app/README.md`](flutter_app/README.md).
 
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 
-### Përditësimi
+#### Përditësimi
 Nëse ndryshoni ndonjë skedar, rrisni versionin `CACHE` në `sw.js` (p.sh. `vaktet-v22`) që pajisjet ta marrin versionin e ri.
+
+</details>
