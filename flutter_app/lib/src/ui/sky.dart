@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../logic/prayer.dart';
@@ -1587,7 +1588,7 @@ const List<Shadow> _noteShadow = [Shadow(color: Color(0x66000000), offset: Offse
 
 /// Small notes that travel with the Sun and the Moon across the sky: the UV beside the Sun, the phase beside the
 /// Moon. A tap on a note, or on the Sun or the Moon, tells more.
-class _OrbNotes extends StatelessWidget {
+class _OrbNotes extends StatefulWidget {
   const _OrbNotes({required this.model, required this.full, required this.now, required this.painter});
 
   final TodayModel model;
@@ -1598,22 +1599,73 @@ class _OrbNotes extends StatelessWidget {
   final SkyPainter painter;
 
   @override
+  State<_OrbNotes> createState() => _OrbNotesState();
+}
+
+class _OrbNotesState extends State<_OrbNotes> {
+  /// Where the texts on the screen are (the prayer, the countdown, the date…): a note never covers them.
+  List<Rect>? _texts;
+
+  /// After each frame: finds every text on the screen and keeps where it is, so the notes find a free place.
+  void _measure() {
+    if (!mounted) return;
+    final me = context.findRenderObject();
+    if (me is! RenderBox || !me.attached || !me.hasSize) return;
+    RenderObject root = me;
+    while (root.parent != null) {
+      root = root.parent!;
+    }
+    final origin = me.localToGlobal(Offset.zero);
+    final bounds = Offset.zero & me.size;
+    final found = <Rect>[];
+    void visit(RenderObject o) {
+      if (identical(o, me)) return;
+      if (o is RenderOffstage && o.offstage) return;
+      if (o is RenderOpacity && o.opacity == 0) return;
+      if (o is RenderParagraph) {
+        if (o.hasSize && o.text.toPlainText().trim().isNotEmpty) {
+          final r = (o.localToGlobal(Offset.zero) - origin) & o.size;
+          if (r.overlaps(bounds)) found.add(r);
+        }
+        return;
+      }
+      o.visitChildren(visit);
+    }
+
+    root.visitChildren(visit);
+    final old = _texts;
+    final same =
+        old != null &&
+        old.length == found.length &&
+        Iterable<int>.generate(found.length).every((i) {
+          final a = old[i], b = found[i];
+          return (a.left - b.left).abs() < 2 && (a.top - b.top).abs() < 2 && (a.width - b.width).abs() < 2;
+        });
+    if (!same) setState(() => _texts = found);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    final texts = _texts;
+    if (texts == null) return const SizedBox.expand();
+    final model = widget.model, full = widget.full, painter = widget.painter;
     final scaler = MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, box) {
         final size = box.biggest;
         if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();
-        final t = now();
+        final t = widget.now();
         final scene = model.scene;
         final r = full ? 17.0 : 13.0;
-        final notes = <(Offset, String, bool)>[];
+        // (where, one line, short form for two lines, sun)
+        final notes = <(Offset, String, String, bool)>[];
         final sp = scene.sunProgress;
         if (sp > 0 && sp < 1) {
           final c = painter._arc(size, sp);
           if (painter._aboveHills(size, c, 14) > .5) {
-            final uv = uvIndex(t);
-            notes.add((c, 'UV $uv · ${uvLevel(uv).level}', true));
+            final uv = uvIndex(t), level = uvLevel(uv).level;
+            notes.add((c, 'UV $uv · $level', 'UV $uv\n$level', true));
           }
         }
         final moon = scene.moon;
@@ -1626,7 +1678,8 @@ class _OrbNotes extends StatelessWidget {
         }
         if (mc != null) {
           final pct = (moon.illumination * 100).round();
-          notes.add((mc, '${moonPhaseName(moon.illumination, moon.waxing)} · $pct%', false));
+          final name = moonPhaseName(moon.illumination, moon.waxing);
+          notes.add((mc, '$name · $pct%', '$name\n$pct%', false));
         }
         if (notes.isEmpty) return const SizedBox.shrink();
 
@@ -1639,85 +1692,88 @@ class _OrbNotes extends StatelessWidget {
           shadows: _noteShadow,
         );
         final inside = (Offset.zero & size).deflate(6);
-        final placed = <Rect>[];
+        final busy = [for (final x in texts) x.inflate(6)];
         final children = <Widget>[];
         for (final n in notes) {
-          final tp = TextPainter(
-            text: TextSpan(text: n.$2, style: style),
-            textDirection: TextDirection.ltr,
-            textScaler: scaler,
-            maxLines: 1,
-          )..layout();
-          final w = tp.width + 14, h = tp.height + 6;
-          tp.dispose();
           final c = n.$1;
           final gap = r + 7;
-          final left = Offset(c.dx - gap - w, c.dy - h / 2), right = Offset(c.dx + gap, c.dy - h / 2);
-          final outerLeft = c.dx < size.width / 2;
-          // beside it on the side of the nearer edge, clear of the text in the middle; else under, the other side, over
-          final candidates = [
-            outerLeft ? left : right,
-            Offset(c.dx - w / 2, c.dy + gap),
-            outerLeft ? right : left,
-            Offset(c.dx - w / 2, c.dy - gap - h),
-          ];
-          Rect? spot;
-          for (final o in candidates) {
-            final rect = o & Size(w, h);
-            final fits = rect.left >= inside.left &&
-                rect.top >= inside.top &&
-                rect.right <= inside.right &&
-                rect.bottom <= inside.bottom;
-            if (fits && !placed.any((p) => p.overlaps(rect))) {
-              spot = rect;
-              break;
+          // the free place nearest to it: beside it, under, over, then the corners; in one line, else in two
+          (Rect, String)? spot;
+          for (final text in [n.$2, n.$3]) {
+            final tp = TextPainter(
+              text: TextSpan(text: text, style: style),
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.center,
+              textScaler: scaler,
+            )..layout();
+            final w = tp.width + 14, h = tp.height + 6;
+            tp.dispose();
+            final toEdge = c.dx < size.width / 2;
+            final left = Offset(c.dx - gap - w, c.dy - h / 2), right = Offset(c.dx + gap, c.dy - h / 2);
+            final candidates = [
+              toEdge ? left : right,
+              Offset(c.dx - w / 2, c.dy + gap),
+              Offset(c.dx - w / 2, c.dy - gap - h),
+              toEdge ? right : left,
+              Offset(c.dx + gap * .7, c.dy + gap * .7),
+              Offset(c.dx - gap * .7 - w, c.dy + gap * .7),
+              Offset(c.dx + gap * .7, c.dy - gap * .7 - h),
+              Offset(c.dx - gap * .7 - w, c.dy - gap * .7 - h),
+            ];
+            for (final o in candidates) {
+              final rect = o & Size(w, h);
+              final fits =
+                  rect.left >= inside.left &&
+                  rect.top >= inside.top &&
+                  rect.right <= inside.right &&
+                  rect.bottom <= inside.bottom;
+              if (fits && !busy.any((b) => b.overlaps(rect))) {
+                spot = (rect, text);
+                break;
+              }
             }
+            if (spot != null) break;
           }
-          spot ??= Rect.fromLTWH(
-            (c.dx - w / 2).clamp(inside.left, math.max(inside.left, inside.right - w)),
-            (c.dy + gap).clamp(inside.top, math.max(inside.top, inside.bottom - h)),
-            w,
-            h,
-          );
-          placed.add(spot);
-          final sun = n.$3;
+          final sun = n.$4;
           void open() {
-            showSkyInfo(context, sun: sun, model: model, now: now());
+            showSkyInfo(context, sun: sun, model: model, now: widget.now());
           }
 
-          children
-            ..add(
-              Positioned(
-                left: c.dx - 22,
-                top: c.dy - 22,
-                width: 44,
-                height: 44,
-                child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: open),
-              ),
-            )
-            ..add(
-              Positioned(
-                left: spot.left,
-                top: spot.top,
-                child: Semantics(
-                  button: true,
-                  label: '${n.$2}. Më shumë për ${sun ? 'diellin' : 'hënën'}',
-                  excludeSemantics: true,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: open,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                      decoration: const BoxDecoration(
-                        color: Color(0x2E000000),
-                        borderRadius: BorderRadius.all(Radius.circular(10)),
-                      ),
-                      child: Text(n.$2, style: style, maxLines: 1, softWrap: false),
+          // the Sun or the Moon itself opens the same, with or without a note
+          children.add(
+            Positioned(
+              left: c.dx - 22,
+              top: c.dy - 22,
+              width: 44,
+              height: 44,
+              child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: open),
+            ),
+          );
+          if (spot == null) continue; // no free place: no note rather than one over the text
+          busy.add(spot.$1.inflate(4));
+          children.add(
+            Positioned(
+              left: spot.$1.left,
+              top: spot.$1.top,
+              child: Semantics(
+                button: true,
+                label: '${n.$2}. Më shumë për ${sun ? 'diellin' : 'hënën'}',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: open,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: const BoxDecoration(
+                      color: Color(0x2E000000),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
+                    child: Text(spot.$2, style: style, textAlign: TextAlign.center, softWrap: false),
                   ),
                 ),
               ),
-            );
+            ),
+          );
         }
         return Stack(children: children);
       },
