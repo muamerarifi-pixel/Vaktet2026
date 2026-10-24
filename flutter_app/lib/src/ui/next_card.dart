@@ -96,7 +96,14 @@ class NextCard extends StatelessWidget {
     };
     return Semantics(
       liveRegion: true,
-      child: SkyCard(model: model, mode: mode, clock: clock, options: options, child: content),
+      child: SkyCard(
+        model: model,
+        mode: mode,
+        clock: clock,
+        options: options,
+        now: () => time.value,
+        child: content,
+      ),
     );
   }
 }

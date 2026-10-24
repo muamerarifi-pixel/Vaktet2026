@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../logic/prayer.dart';
+import '../logic/sun_moon.dart';
 import 'colors.dart';
 import 'landscape.dart';
+import 'sky_info.dart';
+import 'text.dart';
 
 /// How the sky card is shown.
 enum SkyMode {
@@ -1372,10 +1375,14 @@ class SkyCard extends StatelessWidget {
     required this.clock,
     required this.child,
     this.options = const SkyOptions(),
+    this.now,
   });
 
   final TodayModel model;
   final SkyMode mode;
+
+  /// The moment now (today only): the small notes beside the Sun and the Moon are shown with it.
+  final int Function()? now;
 
   /// The clock while the sky moves, or null while it is still.
   final SkyClock? clock;
@@ -1392,6 +1399,7 @@ class SkyCard extends StatelessWidget {
     final forbidden = model.card?.forbidden ?? false;
     final full = mode == SkyMode.full;
     final radius = full ? 0.0 : 28.0;
+    final nowFn = now;
 
     SkyPainter painter(SkyLayer l) => SkyPainter(
       layer: l,
@@ -1414,6 +1422,10 @@ class SkyCard extends StatelessWidget {
         Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.motion)))),
         Positioned.fill(child: StillSky(painters: [painter(SkyLayer.land), painter(SkyLayer.front)])),
         child,
+        if (nowFn != null && model.isToday)
+          Positioned.fill(
+            child: _OrbNotes(model: model, full: full, now: nowFn, painter: painter(SkyLayer.front)),
+          ),
       ],
     );
     if (!full) card = ClipRRect(borderRadius: BorderRadius.circular(radius), child: card);
@@ -1568,5 +1580,147 @@ class _EllipseTransform extends GradientTransform {
       ..translateByDouble(cx, y, 0, 1)
       ..scaleByDouble(rx * bounds.width / shortest, ry * bounds.height / shortest, 1, 1)
       ..translateByDouble(-cx, -y, 0, 1);
+  }
+}
+
+const List<Shadow> _noteShadow = [Shadow(color: Color(0x66000000), offset: Offset(0, 1), blurRadius: 3)];
+
+/// Small notes that travel with the Sun and the Moon across the sky: the UV beside the Sun, the phase beside the
+/// Moon. A tap on a note, or on the Sun or the Moon, tells more.
+class _OrbNotes extends StatelessWidget {
+  const _OrbNotes({required this.model, required this.full, required this.now, required this.painter});
+
+  final TodayModel model;
+  final bool full;
+  final int Function() now;
+
+  /// Where the Sun and the Moon are drawn, so the notes keep to them.
+  final SkyPainter painter;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final size = box.biggest;
+        if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();
+        final t = now();
+        final scene = model.scene;
+        final r = full ? 17.0 : 13.0;
+        final notes = <(Offset, String, bool)>[];
+        final sp = scene.sunProgress;
+        if (sp > 0 && sp < 1) {
+          final c = painter._arc(size, sp);
+          if (painter._aboveHills(size, c, 14) > .5) {
+            final uv = uvIndex(t);
+            notes.add((c, 'UV $uv · ${uvLevel(uv).level}', true));
+          }
+        }
+        final moon = scene.moon;
+        Offset? mc;
+        if (moon.illumination < .015) {
+          if (sp < 0 || sp > 1) mc = Offset(.86 * size.width, painter._horizon(size) - (full ? 46 : 20));
+        } else if (moon.progress > 0 && moon.progress < 1) {
+          final c = painter._arc(size, moon.progress);
+          if (painter._aboveHills(size, c, r) > .5) mc = c;
+        }
+        if (mc != null) {
+          final pct = (moon.illumination * 100).round();
+          notes.add((mc, '${moonPhaseName(moon.illumination, moon.waxing)} · $pct%', false));
+        }
+        if (notes.isEmpty) return const SizedBox.shrink();
+
+        final style = vt(
+          full ? 11.5 : 10.5,
+          750,
+          color: const Color(0xFFFFFFFF),
+          opacity: .92,
+          height: 1.2,
+          shadows: _noteShadow,
+        );
+        final inside = (Offset.zero & size).deflate(6);
+        final placed = <Rect>[];
+        final children = <Widget>[];
+        for (final n in notes) {
+          final tp = TextPainter(
+            text: TextSpan(text: n.$2, style: style),
+            textDirection: TextDirection.ltr,
+            textScaler: scaler,
+            maxLines: 1,
+          )..layout();
+          final w = tp.width + 14, h = tp.height + 6;
+          tp.dispose();
+          final c = n.$1;
+          final gap = r + 7;
+          final left = Offset(c.dx - gap - w, c.dy - h / 2), right = Offset(c.dx + gap, c.dy - h / 2);
+          final outerLeft = c.dx < size.width / 2;
+          // beside it on the side of the nearer edge, clear of the text in the middle; else under, the other side, over
+          final candidates = [
+            outerLeft ? left : right,
+            Offset(c.dx - w / 2, c.dy + gap),
+            outerLeft ? right : left,
+            Offset(c.dx - w / 2, c.dy - gap - h),
+          ];
+          Rect? spot;
+          for (final o in candidates) {
+            final rect = o & Size(w, h);
+            final fits = rect.left >= inside.left &&
+                rect.top >= inside.top &&
+                rect.right <= inside.right &&
+                rect.bottom <= inside.bottom;
+            if (fits && !placed.any((p) => p.overlaps(rect))) {
+              spot = rect;
+              break;
+            }
+          }
+          spot ??= Rect.fromLTWH(
+            (c.dx - w / 2).clamp(inside.left, math.max(inside.left, inside.right - w)),
+            (c.dy + gap).clamp(inside.top, math.max(inside.top, inside.bottom - h)),
+            w,
+            h,
+          );
+          placed.add(spot);
+          final sun = n.$3;
+          void open() {
+            showSkyInfo(context, sun: sun, model: model, now: now());
+          }
+
+          children
+            ..add(
+              Positioned(
+                left: c.dx - 22,
+                top: c.dy - 22,
+                width: 44,
+                height: 44,
+                child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: open),
+              ),
+            )
+            ..add(
+              Positioned(
+                left: spot.left,
+                top: spot.top,
+                child: Semantics(
+                  button: true,
+                  label: '${n.$2}. Më shumë për ${sun ? 'diellin' : 'hënën'}',
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: open,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: const BoxDecoration(
+                        color: Color(0x2E000000),
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                      child: Text(n.$2, style: style, maxLines: 1, softWrap: false),
+                    ),
+                  ),
+                ),
+              ),
+            );
+        }
+        return Stack(children: children);
+      },
+    );
   }
 }
