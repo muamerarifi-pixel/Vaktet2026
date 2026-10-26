@@ -1,12 +1,16 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../logic/prayer.dart';
+import '../logic/sun_moon.dart';
 import 'colors.dart';
 import 'landscape.dart';
+import 'sky_info.dart';
+import 'text.dart';
 
 /// How the sky card is shown.
 enum SkyMode {
@@ -17,47 +21,158 @@ enum SkyMode {
   full,
 }
 
-/// The clock of everything that moves slowly on the sky: the drifting clouds, the twinkling stars, the birds,
-/// and the digits of the countdown as they fade.
+/// The clock of everything that moves on the sky: the drifting clouds, the twinkling stars, the birds and planes.
 ///
-/// It steps 20 times a second on a plain timer. A ticker tied to the screen would ask for a new picture on every
-/// refresh (60–120 a second) even when nothing has moved, and every picture costs battery; slow motion looks just
-/// as smooth at 20. There is one clock for the whole app, so the sky and the fading digits share the same
-/// pictures.
+/// It ticks with the screen itself, on every refresh (60, 90 or 120 times a second, whatever the phone shows), so
+/// the sky moves as smoothly as the screen can show it. There is one clock for the whole app.
 ///
-/// It runs only while someone holds it (the moving sky, a digit that is fading), and its time stands still in
-/// between, so nothing jumps when it starts again.
+/// It runs while someone holds it (the sky on the screen), and its time stands still in between (the app out of
+/// sight), so nothing jumps when it starts again.
 class SkyClock extends ChangeNotifier {
   SkyClock._();
 
   static final SkyClock shared = SkyClock._();
 
-  static const Duration step = Duration(milliseconds: 50);
-
   final Set<Object> _holders = {};
-  Timer? _timer;
-  int _steps = 0;
+  late final Ticker _ticker = Ticker(_tick, debugLabel: 'SkyClock');
+
+  /// The time it ran before the current run, and in the current run.
+  Duration _before = Duration.zero;
+  Duration _run = Duration.zero;
 
   /// The clock's own time: it only moves while the clock runs.
-  double get seconds => _steps * step.inMicroseconds / 1e6;
+  double get seconds => (_before + _run).inMicroseconds / 1e6;
 
-  bool get running => _timer != null;
+  bool get running => _ticker.isActive;
 
   bool isHeldBy(Object who) => _holders.contains(who);
 
   /// Keeps the clock running until [who] lets go.
   void hold(Object who) {
-    if (!_holders.add(who) || _timer != null) return;
-    _timer = Timer.periodic(step, (_) {
-      _steps++;
-      notifyListeners();
-    });
+    if (!_holders.add(who) || _ticker.isActive) return;
+    _ticker.start();
+  }
+
+  void _tick(Duration elapsed) {
+    _run = elapsed;
+    notifyListeners();
   }
 
   void release(Object who) {
     if (!_holders.remove(who) || _holders.isNotEmpty) return;
-    _timer?.cancel();
-    _timer = null;
+    _ticker.stop();
+    _before += _run;
+    _run = Duration.zero;
+  }
+}
+
+/// Still layers of the sky, painted once into a picture at the screen's own resolution, and that picture shown on
+/// every frame.
+///
+/// The screen is drawn again on every refresh (the stars twinkle, the clouds drift), and showing one picture is a
+/// single quick step where the gradients, the thousand faint stars, the Milky Way, the mountains, the lake and the
+/// mist would be hundreds. They are painted again only when the light changes (about once a minute), or the
+/// screen changes size.
+class StillSky extends LeafRenderObjectWidget {
+  const StillSky({super.key, required this.painters});
+
+  /// Painted one over the other, in this order.
+  final List<CustomPainter> painters;
+
+  @override
+  RenderStillSky createRenderObject(BuildContext context) =>
+      RenderStillSky(painters, MediaQuery.devicePixelRatioOf(context));
+
+  @override
+  void updateRenderObject(BuildContext context, RenderStillSky renderObject) => renderObject
+    ..painters = painters
+    ..pixelRatio = MediaQuery.devicePixelRatioOf(context);
+}
+
+class RenderStillSky extends RenderBox {
+  RenderStillSky(this._painters, this._pixelRatio);
+
+  List<CustomPainter> _painters;
+  set painters(List<CustomPainter> value) {
+    var changed = value.length != _painters.length;
+    for (var i = 0; !changed && i < value.length; i++) {
+      final now = value[i], was = _painters[i];
+      changed = now.runtimeType != was.runtimeType || now.shouldRepaint(was);
+    }
+    _painters = value;
+    if (changed) _forget();
+  }
+
+  double _pixelRatio;
+  set pixelRatio(double value) {
+    if (value == _pixelRatio) return;
+    _pixelRatio = value;
+    _forget();
+  }
+
+  ui.Image? _image;
+  Size? _imageFor;
+
+  /// Whether the picture is there (for tests).
+  bool get hasPicture => _image != null;
+
+  void _forget() {
+    _image?.dispose();
+    _image = null;
+    markNeedsPaint();
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  /// Its picture changes on its own, and nothing around it paints it again.
+  @override
+  bool get isRepaintBoundary => true;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (size.isEmpty) return;
+    if (_image == null || _imageFor != size) {
+      _image?.dispose();
+      _image = _render();
+      _imageFor = size;
+    }
+    final image = _image!;
+    context.canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      offset & size,
+      Paint()..filterQuality = FilterQuality.low,
+    );
+  }
+
+  ui.Image _render() {
+    // the screen's own pixels, but never a huge picture (a tablet): at most about 9 million pixels, 4096 a side
+    final area = size.width * size.height;
+    final scale = math.max(
+      .25,
+      math.min(_pixelRatio, math.min(4096 / math.max(size.width, size.height), math.sqrt(9.4e6 / area))),
+    );
+    final w = math.max(1, (size.width * scale).ceil()), h = math.max(1, (size.height * scale).ceil());
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..scale(w / size.width, h / size.height);
+    for (final painter in _painters) {
+      painter.paint(canvas, size);
+    }
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(w, h);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    _image = null;
+    super.dispose();
   }
 }
 
@@ -394,10 +509,10 @@ double _wave(double seconds, double period, [double phase = 0]) =>
 /// Which part of the sky a painter draws. The parts that never move are kept apart from the moving one,
 /// so only the moving one is painted again on each frame.
 enum SkyLayer {
-  /// The gradient of the sky.
+  /// The gradient of the sky, its haze, the faint stars and the Milky Way, the glow over the hills and the sun.
   back,
 
-  /// Haze, clouds, stars, shooting stars, sun rays, the sun or the moon.
+  /// What moves: the twinkling stars, shooting stars, the moon, clouds, birds, planes and fireflies.
   motion,
 
   /// The mountains and the lake (full screen), or the hills (card). Painted only when the light changes.
@@ -513,6 +628,10 @@ class SkyPainter extends CustomPainter {
           _milkyWay(canvas, size, pal);
           _paintStars(canvas, size, pal, 0, twinkling: false);
         }
+        // the glows of the hour don't move between two minutes, so they are part of the still picture too (they
+        // are blended in a way that would cost a second pass over the screen on every frame)
+        _horizonGlow(canvas, size);
+        _paintSun(canvas, size, pal);
       case SkyLayer.motion:
         // still, the sky shows the moment it stopped at
         final t = SkyClock.shared.seconds;
@@ -520,9 +639,7 @@ class SkyPainter extends CustomPainter {
         final life = options.life;
         _paintStars(canvas, size, pal, t, twinkling: true);
         if (_full && live && life) _shootingStar(canvas, size, pal, t);
-        _horizonGlow(canvas, size);
         _paintMoon(canvas, size, t);
-        _paintSun(canvas, size, pal, t);
         if (_full) _brightStar(canvas, size, t);
         if (_full && life) _paintClouds(canvas, size, t);
         if (_full && live && life) {
@@ -746,8 +863,8 @@ class SkyPainter extends CustomPainter {
     );
   }
 
-  /// The sun with its soft glow (and its rays on the full screen).
-  void _paintSun(Canvas canvas, Size size, SkyPalette pal, double t) {
+  /// The sun with its soft glow.
+  void _paintSun(Canvas canvas, Size size, SkyPalette pal) {
     final p = scene.sunProgress;
     if (p < -.06 || p > 1.06) return; // well below the hills
     final c = _arc(size, p);
@@ -756,15 +873,14 @@ class SkyPainter extends CustomPainter {
     final above = _aboveHills(size, c, 14);
     if (above <= 0) return;
     Color a(double o) => s.withValues(alpha: o * above);
-    final breathe = _full ? 1 + .05 * _wave(t, 6) : 1.0;
     canvas.drawCircle(
       c,
-      r * breathe,
+      r,
       Paint()
         ..blendMode = BlendMode.screen
         ..shader = ui.Gradient.radial(
           c,
-          r * breathe,
+          r,
           [a(.95), a(.95), a(.5), a(.26), a(.13), a(.05), a(.015), a(0)],
           const [0, .085, .10, .16, .28, .50, .72, .92],
         ),
@@ -1232,6 +1348,7 @@ class SkyPainter extends CustomPainter {
     }
   }
 
+  /// The still layers (see [StillSky]) are painted again only when this says so.
   @override
   bool shouldRepaint(SkyPainter old) =>
       old.layer != layer ||
@@ -1240,11 +1357,14 @@ class SkyPainter extends CustomPainter {
       old.mode != mode ||
       old.dark != dark ||
       old.radius != radius ||
-      old.clock != clock ||
       old.scene != scene ||
       old.options != options ||
       (layer == SkyLayer.motion &&
-          (old.orb.sun != orb.sun || old.orb.x != orb.x || old.orb.y != orb.y || old.orb.yFull != orb.yFull));
+          (old.clock != clock ||
+              old.orb.sun != orb.sun ||
+              old.orb.x != orb.x ||
+              old.orb.y != orb.y ||
+              old.orb.yFull != orb.yFull));
 }
 
 /// The card with the sky behind its content.
@@ -1256,15 +1376,22 @@ class SkyCard extends StatelessWidget {
     required this.clock,
     required this.child,
     this.options = const SkyOptions(),
+    this.now,
   });
 
   final TodayModel model;
   final SkyMode mode;
 
+  /// The moment now (today only): the small notes beside the Sun and the Moon are shown with it.
+  final int Function()? now;
+
   /// The clock while the sky moves, or null while it is still.
   final SkyClock? clock;
   final Widget child;
   final SkyOptions options;
+
+  /// Room around the card's halo for its blur to spread into.
+  static const double _haloRoom = 90;
 
   @override
   Widget build(BuildContext context) {
@@ -1273,29 +1400,34 @@ class SkyCard extends StatelessWidget {
     final forbidden = model.card?.forbidden ?? false;
     final full = mode == SkyMode.full;
     final radius = full ? 0.0 : 28.0;
+    final nowFn = now;
 
-    Widget layer(SkyLayer l) => Positioned.fill(
-      child: RepaintBoundary(
-        child: CustomPaint(
-          painter: SkyPainter(
-            layer: l,
-            phase: model.phase,
-            orb: model.orb,
-            scene: model.scene,
-            forbidden: forbidden,
-            mode: mode,
-            dark: dark,
-            radius: radius,
-            clock: clock,
-            options: options,
-          ),
-        ),
-      ),
+    SkyPainter painter(SkyLayer l) => SkyPainter(
+      layer: l,
+      phase: model.phase,
+      orb: model.orb,
+      scene: model.scene,
+      forbidden: forbidden,
+      mode: mode,
+      dark: dark,
+      radius: radius,
+      clock: clock,
+      options: options,
     );
 
+    // only the moving layer is painted on every frame; the ones under and over it are still pictures
     Widget card = Stack(
       fit: full ? StackFit.expand : StackFit.loose,
-      children: [layer(SkyLayer.back), layer(SkyLayer.motion), layer(SkyLayer.land), layer(SkyLayer.front), child],
+      children: [
+        Positioned.fill(child: StillSky(painters: [painter(SkyLayer.back)])),
+        Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.motion)))),
+        Positioned.fill(child: StillSky(painters: [painter(SkyLayer.land), painter(SkyLayer.front)])),
+        child,
+        if (nowFn != null && model.isToday)
+          Positioned.fill(
+            child: _OrbNotes(model: model, full: full, now: nowFn, painter: painter(SkyLayer.front)),
+          ),
+      ],
     );
     if (!full) card = ClipRRect(borderRadius: BorderRadius.circular(radius), child: card);
     if (full) return card;
@@ -1319,17 +1451,26 @@ class SkyCard extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // blurred halo of the same sky, so the card glows into the page
+        // blurred halo of the same sky, so the card glows into the page: blurred once into a picture (with room
+        // around it for the blur), not again on every frame
         Positioned(
-          left: 18,
-          right: 18,
-          top: 22,
-          bottom: -12,
-          child: ExcludeSemantics(
-            child: RepaintBoundary(
-              child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-                child: Opacity(opacity: dark ? .4 : .5, child: halo),
+          left: 18 - _haloRoom,
+          right: 18 - _haloRoom,
+          top: 22 - _haloRoom,
+          bottom: -12 - _haloRoom,
+          child: IgnorePointer(
+            child: ExcludeSemantics(
+              child: RepaintBoundary(
+                child: _StillPicture(
+                  stamp: (model.phase, dark, forbidden),
+                  child: Padding(
+                    padding: const EdgeInsets.all(_haloRoom),
+                    child: ImageFiltered(
+                      imageFilter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                      child: Opacity(opacity: dark ? .4 : .5, child: halo),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -1352,6 +1493,38 @@ class SkyCard extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Shows [child] as one picture, taken once, and again only when [stamp] changes (or the size does). For things
+/// that never change between two of their builds, and cost much to draw (a blur).
+class _StillPicture extends StatefulWidget {
+  const _StillPicture({required this.stamp, required this.child});
+
+  final Object stamp;
+  final Widget child;
+
+  @override
+  State<_StillPicture> createState() => _StillPictureState();
+}
+
+class _StillPictureState extends State<_StillPicture> {
+  final SnapshotController _snap = SnapshotController(allowSnapshotting: true);
+
+  @override
+  void didUpdateWidget(_StillPicture old) {
+    super.didUpdateWidget(old);
+    if (old.stamp != widget.stamp) _snap.clear();
+  }
+
+  @override
+  void dispose() {
+    _snap.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      SnapshotWidget(controller: _snap, mode: SnapshotMode.permissive, autoresize: true, child: widget.child);
 }
 
 /// A soft wash of the current sky behind the whole page:
@@ -1408,5 +1581,202 @@ class _EllipseTransform extends GradientTransform {
       ..translateByDouble(cx, y, 0, 1)
       ..scaleByDouble(rx * bounds.width / shortest, ry * bounds.height / shortest, 1, 1)
       ..translateByDouble(-cx, -y, 0, 1);
+  }
+}
+
+const List<Shadow> _noteShadow = [Shadow(color: Color(0x66000000), offset: Offset(0, 1), blurRadius: 3)];
+
+/// Small notes that travel with the Sun and the Moon across the sky: the UV beside the Sun, the phase beside the
+/// Moon. A tap on a note, or on the Sun or the Moon, tells more.
+class _OrbNotes extends StatefulWidget {
+  const _OrbNotes({required this.model, required this.full, required this.now, required this.painter});
+
+  final TodayModel model;
+  final bool full;
+  final int Function() now;
+
+  /// Where the Sun and the Moon are drawn, so the notes keep to them.
+  final SkyPainter painter;
+
+  @override
+  State<_OrbNotes> createState() => _OrbNotesState();
+}
+
+class _OrbNotesState extends State<_OrbNotes> {
+  /// Where the texts on the screen are (the prayer, the countdown, the date…): a note never covers them.
+  List<Rect>? _texts;
+
+  /// After each frame: finds every text on the screen and keeps where it is, so the notes find a free place.
+  void _measure() {
+    if (!mounted) return;
+    final me = context.findRenderObject();
+    if (me is! RenderBox || !me.attached || !me.hasSize) return;
+    RenderObject root = me;
+    while (root.parent != null) {
+      root = root.parent!;
+    }
+    final origin = me.localToGlobal(Offset.zero);
+    final bounds = Offset.zero & me.size;
+    final found = <Rect>[];
+    void visit(RenderObject o) {
+      if (identical(o, me)) return;
+      if (o is RenderOffstage && o.offstage) return;
+      if (o is RenderOpacity && o.opacity == 0) return;
+      if (o is RenderParagraph) {
+        if (o.hasSize && o.text.toPlainText().trim().isNotEmpty) {
+          final r = (o.localToGlobal(Offset.zero) - origin) & o.size;
+          if (r.overlaps(bounds)) found.add(r);
+        }
+        return;
+      }
+      o.visitChildren(visit);
+    }
+
+    root.visitChildren(visit);
+    final old = _texts;
+    final same =
+        old != null &&
+        old.length == found.length &&
+        Iterable<int>.generate(found.length).every((i) {
+          final a = old[i], b = found[i];
+          return (a.left - b.left).abs() < 2 && (a.top - b.top).abs() < 2 && (a.width - b.width).abs() < 2;
+        });
+    if (!same) setState(() => _texts = found);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    final texts = _texts;
+    if (texts == null) return const SizedBox.expand();
+    final model = widget.model, full = widget.full, painter = widget.painter;
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final size = box.biggest;
+        if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();
+        final t = widget.now();
+        final scene = model.scene;
+        final r = full ? 17.0 : 13.0;
+        // (where, one line, short form for two lines, sun)
+        final notes = <(Offset, String, String, bool)>[];
+        final sp = scene.sunProgress;
+        if (sp > 0 && sp < 1) {
+          final c = painter._arc(size, sp);
+          if (painter._aboveHills(size, c, 14) > .5) {
+            final uv = uvIndex(t), level = uvLevel(uv).level;
+            notes.add((c, 'UV $uv · $level', 'UV $uv\n$level', true));
+          }
+        }
+        final moon = scene.moon;
+        Offset? mc;
+        if (moon.illumination < .015) {
+          if (sp < 0 || sp > 1) mc = Offset(.86 * size.width, painter._horizon(size) - (full ? 46 : 20));
+        } else if (moon.progress > 0 && moon.progress < 1) {
+          final c = painter._arc(size, moon.progress);
+          if (painter._aboveHills(size, c, r) > .5) mc = c;
+        }
+        if (mc != null) {
+          final pct = (moon.illumination * 100).round();
+          final name = moonPhaseName(moon.illumination, moon.waxing);
+          notes.add((mc, '$name · $pct%', '$name\n$pct%', false));
+        }
+        if (notes.isEmpty) return const SizedBox.shrink();
+
+        final style = vt(
+          full ? 11.5 : 10.5,
+          750,
+          color: const Color(0xFFFFFFFF),
+          opacity: .92,
+          height: 1.2,
+          shadows: _noteShadow,
+        );
+        final inside = (Offset.zero & size).deflate(6);
+        final busy = [for (final x in texts) x.inflate(6)];
+        final children = <Widget>[];
+        for (final n in notes) {
+          final c = n.$1;
+          final gap = r + 7;
+          // the free place nearest to it: beside it, under, over, then the corners; in one line, else in two
+          (Rect, String)? spot;
+          for (final text in [n.$2, n.$3]) {
+            final tp = TextPainter(
+              text: TextSpan(text: text, style: style),
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.center,
+              textScaler: scaler,
+            )..layout();
+            final w = tp.width + 14, h = tp.height + 6;
+            tp.dispose();
+            final toEdge = c.dx < size.width / 2;
+            final left = Offset(c.dx - gap - w, c.dy - h / 2), right = Offset(c.dx + gap, c.dy - h / 2);
+            final candidates = [
+              toEdge ? left : right,
+              Offset(c.dx - w / 2, c.dy + gap),
+              Offset(c.dx - w / 2, c.dy - gap - h),
+              toEdge ? right : left,
+              Offset(c.dx + gap * .7, c.dy + gap * .7),
+              Offset(c.dx - gap * .7 - w, c.dy + gap * .7),
+              Offset(c.dx + gap * .7, c.dy - gap * .7 - h),
+              Offset(c.dx - gap * .7 - w, c.dy - gap * .7 - h),
+            ];
+            for (final o in candidates) {
+              final rect = o & Size(w, h);
+              final fits =
+                  rect.left >= inside.left &&
+                  rect.top >= inside.top &&
+                  rect.right <= inside.right &&
+                  rect.bottom <= inside.bottom;
+              if (fits && !busy.any((b) => b.overlaps(rect))) {
+                spot = (rect, text);
+                break;
+              }
+            }
+            if (spot != null) break;
+          }
+          final sun = n.$4;
+          void open() {
+            showSkyInfo(context, sun: sun, model: model, now: widget.now());
+          }
+
+          // the Sun or the Moon itself opens the same, with or without a note
+          children.add(
+            Positioned(
+              left: c.dx - 22,
+              top: c.dy - 22,
+              width: 44,
+              height: 44,
+              child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: open),
+            ),
+          );
+          if (spot == null) continue; // no free place: no note rather than one over the text
+          busy.add(spot.$1.inflate(4));
+          children.add(
+            Positioned(
+              left: spot.$1.left,
+              top: spot.$1.top,
+              child: Semantics(
+                button: true,
+                label: '${n.$2}. Më shumë për ${sun ? 'diellin' : 'hënën'}',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: open,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: const BoxDecoration(
+                      color: Color(0x2E000000),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Text(spot.$2, style: style, textAlign: TextAlign.center, softWrap: false),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        return Stack(children: children);
+      },
+    );
   }
 }

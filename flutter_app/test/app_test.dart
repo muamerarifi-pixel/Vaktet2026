@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaktet/src/app.dart';
 import 'package:vaktet/src/logic/day.dart';
 import 'package:vaktet/src/state/app_controller.dart';
+import 'package:vaktet/src/ui/glass.dart';
 import 'package:vaktet/src/ui/next_card.dart';
 
 import 'test_fonts.dart';
@@ -83,12 +84,14 @@ void main() {
     expect(sizeOf('0'), closeTo(sizeOf('1') * CountdownNumber.secondsScale, .01));
     now += 61 * 1000;
     controller.tick();
-    // the digits that change fade into the new ones: halfway, both are there
+    // the digits that change fade into the new ones: halfway, both are there, half see-through
     await tester.pump();
     await tester.pump(CountdownNumber.fade ~/ 2);
-    final fading = find.descendant(of: _countdown('01:12:59'), matching: find.byType(Opacity));
-    expect(fading, findsWidgets);
-    // the fade steps with the sky's 20-a-second clock, not with every refresh of the screen
+    final old = find.descendant(of: _countdown('01:12:59'), matching: find.text('4'));
+    expect(old, findsOneWidget);
+    final see = tester.widgetList<FadeTransition>(find.ancestor(of: old, matching: find.byType(FadeTransition)));
+    expect(see.any((f) => f.opacity.value > 0 && f.opacity.value < 1), isTrue);
+    expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('2')), findsOneWidget);
     await tester.pump(CountdownNumber.fade * 2);
     expect(_countdown('01:12:59'), findsOneWidget);
     expect(find.descendant(of: _countdown('01:12:59'), matching: find.text('4')), findsNothing); // faded out
@@ -315,6 +318,32 @@ void main() {
     await _close(tester);
   });
 
+  testWidgets('the remaining time stands on the sky, with no card behind it, and moves out of the sheet\'s way', (
+    tester,
+  ) async {
+    await _open(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(FrostedGlass), findsNothing);
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.descendant(of: _countdown('01:14:00'), matching: find.byType(ShaderMask)), findsNothing);
+    Rect countdownAt() => tester.getRect(_countdown('01:14:00'));
+    final before = countdownAt();
+    // as the sheet comes up, the countdown moves up out of its way
+    final finger = await tester.startGesture(const Offset(195, 600));
+    await finger.moveBy(const Offset(0, -40));
+    await tester.pump();
+    await finger.moveBy(const Offset(0, -40));
+    await tester.pump();
+    expect(find.text('VAKTET E SOTME'), findsOneWidget);
+    expect(countdownAt().center.dy, lessThan(before.center.dy - 5));
+    expect(countdownAt().width, closeTo(before.width, .01)); // only moved, never shrunk
+    await finger.up();
+    await tester.pumpAndSettle();
+    expect(find.text('VAKTET E SOTME'), findsNothing); // a short swipe springs back shut
+    expect(tester.takeException(), isNull);
+    await _close(tester);
+  });
+
   testWidgets('the settings are restored when the app starts again', (tester) async {
     final c = await _open(tester, prefs: {'city': 'peje', 'theme': 'dark', 'hijri': 1, 'alarm': 45});
     expect(c.city.id, 'peje');
@@ -506,13 +535,17 @@ void main() {
 
   testWidgets('Friday: the countdown is gold; the night before, the sky is full of stars', (tester) async {
     // Friday 9 October 2026, 11:00 in Kosovo
+    final gold = find.byWidgetPredicate((w) => w is ShaderMask && w.blendMode == BlendMode.srcIn);
+    final frosted = find.byWidgetPredicate((w) => w is ShaderMask && w.blendMode == BlendMode.modulate);
     var c = await _open(tester, at: DateTime.utc(2026, 10, 9, 9).millisecondsSinceEpoch);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(gold, findsOneWidget);
+    expect(frosted, findsNothing);
     await _close(tester);
     c.dispose();
     // Saturday: plain white
     c = await _open(tester);
-    expect(find.byType(ShaderMask), findsNothing);
+    expect(gold, findsNothing);
+    expect(frosted, findsNothing);
     await _close(tester);
     c.dispose();
     // Thursday 8 October 2026 at 21:00 is Friday night; at 15:00 it is not yet

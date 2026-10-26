@@ -74,6 +74,18 @@ void main() {
           }
         }
 
+        // the largest text size
+        for (final entry in instants.entries) {
+          SharedPreferences.setMockInitialValues({'city': 'dragash', 'fontScale': 1.25, 'countdownSize': 1.3});
+          final controller = AppController(
+            prefs: await SharedPreferences.getInstance(),
+            clock: () => entry.value.millisecondsSinceEpoch,
+          );
+          await tester.pumpWidget(VaktetApp(controller: controller, skyMotion: false));
+          await tester.pump(const Duration(milliseconds: 50));
+          expect(tester.takeException(), isNull, reason: 'largest text ${entry.key}');
+        }
+
         // the month tab and the settings
         SharedPreferences.setMockInitialValues({'city': 'dragash'});
         final controller = AppController(

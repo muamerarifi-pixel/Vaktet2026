@@ -1,49 +1,41 @@
 package com.vaktet.vaktet
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
-import android.os.PowerManager
+import android.os.Bundle
+import android.view.Display
 import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.EventChannel
 
 class MainActivity : FlutterActivity() {
-    /**
-     * Tells the app whether the phone's battery saver is on (now, and whenever it changes), so the sky can stay
-     * still while it is.
-     */
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "vaktet/power_save").setStreamHandler(
-            object : EventChannel.StreamHandler {
-                private var receiver: BroadcastReceiver? = null
-
-                override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
-                    val power = getSystemService(Context.POWER_SERVICE) as PowerManager
-                    events.success(power.isPowerSaveMode)
-                    val changes = object : BroadcastReceiver() {
-                        override fun onReceive(context: Context, intent: Intent) {
-                            events.success(power.isPowerSaveMode)
-                        }
-                    }
-                    val filter = IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
-                    // a broadcast from the system only: nothing else needs to reach this receiver
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        registerReceiver(changes, filter, Context.RECEIVER_NOT_EXPORTED)
-                    } else {
-                        registerReceiver(changes, filter)
-                    }
-                    receiver = changes
-                }
-
-                override fun onCancel(arguments: Any?) {
-                    receiver?.let { unregisterReceiver(it) }
-                    receiver = null
-                }
-            },
-        )
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        preferFastestRefresh()
     }
+
+    override fun onResume() {
+        super.onResume()
+        preferFastestRefresh()
+    }
+
+    /**
+     * Asks for the screen's fastest refresh rate (90, 120 Hz …) at its current resolution. Without it, many
+     * phones keep an app like this one at 60 Hz, and the sky and the swipes move in half the steps the screen
+     * could show. A phone its owner has set to a fixed 60 Hz offers only that, so nothing changes there.
+     */
+    private fun preferFastestRefresh() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val screen = currentScreen() ?: return
+        val current = screen.mode
+        val fastest =
+            screen.supportedModes
+                .filter { it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight }
+                .maxByOrNull { it.refreshRate } ?: return
+        val params = window.attributes
+        if (params.preferredDisplayModeId == fastest.modeId) return
+        params.preferredDisplayModeId = fastest.modeId
+        window.attributes = params
+    }
+
+    @Suppress("DEPRECATION")
+    private fun currentScreen(): Display? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
 }

@@ -190,6 +190,54 @@ const List<(int, int)> seasonColors = [
   (288, 0xFF80593A), // mid-October: russet
 ];
 
+/// The big tree on the shore through the year (day of the year, how much of its crown is in leaf 0–1, the
+/// leaves' colour ARGB): bare in winter, buds in March, fresh green in April, deep green in summer, turning in
+/// September, gold and orange in October, rust and thinning in November, the last leaves in December.
+const List<(int, double, int)> treeYear = [
+  (20, 0, 0xFF6E5A44),
+  (75, 0, 0xFF7C8A4A),
+  (106, .75, 0xFF8DBE58),
+  (140, 1, 0xFF5C9442),
+  (200, 1, 0xFF4A7636),
+  (258, 1, 0xFF7F8C3A),
+  (290, .9, 0xFFD38A2E),
+  (312, .55, 0xFFB5552C),
+  (338, .1, 0xFF7A5034),
+];
+
+/// The tree on [day]: (how much of the crown is in leaf, the leaves' colour).
+(double, int) treeSeason(Day day) {
+  final d = dayOfYear(day).toDouble();
+  for (var i = 0; i < treeYear.length; i++) {
+    final (a, la, ca) = treeYear[i];
+    final (b0, lb, cb) = treeYear[(i + 1) % treeYear.length];
+    final b = i + 1 < treeYear.length ? b0.toDouble() : b0 + 365.0;
+    final x = d < treeYear.first.$1 ? d + 365 : d;
+    if (x >= a && x < b) {
+      final t = _smooth((x - a) / (b - a));
+      return (_q(la + (lb - la) * t, 1 / 100), _lerpArgb(ca, cb, t));
+    }
+  }
+  return (treeYear.first.$2, treeYear.first.$3);
+}
+
+/// What else the tree shows on [day], each 0–1: blossoms (late March – April), fruit (late summer), fallen
+/// leaves on the ground under it (autumn), snow on its branches and along the bank (winter).
+(double, double, double, double) treeExtras(Day day) {
+  final d = dayOfYear(day).toDouble();
+  // 0 until a, up to 1 by b, held until c, back to 0 by e
+  double span(double x, double a, double b, double c, double e) => x <= a || x >= e
+      ? 0
+      : (x < b ? _smooth((x - a) / (b - a)) : (x <= c ? 1 : _smooth((e - x) / (e - c))));
+  final winter = d < 180 ? d + 365 : d; // December to March, in one run
+  return (
+    _q(span(d, 78, 100, 108, 128), 1 / 100),
+    _q(span(d, 213, 236, 266, 290), 1 / 100),
+    _q(span(d, 276, 306, 330, 352), 1 / 100),
+    _q(span(winter, 336, 358, 406, 430), 1 / 100),
+  );
+}
+
 int dayOfYear(Day day) => day.epochDay - Day(day.y, 1, 1).epochDay + 1;
 
 /// The hills' colour on [day], blended between the seasons.
@@ -290,6 +338,12 @@ class SkyScene {
     this.cloudThin = 0,
     this.cloudSunset = 0,
     this.season = 0xFF4E7B4C,
+    this.treeLeaves = 1,
+    this.treeLeaf = 0xFF5C9442,
+    this.treeBlossom = 0,
+    this.treeFruit = 0,
+    this.treeFallen = 0,
+    this.treeSnow = 0,
   });
 
   /// The colours of the sky, melting from one prayer time into the next.
@@ -309,6 +363,16 @@ class SkyScene {
 
   /// The colour of the wooded hills for the season (ARGB).
   final int season;
+
+  /// How much of the big tree's crown is in leaf (0 bare – 1 full), and the leaves' colour (ARGB).
+  final double treeLeaves;
+  final int treeLeaf;
+
+  /// The tree's blossoms, fruit, fallen leaves under it and snow on it (and along the bank), each 0–1.
+  final double treeBlossom;
+  final double treeFruit;
+  final double treeFallen;
+  final double treeSnow;
 
   /// The temporal hour, 0–24.
   final double hour;
@@ -355,10 +419,30 @@ class SkyScene {
       other.tintStrength == tintStrength &&
       other.blend == blend &&
       other.sunProgress == sunProgress &&
-      other.season == season;
+      other.season == season &&
+      other.treeLeaves == treeLeaves &&
+      other.treeLeaf == treeLeaf &&
+      other.treeBlossom == treeBlossom &&
+      other.treeFruit == treeFruit &&
+      other.treeFallen == treeFallen &&
+      other.treeSnow == treeSnow;
 
   @override
-  int get hashCode => Object.hash(hour, moon, tint, tintStrength, blend, sunProgress, season);
+  int get hashCode => Object.hash(
+    hour,
+    moon,
+    tint,
+    tintStrength,
+    blend,
+    sunProgress,
+    season,
+    treeLeaves,
+    treeLeaf,
+    treeBlossom,
+    treeFruit,
+    treeFallen,
+    treeSnow,
+  );
 }
 
 int _lerpArgb(int a, int b, double t) {
@@ -443,5 +527,11 @@ SkyScene skySceneAt(List<PrayerRow> rows, int now, Day day) {
     cloudThin: _q(clouds.$2, 1 / 100),
     cloudSunset: _q(clouds.$3, 1 / 100),
     season: seasonColor(day),
+    treeLeaves: treeSeason(day).$1,
+    treeLeaf: treeSeason(day).$2,
+    treeBlossom: treeExtras(day).$1,
+    treeFruit: treeExtras(day).$2,
+    treeFallen: treeExtras(day).$3,
+    treeSnow: treeExtras(day).$4,
   );
 }
