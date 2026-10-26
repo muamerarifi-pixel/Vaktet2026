@@ -88,7 +88,7 @@ typedef Look = ({ThemeChoice theme, FontChoice font, double fontScale});
 class AppController extends ChangeNotifier with WidgetsBindingObserver {
   AppController({required SharedPreferences prefs, int Function()? clock})
     : _prefs = prefs,
-      _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
+      _clock = clock ?? _systemClock {
     city = cityById(prefs.getString(_kCity));
     theme = ThemeChoice.values.firstWhere((t) => t.name == prefs.getString(_kTheme), orElse: () => ThemeChoice.auto);
     font = FontChoice.values.firstWhere((f) => f.name == prefs.getString(_kFont), orElse: () => FontChoice.figtree);
@@ -117,6 +117,14 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     cursorM = today.m;
     _recompute();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  static int _systemClock() {
+    final now = DateTime.now();
+    final utcMs = now.millisecondsSinceEpoch;
+    final deviceOffsetMin = now.timeZoneOffset.inMinutes;
+    final kosovoOff = kosovoOffsetAt(utcMs);
+    return utcMs + (deviceOffsetMin - kosovoOff) * msPerMinute;
   }
 
   static const _kCity = 'city';

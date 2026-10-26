@@ -79,6 +79,16 @@ void main() {
       expect(before.name, 'Lindja e diellit');
     });
 
+    test('currentPrayerText indicates the entered prayer (e.g. Ikindia hyri)', () {
+      final city = cityById('kosove');
+      const day = Day(2026, 10, 26);
+      final rows = dayRows(day, city);
+      final asr = rowOf(rows, PrayerKey.asr);
+      final card = nextCard(now: asr.instant + 10 * msPerMinute, day: day, rows: rows, city: city);
+      expect(card.name, 'Akshami');
+      expect(card.currentPrayerText, 'Ikindia tashmë ka hyrë');
+    });
+
     test('after Jacia the card shows tomorrow\'s Imsaku and the alarm is for tomorrow', () {
       final city = cityById('kosove');
       const day = Day(2026, 10, 3);

@@ -180,6 +180,7 @@ class NextCardModel {
     required this.target,
     this.altText,
     this.altTarget,
+    this.currentPrayerText,
   });
 
   /// True while a forbidden time is running (the card turns red).
@@ -193,6 +194,9 @@ class NextCardModel {
   final int target;
   final String? altText;
   final int? altTarget;
+
+  /// Which prayer has already entered, e.g. "Ikindia hyri".
+  final String? currentPrayerText;
 }
 
 NextCardModel nextCard({required int now, required Day day, required List<PrayerRow> rows, required City city}) {
@@ -239,6 +243,33 @@ NextCardModel nextCard({required int now, required Day day, required List<Prayer
     altText = 'Sabahu mund të falet në ${fmtTime(sabah.local)}, pas';
     altTarget = sabah.instant;
   }
+  String? currentPrayerText;
+  final imsak = rowOf(rows, PrayerKey.imsak);
+  final sabah = rowOf(rows, PrayerKey.sabah);
+  final sunrise = rowOf(rows, PrayerKey.sunrise);
+  final dreka = rowOf(rows, PrayerKey.dreka);
+  final asr = rowOf(rows, PrayerKey.asr);
+  final maghrib = rowOf(rows, PrayerKey.maghrib);
+  final isha = rowOf(rows, PrayerKey.isha);
+
+  if (now >= isha.instant) {
+    currentPrayerText = 'Jacia tashmë ka hyrë';
+  } else if (now >= maghrib.instant) {
+    currentPrayerText = 'Akshami tashmë ka hyrë';
+  } else if (now >= asr.instant) {
+    currentPrayerText = 'Ikindia tashmë ka hyrë';
+  } else if (now >= dreka.instant) {
+    currentPrayerText = day.weekday == 5 ? 'Xhumaja tashmë ka hyrë' : 'Dreka tashmë ka hyrë';
+  } else if (now >= sunrise.instant) {
+    currentPrayerText = 'Dielli tashmë ka lindur';
+  } else if (now >= sabah.instant) {
+    currentPrayerText = 'Sabahu tashmë ka hyrë';
+  } else if (now >= imsak.instant) {
+    currentPrayerText = 'Imsaku tashmë ka hyrë';
+  } else {
+    currentPrayerText = 'Jacia tashmë ka hyrë';
+  }
+
   return NextCardModel(
     forbidden: false,
     intro: intro,
@@ -248,6 +279,7 @@ NextCardModel nextCard({required int now, required Day day, required List<Prayer
     target: next.instant,
     altText: altText,
     altTarget: altTarget,
+    currentPrayerText: currentPrayerText,
   );
 }
 

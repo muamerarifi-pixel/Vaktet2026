@@ -196,6 +196,42 @@ class _NameAndTime extends StatelessWidget {
   }
 }
 
+class _CurrentPrayerPill extends StatelessWidget {
+  const _CurrentPrayerPill({required this.text, this.center = true});
+
+  final String text;
+  final bool center;
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = Glass(
+      blur: 10,
+      fill: const Color(0x2EFFFFFF),
+      border: const Color(0x3DFFFFFF),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF68D391),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            text,
+            style: vt(12.5, 700, color: _white, ls: .04),
+          ),
+        ],
+      ),
+    );
+    return Align(alignment: center ? Alignment.center : Alignment.centerLeft, child: pill);
+  }
+}
+
 /// The metallic gold of the Friday countdown: light, deep and light again, like polished gold.
 const LinearGradient _goldShine = LinearGradient(
   begin: Alignment(-1, -1),
@@ -482,6 +518,10 @@ class _Normal extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (card.currentPrayerText != null) ...[
+            _CurrentPrayerPill(text: card.currentPrayerText!, center: false),
+            const SizedBox(height: 8),
+          ],
           _Intro(card: card, center: false),
           const SizedBox(height: 6),
           _NameAndTime(card: card, vw: vw, center: false),
@@ -603,55 +643,32 @@ class _FullScreen extends StatelessWidget {
               gold: gold,
             ),
           );
-          final layout = Column(
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _Intro(card: card, center: true, full: true),
-                        const SizedBox(height: 10),
-                        _NameAndTime(card: card, vw: vw, center: true, full: true),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  number,
-                  // the label hangs below the digits without taking room, so the digits stay centred
-                  SizedBox(
-                    height: 0,
-                    child: OverflowBox(
-                      alignment: Alignment.topCenter,
-                      minHeight: 0,
-                      maxHeight: 80,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: reveal == null
-                            ? _CountdownLabel(text: card.countdownLabel, full: true)
-                            : FadeTransition(
-                                // it would peek out above the prayer-times sheet on short screens
-                                opacity: Tween(
-                                  begin: 1.0,
-                                  end: 0.0,
-                                ).animate(CurvedAnimation(parent: reveal!, curve: const Interval(0, .6))),
-                                child: _CountdownLabel(text: card.countdownLabel, full: true),
-                              ),
-                      ),
-                    ),
-                  ),
+          final layout = Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (card.currentPrayerText != null) ...[
+                  _CurrentPrayerPill(text: card.currentPrayerText!, center: true),
+                  const SizedBox(height: 14),
                 ],
-              ),
-              // the second line ("Sabahu mund të falet …") is a small line at the bottom of the screen instead
-              const Spacer(),
-            ],
+                _Intro(card: card, center: true, full: true),
+                const SizedBox(height: 8),
+                _NameAndTime(card: card, vw: vw, center: true, full: true),
+                const SizedBox(height: 16),
+                number,
+                const SizedBox(height: 10),
+                reveal == null
+                    ? _CountdownLabel(text: card.countdownLabel, full: true)
+                    : FadeTransition(
+                        opacity: Tween(
+                          begin: 1.0,
+                          end: 0.0,
+                        ).animate(CurvedAnimation(parent: reveal!, curve: const Interval(0, .6))),
+                        child: _CountdownLabel(text: card.countdownLabel, full: true),
+                      ),
+              ],
+            ),
           );
           final r = reveal;
           if (r == null) return layout;
