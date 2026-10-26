@@ -139,7 +139,7 @@
     theme: store.get("theme", "auto"),
     hijriAdj: parseInt(store.get("hijri", "0"), 10) || 0,
     alarmOffset: parseInt(store.get("alarm", "30"), 10) || 30,
-    font: ["figtree", "nunito", "lora", "mono"].includes(store.get("font", "figtree")) ? store.get("font", "figtree") : "figtree",
+    font: ["figtree", "manrope", "nunito", "lora", "mono"].includes(store.get("font", "figtree")) ? store.get("font", "figtree") : "figtree",
     fontScale: [0.9, 1, 1.12, 1.25].includes(parseFloat(store.get("fontScale", "1"))) ? parseFloat(store.get("fontScale", "1")) : 1,
     tilt: store.get("tilt", "1") === "1",
     countdownWeight: [300, 500, 700, 900].includes(parseInt(store.get("countdownWeight", "900"), 10)) ? parseInt(store.get("countdownWeight", "900"), 10) : 900,
@@ -884,8 +884,26 @@
   function setCount(ms) {
     const text = fmtCount(ms);
     if (text === lastCount) return;
+    const prev = lastCount;
+    // diff against previous digits
     lastCount = text;
-    $("countdown").innerHTML = text.split(":").map((p) => '<span class="cd-n">' + p + "</span>").join('<span class="cd-sep">:</span>');
+    const cd = $("countdown");
+    if (!cd) return;
+    const currentDigits = cd.querySelectorAll(".cd-d");
+    const newChars = text.replace(/:/g, "").split("");
+    if (currentDigits.length === newChars.length && prev) {
+      for (let i = 0; i < newChars.length; i++) {
+        if (newChars[i] !== prev.replace(/:/g, "")[i]) {
+          const el = currentDigits[i];
+          el.textContent = newChars[i];
+          el.classList.remove("cd-tick");
+          void el.offsetWidth;
+          el.classList.add("cd-tick");
+        }
+      }
+      return;
+    }
+    cd.innerHTML = text.split(":").map((p) => '<span class="cd-n">' + p.split("").map((d) => '<span class="cd-d">' + d + '</span>').join("") + '</span>').join('<span class="cd-sep">:</span>');
   }
 
   // ---------- Smooth changes ----------
@@ -1392,6 +1410,9 @@
     $("city").addEventListener("change", (e) => {
       state.city = cityById(e.target.value);
       store.set("city", state.city.id);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try { navigator.vibrate(10); } catch (_) {}
+      }
       renderAll();
     });
     $("prevDay").addEventListener("click", () => select(addDays(state.selected, -1)));
@@ -1408,6 +1429,9 @@
 
     const dlg = $("settings");
     $("settingsBtn").addEventListener("click", () => {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try { navigator.vibrate(8); } catch (_) {}
+      }
       document.querySelectorAll('input[name="theme"]').forEach((r) => { r.checked = r.value === state.theme; });
       document.querySelectorAll('input[name="hijri"]').forEach((r) => { r.checked = parseInt(r.value, 10) === state.hijriAdj; });
       document.querySelectorAll('input[name="alarm"]').forEach((r) => { r.checked = parseInt(r.value, 10) === state.alarmOffset; });

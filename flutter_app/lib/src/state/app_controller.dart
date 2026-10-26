@@ -15,6 +15,7 @@ enum HomeView { today, month }
 /// The font of the whole app. All four are bundled (variable fonts, subset to Latin), so they work offline.
 enum FontChoice {
   figtree('Figtree', 'Moderne'),
+  manrope('Manrope', 'E lehtë'),
   nunito('Nunito', 'E butë'),
   lora('Lora', 'Klasike'),
   mono('JetBrainsMono', 'Digjitale');
@@ -68,6 +69,7 @@ enum Feature {
 /// a few kilobytes each.
 enum CountdownFont {
   text(null, 'Si teksti'),
+  manrope('VaktetManrope', 'E lehtë'),
   cormorant('VaktetCormorant', 'Elegante'),
   playfair('VaktetPlayfair', 'Fisnike'),
   cinzel('VaktetCinzel', 'Romake'),

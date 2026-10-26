@@ -557,8 +557,8 @@ class SkyPainter extends CustomPainter {
     this.options = const SkyOptions(),
   }) : super(
          repaint: switch (layer) {
-           SkyLayer.motion => clock,
-           SkyLayer.land || SkyLayer.back || SkyLayer.front => null,
+           SkyLayer.motion || SkyLayer.land => clock,
+           SkyLayer.back || SkyLayer.front => null,
          },
        );
 
@@ -649,8 +649,9 @@ class SkyPainter extends CustomPainter {
         }
         if (_full && life && !_land) _paintFireflies(canvas, size, t);
       case SkyLayer.land:
+        final t = clock?.seconds ?? 0.0;
         if (_land) {
-          Landscape(size: size, pal: pal, scene: scene, dim: _k).paint(canvas);
+          Landscape(size: size, pal: pal, scene: scene, dim: _k, t: t).paint(canvas);
         } else {
           _hills(canvas, size, pal);
         }
@@ -1421,7 +1422,8 @@ class SkyCard extends StatelessWidget {
       children: [
         Positioned.fill(child: StillSky(painters: [painter(SkyLayer.back)])),
         Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.motion)))),
-        Positioned.fill(child: StillSky(painters: [painter(SkyLayer.land), painter(SkyLayer.front)])),
+        Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.land)))),
+        Positioned.fill(child: StillSky(painters: [painter(SkyLayer.front)])),
         child,
         if (nowFn != null && model.isToday)
           Positioned.fill(

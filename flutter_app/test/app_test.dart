@@ -7,6 +7,7 @@ import 'package:vaktet/src/logic/day.dart';
 import 'package:vaktet/src/state/app_controller.dart';
 import 'package:vaktet/src/ui/glass.dart';
 import 'package:vaktet/src/ui/next_card.dart';
+import 'package:vaktet/src/ui/settings.dart';
 
 import 'test_fonts.dart';
 
@@ -398,6 +399,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.font, FontChoice.lora);
     expect(Theme.of(tester.element(find.text('Pamja'))).textTheme.bodyMedium!.fontFamily, 'Lora');
+    await tester.tap(find.descendant(of: find.byType(Segmented<FontChoice>), matching: find.text('E lehtë')));
+    await tester.pumpAndSettle();
+    expect(c.font, FontChoice.manrope);
+    expect(Theme.of(tester.element(find.text('Pamja'))).textTheme.bodyMedium!.fontFamily, 'Manrope');
     await tester.tap(find.text('E madhe'));
     await tester.pumpAndSettle();
     expect(c.fontScale, 1.12);
@@ -407,9 +412,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.countdownWeight, 300);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('font'), 'lora');
+    expect(prefs.getString('font'), 'manrope');
     expect(prefs.getDouble('fontScale'), 1.12);
     expect(prefs.getInt('countdownWeight'), 300);
+    await tester.scrollUntilVisible(_label('Mbyll'), -200);
     await tester.tap(_label('Mbyll'));
     await tester.pumpAndSettle();
     expect(countdownWeight(), 300);

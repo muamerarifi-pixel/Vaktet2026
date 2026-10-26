@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../logic/cities.dart';
 import 'colors.dart';
@@ -214,11 +215,25 @@ class CityPicker extends StatelessWidget {
             left: 0,
             right: 0,
             top: 0,
-            child: Text(
-              city.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: vt(15, 750, color: fg, height: 1.5),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.12),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                  child: child,
+                ),
+              ),
+              child: Text(
+                city.name,
+                key: ValueKey(city.id),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: vt(15, 750, color: fg, height: 1.5),
+              ),
             ),
           ),
           Positioned(
@@ -245,7 +260,10 @@ class CityPicker extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           side: BorderSide(color: c.line),
         ),
-        onSelected: onSelected,
+        onSelected: (selected) {
+          HapticFeedback.selectionClick();
+          onSelected(selected);
+        },
         itemBuilder: (context) => [
           for (final item in cities)
             PopupMenuItem<City>(

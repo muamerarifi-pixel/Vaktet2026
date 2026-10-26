@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../state/app_controller.dart';
 import 'colors.dart';
@@ -7,10 +10,14 @@ import 'text.dart';
 import 'widgets.dart';
 
 Future<void> showSettings(BuildContext context, AppController controller) {
-  return showDialog<void>(
+  HapticFeedback.lightImpact();
+  return showGeneralDialog<void>(
     context: context,
-    barrierColor: const Color(0x73080E0C),
-    builder: (_) => Dialog(
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: const Color(0x66080E0C),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (dialogContext, animation, secondaryAnimation) => Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
@@ -23,6 +30,16 @@ Future<void> showSettings(BuildContext context, AppController controller) {
         ),
       ),
     ),
+    transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+      final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curve,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1.0).animate(curve),
+          child: child,
+        ),
+      );
+    },
   );
 }
 
@@ -35,43 +52,55 @@ class _Sheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     final colors = context.colors;
+    final isDark = colors.dark;
     return Container(
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: colors.line),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: colors.dark ? .5 : .06),
-            blurRadius: 2,
+            color: Colors.black.withValues(alpha: isDark ? .5 : .06),
+            blurRadius: 3,
             offset: const Offset(0, 1),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: colors.dark ? .8 : .14),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-            spreadRadius: -12,
+            color: Colors.black.withValues(alpha: isDark ? .85 : .14),
+            blurRadius: 32,
+            offset: const Offset(0, 10),
+            spreadRadius: -8,
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text('Cilësimet', style: vt(19, 850, color: colors.ink, height: 1.5)),
-                ),
-                RoundIconButton(icon: VIcon.close, label: 'Mbyll', onTap: () => Navigator.of(context).pop()),
-              ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xD4131B17) : const Color(0xDCF8FAF8),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isDark ? const Color(0x38FFFFFF) : const Color(0x88FFFFFF),
+                width: 1.2,
+              ),
             ),
-            const SizedBox(height: 8),
-            _Field(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text('Cilësimet', style: vt(19, 850, color: colors.ink, height: 1.5)),
+                      ),
+                      RoundIconButton(icon: VIcon.close, label: 'Mbyll', onTap: () => Navigator.of(context).pop()),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _Field(
               title: 'Pamja',
               child: Segmented<ThemeChoice>(
                 options: const [
@@ -173,6 +202,9 @@ class _Sheet extends StatelessWidget {
             ),
           ],
         ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -196,16 +228,36 @@ class _CountdownFonts extends StatelessWidget {
         checked: on,
         label: f.label,
         excludeSemantics: true,
-        onTap: () => onChanged(f),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onChanged(f);
+        },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => onChanged(f),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onChanged(f);
+          },
           child: Container(
             padding: const EdgeInsets.fromLTRB(6, 8, 6, 7),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              color: on ? c.surface : c.bg,
-              border: Border.all(color: on ? c.accent : c.line, width: on ? 1.6 : 1),
+              color: on
+                  ? (c.dark ? const Color(0x38FFFFFF) : c.surface)
+                  : (c.dark ? const Color(0x20000000) : const Color(0x28FFFFFF)),
+              border: Border.all(
+                color: on ? c.accent : c.line.withValues(alpha: 0.6),
+                width: on ? 1.6 : 1,
+              ),
+              boxShadow: on
+                  ? [
+                      BoxShadow(
+                        color: c.accent.withValues(alpha: 0.18),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1.5),
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               children: [
@@ -272,10 +324,16 @@ class _Switch extends StatelessWidget {
       toggled: value,
       label: title,
       excludeSemantics: true,
-      onTap: () => onChanged(!value),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onChanged(!value);
+      },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => onChanged(!value),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onChanged(!value);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 7),
           child: Row(
@@ -385,12 +443,13 @@ class Segmented<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final isDark = c.dark;
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: c.bg,
-        border: Border.all(color: c.line),
+        color: isDark ? const Color(0x30000000) : const Color(0x38FFFFFF),
+        border: Border.all(color: c.line.withValues(alpha: 0.6)),
       ),
       child: Row(
         children: [
@@ -402,18 +461,32 @@ class Segmented<T> extends StatelessWidget {
                 checked: options[i].$2 == value,
                 label: options[i].$1,
                 excludeSemantics: true,
-                onTap: () => onChanged(options[i].$2),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onChanged(options[i].$2);
+                },
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onChanged(options[i].$2),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onChanged(options[i].$2);
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
-                      color: options[i].$2 == value ? c.surface : null,
+                      color: options[i].$2 == value
+                          ? (isDark ? const Color(0x4DFFFFFF) : c.surface)
+                          : null,
                       boxShadow: options[i].$2 == value
-                          ? const [BoxShadow(color: Color(0x1F000000), blurRadius: 3, offset: Offset(0, 1))]
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDark ? .35 : .10),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1.5),
+                              ),
+                            ]
                           : null,
                     ),
                     child: FittedBox(

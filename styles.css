@@ -10,6 +10,7 @@
 @font-face { font-family: "Nunito"; src: url("/fonts/Nunito.ttf") format("truetype"); font-weight: 200 1000; font-display: swap; }
 @font-face { font-family: "Lora"; src: url("/fonts/Lora.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-display: swap; }
+@font-face { font-family: "Manrope"; src: url("/fonts/Manrope-Light.ttf") format("truetype"); font-weight: 200 800; font-display: swap; }
 @font-face {
   font-family: "Figtree";
   src: url("/fonts/figtree.woff2") format("woff2");
@@ -129,7 +130,10 @@ button { cursor: pointer; }
   font-size: 15px;
   max-width: 52vw;
   text-overflow: ellipsis;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
+.city select:active { transform: scale(.97); }
 .city .chev { position: absolute; right: 13px; width: 14px; height: 14px; pointer-events: none; color: var(--muted); }
 
 .icon-btn {
@@ -141,7 +145,13 @@ button { cursor: pointer; }
   border: 1px solid var(--line);
   background: var(--surface);
   padding: 0;
+  cursor: pointer;
+  transition: transform .2s cubic-bezier(.2, .8, .2, 1), opacity .15s ease, background-color .15s ease;
 }
+.icon-btn:hover { transform: scale(1.05); }
+.icon-btn:active { transform: scale(.94); }
+#settingsBtn:hover { transform: rotate(12deg) scale(1.04); }
+#settingsBtn:active { transform: rotate(24deg) scale(.95); }
 .icon-btn svg { width: 19px; height: 19px; }
 
 /* Layout */
@@ -183,9 +193,12 @@ body[data-view="month"] .today { display: none; }
   border-radius: 999px;
   color: var(--muted);
   padding: 0;
+  cursor: pointer;
+  transition: transform .15s ease, background-color .18s ease, color .18s ease;
 }
 .step svg { width: 18px; height: 18px; }
 .step:hover { background: var(--accent-soft); color: var(--ink); }
+.step:active { transform: scale(.92); }
 .back-today {
   display: block;
   margin: -6px auto 14px;
@@ -584,6 +597,18 @@ body.is-focus .current-prayer-pill {
   text-shadow: 0 2px 24px rgba(0, 0, 0, .22), 0 1px 2px rgba(0, 0, 0, .12);
 }
 .cd-sep { opacity: .55; position: relative; top: -.06em; margin: 0 .01em; }
+.cd-d {
+  display: inline-block;
+  min-width: .56em;
+  text-align: center;
+}
+.cd-d.cd-tick {
+  animation: cd-tick-slide .28s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes cd-tick-slide {
+  0% { transform: translateY(-0.14em); opacity: 0.6; }
+  100% { transform: translateY(0); opacity: 1; }
+}
 .countdown-label { display: block; margin-top: 6px; font-weight: 700; opacity: .86; }
 
 body.is-focus #times, body.is-focus #cityNote, body.is-focus #alarmCard, body.is-focus #dayline { display: none !important; }
@@ -1049,13 +1074,39 @@ dialog {
   max-width: 460px;
   width: calc(100% - 24px);
 }
-dialog::backdrop { background: rgba(8, 14, 12, .45); }
+dialog::backdrop {
+  background: rgba(8, 14, 12, .45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+dialog[open] {
+  animation: dialog-pop .22s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes dialog-pop {
+  from { opacity: 0; transform: scale(.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
 .sheet {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: rgba(248, 250, 248, .86);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, .32);
   border-radius: var(--radius-lg);
   padding: 18px 20px 20px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 4px 16px rgba(20, 32, 28, .08), 0 16px 40px -10px rgba(20, 32, 28, .18);
+}
+:root[data-theme="dark"] .sheet {
+  background: rgba(18, 24, 21, .84);
+  border-color: rgba(255, 255, 255, .14);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .55), 0 20px 52px -8px rgba(0, 0, 0, .85);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sheet {
+    background: rgba(18, 24, 21, .84);
+    border-color: rgba(255, 255, 255, .14);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, .55), 0 20px 52px -8px rgba(0, 0, 0, .85);
+  }
 }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .sheet-head h2 { margin: 0; font-size: 19px; font-weight: 850; }
@@ -1067,21 +1118,33 @@ dialog::backdrop { background: rgba(8, 14, 12, .45); }
   gap: 4px;
   padding: 4px;
   border-radius: 999px;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: rgba(238, 241, 238, .65);
+  background: color-mix(in srgb, var(--bg) 65%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(216, 223, 219, .7);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
 .segmented label { flex: 1; position: relative; }
 .segmented input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .segmented span {
   display: block;
   text-align: center;
-  padding: 8px 6px;
+  padding: 8px 4px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: clamp(12px, 3.2vw, 14px);
   font-weight: 720;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
+  transition: background-color .18s ease, color .18s ease, box-shadow .18s ease;
 }
-.segmented input:checked + span { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.segmented input:checked + span {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .14), 0 0 0 1px rgba(255, 255, 255, .12);
+}
 .segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 .primary {
   width: 100%;
@@ -1137,11 +1200,13 @@ dialog::backdrop { background: rgba(8, 14, 12, .45); }
 }
 
 /* ---------- Font style, text size and countdown thickness (settings) ---------- */
+:root[data-font="manrope"] { --font: "Manrope", ui-sans-serif, system-ui, sans-serif; }
 :root[data-font="nunito"] { --font: "Nunito", ui-rounded, system-ui, sans-serif; }
 :root[data-font="lora"] { --font: "Lora", Georgia, "Times New Roman", serif; }
 :root[data-font="mono"] { --font: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
 :root[data-font] body, :root[data-font] button, :root[data-font] select, :root[data-font] input { font-family: var(--font); }
 .font-figtree { font-family: "Figtree", sans-serif; }
+.font-manrope { font-family: "Manrope", sans-serif; font-weight: 300; }
 .font-nunito { font-family: "Nunito", sans-serif; }
 .font-lora { font-family: "Lora", serif; }
 .font-mono { font-family: "JetBrains Mono", monospace; }
@@ -1193,3 +1258,11 @@ dialog::backdrop { background: rgba(8, 14, 12, .45); }
     transform: translate(calc(var(--tx, 0) * 1px), calc(var(--ty, 0) * 1px));
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-d.cd-tick { animation: none; }
+  dialog[open] { animation: none; }
+  .icon-btn, .step, .city select { transition: none; }
+  #settingsBtn:hover, #settingsBtn:active { transform: none; }
+}
+

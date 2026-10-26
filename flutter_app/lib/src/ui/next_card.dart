@@ -395,6 +395,14 @@ class _FadeDigitState extends State<_FadeDigit> with SingleTickerProviderStateMi
     });
   late final Animation<double> _in = CurvedAnimation(parent: _fade, curve: Curves.easeOut);
   late final Animation<double> _out = ReverseAnimation(CurvedAnimation(parent: _fade, curve: Curves.easeIn));
+  late final Animation<Offset> _inSlide = Tween<Offset>(
+    begin: const Offset(0, -0.15),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _fade, curve: Curves.easeOutCubic));
+  late final Animation<Offset> _outSlide = Tween<Offset>(
+    begin: Offset.zero,
+    end: const Offset(0, 0.15),
+  ).animate(CurvedAnimation(parent: _fade, curve: Curves.easeInCubic));
 
   /// The digit fading out, while it fades.
   String? _old;
@@ -430,8 +438,21 @@ class _FadeDigitState extends State<_FadeDigit> with SingleTickerProviderStateMi
       child: Stack(
         alignment: Alignment.center,
         children: [
-          FadeTransition(opacity: _out, child: old == null ? const SizedBox.shrink() : _text(old)),
-          FadeTransition(opacity: _in, child: _text(widget.digit)),
+          // Anchors the alphabetic baseline permanently so sliding transitions
+          // never jitter or vertically displace neighboring digits or the row.
+          Opacity(
+            opacity: 0,
+            child: _text('8'),
+          ),
+          if (old != null)
+            SlideTransition(
+              position: _outSlide,
+              child: FadeTransition(opacity: _out, child: _text(old)),
+            ),
+          SlideTransition(
+            position: _inSlide,
+            child: FadeTransition(opacity: _in, child: _text(widget.digit)),
+          ),
         ],
       ),
     );

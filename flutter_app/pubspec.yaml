@@ -22,6 +22,9 @@ flutter:
     - family: Figtree
       fonts:
         - asset: assets/fonts/Figtree.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-Light.ttf
     - family: Nunito
       fonts:
         - asset: assets/fonts/Nunito.ttf
@@ -32,6 +35,9 @@ flutter:
       fonts:
         - asset: assets/fonts/JetBrainsMono.ttf
     # the countdown's own faces: digits and colon only (assets/fonts/countdown, OFL)
+    - family: VaktetManrope
+      fonts:
+        - asset: assets/fonts/countdown/Manrope.ttf
     - family: VaktetCormorant
       fonts:
         - asset: assets/fonts/countdown/CormorantGaramond.ttf
