@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.9.10 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9.11 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -54,6 +54,15 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 ---
 
+## Risitë në versionin 1.9.11 (Android)
+
+- 🌊 **Animacion i ujit me dritë e valëzim dinamik:** Shkëlqim horizontal i qetë, reflektim dinamik i rrezeve të diellit dhe dritës së hënës sipas koordinatave qiellore me lëkundje rrezatuese, dhe valëzim i lehtë në sipërfaqen e liqenit.
+- 🪟 **Karta e cilësimeve me efekt xhami (Frosted Glass):** Dizajn modern me BackdropFilter të thellë (sigma 24), hije të butë lundruese dhe tranzicion të hijshëm të shkallëzuar gjatë hapjes.
+- 🌳 **Pema me degëzim organik dhe gjethe me dritë skajore:** Degëzim i detajuar e i lakuar natyrshëm (bezier curves), kurorë me 3 nivele thellësie organike, efekt ere (wind sway) dhe ndriçim skajor (rim lighting) sipas stinës e dritës së diellit/hënës.
+- 🔤 **Tipografi Manrope Light:** Stil i ri shkrimi modern dhe i lehtë për tekstin dhe numërimin.
+- ✨ **Mikro-interaksione:** Lëvizje e rrjedhshme e shifrave të numërimit mbrapsht me fushë të palëkundur (pa dridhje), reagim delikat haptik gjatë ndryshimit të qytetit dhe hapjes së cilësimeve.
+
+---
 ## Risitë në versionin 1.9.10 (Android)
 
 - 🟢 **Treguesi i vakitit aktual sipas gjuhës standarde shqipe:** Mbi mbishkrimin „NAMAZI I ARDHSHËM“ shfaqet treguesi elegant i vakitit që tashmë ka hyrë (p.sh. *„Ikindia tashmë ka hyrë“*, *„Dreka tashmë ka hyrë“*, *„Xhumaja tashmë ka hyrë“*, *„Dielli tashmë ka lindur“*) me efekt *frosted glass* dhe tregues drite të gjelbër aktive.

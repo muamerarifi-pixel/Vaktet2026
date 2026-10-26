@@ -6,6 +6,13 @@ the same: the sky card that follows the prayer time, active prayer indicator pil
 alarm suggestion, the month table, Hijri date with correction, light/dark/automatic theme, a choice of font, text size and countdown thickness, 19 towns. Works fully
 offline.
 
+## What's new in v1.9.11
+
+- **Dynamic Water Surface & Reflections:** Perspective horizontal shimmer lines, breathing radial light paths under sun and moon, and slow-drifting bezier ripples.
+- **Frosted Glass Settings Sheet:** Sleek glassmorphism with high-sigma backdrop blur, dual soft drop shadows, and subtle scale-fade dialog entrance.
+- **Organic Foreground Tree & Wind Sway:** Tapered branch contours with root flares, 3-layer organic leaf clusters, seasonal foliage rim lighting, and harmonic wind effect.
+- **Manrope Light Font:** Integrated clean, modern Manrope Light typography option for text and countdown.
+- **Refined Micro-interactions:** Smooth sliding countdown digit transitions with stationary baseline anchoring to eliminate row jitter, plus subtle haptic feedback.
 ## What's new in v1.9.10
 
 - **Active Prayer Indicator Pill:** Shows which prayer is currently active (e.g., *"Ikindia tashmë ka hyrë"*, *"Dreka tashmë ka hyrë"*, *"Dielli tashmë ka lindur"*) directly above the "NAMAZI I ARDHSHËM" header, with a frosted glass badge and an active green pulse.
