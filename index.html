@@ -98,14 +98,20 @@
           <div class="sky-veil"></div>
           <div class="sky-pulse" id="skyPulse"></div>
         </div>
-        <div class="next-head">
-          <p class="next-intro"><svg class="forbid-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 12.4 12.4 3.6" stroke="currentColor" stroke-width="1.6"/></svg><span id="nextIntro">Namazi i ardhshëm</span></p>
-          <div class="next-main">
-            <span class="next-name" id="nextName">&nbsp;</span>
-            <span class="next-time" id="nextTime"></span>
+        <div class="next-center">
+          <div class="current-prayer-pill" id="currentPrayerPill" hidden>
+            <span class="current-prayer-dot"></span>
+            <span id="currentPrayerText"></span>
           </div>
+          <div class="next-head">
+            <p class="next-intro"><svg class="forbid-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 12.4 12.4 3.6" stroke="currentColor" stroke-width="1.6"/></svg><span id="nextIntro">Namazi i ardhshëm</span></p>
+            <div class="next-main">
+              <span class="next-name" id="nextName">&nbsp;</span>
+              <span class="next-time" id="nextTime"></span>
+            </div>
+          </div>
+          <p class="countdown"><span id="countdown" class="countdown-num">--:--:--</span> <span class="countdown-label" id="countdownLabel">deri në fillim</span></p>
         </div>
-        <p class="countdown"><span id="countdown" class="countdown-num">--:--:--</span> <span class="countdown-label" id="countdownLabel">deri në fillim</span></p>
         <p class="next-alt" id="nextAlt" hidden><span id="nextAltText"></span> <strong id="nextAltCount"></strong></p>
         <div class="dayline" id="dayline" aria-hidden="true">
           <div class="dayline-fill" id="daylineFill"></div>

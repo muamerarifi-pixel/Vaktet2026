@@ -640,7 +640,10 @@
     state.altInstant = null;
     $("nextAlt").hidden = true;
 
+    const pillEl = $("currentPrayerPill"), textEl = $("currentPrayerText");
+
     if (active) {
+      if (pillEl) pillEl.hidden = true;
       card.classList.add("is-forbidden");
       $("nextIntro").textContent = "Kohë e ndaluar për namaz";
       $("nextName").textContent = active.name;
@@ -657,6 +660,37 @@
     $("nextTime").textContent = fmtTime(next.local);
     $("countdownLabel").textContent = "deri në fillim";
     state.nextInstant = next.instant;
+
+    if (pillEl && textEl) {
+      const imsak = rowOf(rows, "imsak");
+      const sabah = rowOf(rows, "sabah");
+      const sunrise = rowOf(rows, "sunrise");
+      const dreka = rowOf(rows, "dreka");
+      const asr = rowOf(rows, "asr");
+      const maghrib = rowOf(rows, "maghrib");
+      const isha = rowOf(rows, "isha");
+
+      let currText = "";
+      if (now >= isha.instant) {
+        currText = "Jacia tashmë ka hyrë";
+      } else if (now >= maghrib.instant) {
+        currText = "Akshami tashmë ka hyrë";
+      } else if (now >= asr.instant) {
+        currText = "Ikindia tashmë ka hyrë";
+      } else if (now >= dreka.instant) {
+        currText = weekday(day) === 5 ? "Xhumaja tashmë ka hyrë" : "Dreka tashmë ka hyrë";
+      } else if (now >= sunrise.instant) {
+        currText = "Dielli tashmë ka lindur";
+      } else if (now >= sabah.instant) {
+        currText = "Sabahu tashmë ka hyrë";
+      } else if (now >= imsak.instant) {
+        currText = "Imsaku tashmë ka hyrë";
+      } else {
+        currText = "Jacia tashmë ka hyrë";
+      }
+      textEl.textContent = currText;
+      pillEl.hidden = false;
+    }
 
     // After midnight, while waiting for Imsaku, also show when Sabahu can be prayed.
     if (next.key === "imsak" && intro !== "Nesër") {
