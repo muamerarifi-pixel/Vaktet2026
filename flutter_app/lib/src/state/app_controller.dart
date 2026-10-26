@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../logic/cities.dart';
@@ -84,7 +85,7 @@ enum CountdownFont {
 typedef Look = ({ThemeChoice theme, FontChoice font, double fontScale});
 
 /// Everything the screens show: the settings (kept on the phone), the selected day, and the ticking clock.
-class AppController extends ChangeNotifier {
+class AppController extends ChangeNotifier with WidgetsBindingObserver {
   AppController({required SharedPreferences prefs, int Function()? clock})
     : _prefs = prefs,
       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
@@ -115,6 +116,7 @@ class AppController extends ChangeNotifier {
     cursorY = today.y;
     cursorM = today.m;
     _recompute();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   static const _kCity = 'city';
@@ -253,7 +255,17 @@ class AppController extends ChangeNotifier {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      tick();
+      _recompute();
+      notifyListeners();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     stop();
     lookNotifier.dispose();
     settingsVersion.dispose();
