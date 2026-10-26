@@ -34,6 +34,10 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 ⏳ **Një vështrim mjafton** – namazi i ardhshëm dhe koha e mbetur shihen menjëherë. Rrëshqit lart për të gjitha vaktet e ditës, alarmin për sabah dhe dy këshilla të reja çdo ditë; prek datën për muajin; rrëshqit anash për ditën tjetër.
 
+🟢 **E dini menjëherë cili vakit ka hyrë** – mbi titullin e namazit të ardhshëm, një tregues elegant në xham të mjegullt me dritë të gjelbër ju tregon qartë vakitin aktual (p.sh. *„Ikindia tashmë ka hyrë“*), i grupuar dhe i centruar në mënyrë të përkryer simetrike në mes të ekranit.
+
+⏰ **Sinkronizim i përpiktë me orën e telefonit** – koha dhe numërimi mbrapsht përputhen gjithmonë në sekondë me shiritin e sipërm të pajisjes tuaj, pa asnjë devijim edhe gjatë ndërrimit të stinëve (ora verore/dimërore).
+
 🌅 **Një qiell i gjallë** – dielli dhe hëna e vërtetë, në fazën e saj të sotme, lindin e perëndojnë pas maleve. Retë lundrojnë, zogjtë dalin në mëngjes e kthehen në mbrëmje, mjegulla shtrihet në lugina, dhe në kohët e ndaluara qielli skuqet e të paralajmëron.
 
 🌟 **E premtja në ar** – koha e mbetur shkëlqen në ar, dhe natën e xhumasë qielli mbushet me yje.
@@ -47,6 +51,16 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit, dhe ora verore e dimërore llogaritet vetë, vit pas viti.
 
 🔒 **Pa reklama, pa llogari, pa gjurmim** – asnjë e dhënë nuk largohet nga telefoni yt.
+
+---
+
+## Risitë në versionin 1.9.10 (Android)
+
+- 🟢 **Treguesi i vakitit aktual sipas gjuhës standarde shqipe:** Mbi mbishkrimin „NAMAZI I ARDHSHËM“ shfaqet treguesi elegant i vakitit që tashmë ka hyrë (p.sh. *„Ikindia tashmë ka hyrë“*, *„Dreka tashmë ka hyrë“*, *„Xhumaja tashmë ka hyrë“*, *„Dielli tashmë ka lindur“*) me efekt *frosted glass* dhe tregues drite të gjelbër aktive.
+- 📐 **Centrim simetrik i ekranit kryesor:** I gjithë blloku qendror (treguesi i vakitit aktual, titulli i namazit të ardhshëm, emri i vakitit me orën dhe numërimi mbrapsht) është i grupuar dhe i centruar në mënyrë të përkryer vertikalisht dhe horizontalisht në qendër të ekranit.
+- ⏱️ **Sinkronizim i plotë me orën e telefonit (Device Status Bar):** Ora e brendshme e aplikacionit ndjek me saktësi absolute orën e sistemit operativ të telefonit, duke eliminuar diferencat gjatë ndërrimit të orës verore/dimërore.
+
+---
 
 ## Si ta marrësh
 
