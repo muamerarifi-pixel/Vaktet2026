@@ -6,6 +6,12 @@ the same: the sky card that follows the prayer time, active prayer indicator pil
 alarm suggestion, the month table, Hijri date with correction, light/dark/automatic theme, a choice of font, text size and countdown thickness, 19 towns. Works fully
 offline.
 
+## What's new in v1.9.12
+
+- **Detailed Botanical Leaf Contours (No More Circles):** Canopy rendered with >1,000 individual lanceolate leaves featuring sharp acute apices, tapered petiole bases, dual-facet 3D illumination, and delicate central midrib veins.
+- **Sprig Branch Distribution & Wind Flutter:** Foliage arranged along terminal twigs radiating outward with natural angle variance and micro-fluttering wind animation.
+- **Realistic Fallen Leaves:** Autumn ground cover rendered with true leaf geometry.
+
 ## What's new in v1.9.11
 
 - **Dynamic Water Surface & Reflections:** Perspective horizontal shimmer lines, breathing radial light paths under sun and moon, and slow-drifting bezier ripples.

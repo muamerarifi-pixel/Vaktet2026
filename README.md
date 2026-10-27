@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.9.11 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9.12 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -51,6 +51,14 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit, dhe ora verore e dimërore llogaritet vetë, vit pas viti.
 
 🔒 **Pa reklama, pa llogari, pa gjurmim** – asnjë e dhënë nuk largohet nga telefoni yt.
+
+---
+
+## Risitë në versionin 1.9.12 (Android)
+
+- 🍃 **Gjethe botanike të detajuara (jo më rrathë):** Kurorë me mbi 1,000 gjethe të imta e me majë të mprehtë natyrale, të modeluara me lakore bezier, ndriçim me dy faseta 3D (ana e ndriçuar dhe ana në hije), si dhe vija delikate të nervurës qendrore.
+- 🌿 **Degëzim dhe shpërndarje natyrale:** Gjethet janë të vendosura në degëzat terminale dhe lëkunden butësisht me ritmin e flladit të erës.
+- 🍂 **Gjethe të vjeshtës në tokë:** Edhe gjethet e rëna në tokë gjatë vjeshtës paraqiten me anatomi reale gjetheje me majë e ngjyra të ngrohta vjeshte.
 
 ---
 
