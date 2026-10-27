@@ -33,7 +33,7 @@ offline.
 
 The APKs are built by GitHub Actions (`.github/workflows/android-apk.yml`) on every push that touches
 `flutter_app/`, one per processor type (`flutter build apk --split-per-abi`): `vaktet-arm64.apk` for nearly every
-phone of the last years and `vaktet-arm32.apk` for older ones, each about a third of the size of one APK for all.
+phone of the last years (`vaktet-arm64.apk`).
 
 1. Open the repository's **Actions** tab → **Android APK** → the latest run.
 2. Download the **vaktet-apk** artifact (a zip with both APKs) and unzip it.

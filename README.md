@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.9.13 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9.13 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -88,7 +88,7 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 ## Si ta marrësh
 
 **Android**
-1. Shkarko **[vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)** – për pothuajse çdo telefon të viteve të fundit. Për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk).
+1. Shkarko **[vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)** (ARM64 për Android).
 2. Hape në telefon. Nëse të pyet, lejo instalimin nga ky burim (një herë).
 3. Gati – Vaktet është në ekranin kryesor.
 
@@ -146,7 +146,7 @@ Për ta instaluar në telefon: hapni faqen → menyja e shfletuesit → "Shto n�
 #### Aplikacioni Android (Flutter)
 Dosja [`flutter_app/`](flutter_app/) e përmban aplikacionin Android, të ndërtuar me Flutter. Kohët dhe logjika janë të njëjta me faqen këtu (një test i krahason), dhe punon pa internet.
 
-APK-të ndërtohen automatikisht nga GitHub Actions (skedari `.github/workflows/android-apk.yml`), një për çdo lloj procesori: `vaktet-arm64.apk` dhe `vaktet-arm32.apk`. Hapni **Actions → Android APK → ekzekutimin e fundit** dhe shkarkoni **vaktet-apk**, ose publikoni një version me **Run workflow → Publish a release**. Udhëzimet e plota janë te [`flutter_app/README.md`](flutter_app/README.md).
+APK-të ndërtohen automatikisht nga GitHub Actions (skedari `.github/workflows/android-apk.yml`), një për çdo lloj procesori: `vaktet-arm64.apk`. Hapni **Actions → Android APK → ekzekutimin e fundit** dhe shkarkoni **vaktet-apk**, ose publikoni një version me **Run workflow → Publish a release**. Udhëzimet e plota janë te [`flutter_app/README.md`](flutter_app/README.md).
 
 `.vercelignore` e mban dosjen `flutter_app/` jashtë faqes në Vercel.
 

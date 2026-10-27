@@ -1,7 +1,7 @@
 name: Android APK
 
 # Builds the Flutter app (flutter_app/) into installable APKs: vaktet-arm64.apk for nearly every phone of the
-# last years, vaktet-arm32.apk for older ones. They are attached to every run as the "vaktet-apk" artifact.
+# (ARM64 only)
 # To publish them as a GitHub Release, run this workflow by hand (Actions → Android APK → Run workflow) with
 # "Publish a release" ticked, or push a tag such as v1.0.0.
 
@@ -73,7 +73,6 @@ jobs:
         run: |
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/vaktet-arm64.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/vaktet-arm32.apk
           ls -la dist
 
       - uses: actions/upload-artifact@v4
@@ -86,7 +85,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
         uses: softprops/action-gh-release@v2
         with:
-          files: flutter_app/dist/*.apk
+          files: flutter_app/dist/vaktet-arm64.apk
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }} # tag the commit the APK was built from, not the default branch
           name: Vaktet ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build {0}', github.run_number) }}
