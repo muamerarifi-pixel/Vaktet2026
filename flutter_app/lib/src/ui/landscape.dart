@@ -594,6 +594,73 @@ class Landscape {
   /// Where the big tree stands on the left shore, across (0–400).
   static const double _treeX = 70;
 
+/// Adds an individual botanical leaf shape to [path].
+///
+/// Features a tapered base, curved organic blade margins, and a sharp pointed apex.
+/// Supports drawing only the left or right facet of the blade for 3D creased lighting.
+void _addLeaf(
+  Path path,
+  Offset center,
+  double len,
+  double wid,
+  double angle, {
+  bool leftFacetOnly = false,
+  bool rightFacetOnly = false,
+}) {
+  final cosA = math.cos(angle);
+  final sinA = math.sin(angle);
+  final ux = cosA, uy = sinA;
+  final nx = -sinA, ny = cosA;
+
+  final bx = center.dx - ux * (len * 0.5);
+  final by = center.dy - uy * (len * 0.5);
+  final tx = center.dx + ux * (len * 0.5);
+  final ty = center.dy + uy * (len * 0.5);
+
+  final c1x = center.dx - ux * (len * 0.12) + nx * (wid * 0.55);
+  final c1y = center.dy - uy * (len * 0.12) + ny * (wid * 0.55);
+  final c2x = center.dx + ux * (len * 0.22) + nx * (wid * 0.48);
+  final c2y = center.dy + uy * (len * 0.22) + ny * (wid * 0.48);
+
+  final c3x = center.dx + ux * (len * 0.22) - nx * (wid * 0.48);
+  final c3y = center.dy + uy * (len * 0.22) - ny * (wid * 0.48);
+  final c4x = center.dx - ux * (len * 0.12) - nx * (wid * 0.55);
+  final c4y = center.dy - uy * (len * 0.12) - ny * (wid * 0.55);
+
+  if (leftFacetOnly) {
+    path
+      ..moveTo(bx, by)
+      ..cubicTo(c1x, c1y, c2x, c2y, tx, ty)
+      ..lineTo(bx, by)
+      ..close();
+  } else if (rightFacetOnly) {
+    path
+      ..moveTo(bx, by)
+      ..lineTo(tx, ty)
+      ..cubicTo(c3x, c3y, c4x, c4y, bx, by)
+      ..close();
+  } else {
+    path
+      ..moveTo(bx, by)
+      ..cubicTo(c1x, c1y, c2x, c2y, tx, ty)
+      ..cubicTo(c3x, c3y, c4x, c4y, bx, by)
+      ..close();
+  }
+}
+
+/// Adds a fine central midrib vein line for the leaf.
+void _addLeafMidrib(Path path, Offset center, double len, double angle) {
+  final cosA = math.cos(angle);
+  final sinA = math.sin(angle);
+  final bx = center.dx - cosA * (len * 0.46);
+  final by = center.dy - sinA * (len * 0.46);
+  final tx = center.dx + cosA * (len * 0.42);
+  final ty = center.dy + sinA * (len * 0.42);
+  path
+    ..moveTo(bx, by)
+    ..lineTo(tx, ty);
+}
+
   /// The big tree on the left shore, its foot in the shore: a dark shape against the sky at night (a little lit by
   /// a bright moon), in the leaves of the season by day — bare in winter, budding in March, fresh green in April,
   /// deep green in summer, gold and orange in October, thinning in November — lit on the side of the sun, warm
@@ -627,7 +694,7 @@ class Landscape {
     canvas.translate(x(_treeX), y(83.6));
     canvas.scale(u * .8);
 
-    // the ground under it: the fallen leaves of autumn
+    // the ground under it: the fallen leaves of autumn (individual tapered leaves)
     final fallen = scene.treeFallen;
     if (fallen > .02) {
       final leaf = Color(scene.treeLeaf);
@@ -637,8 +704,10 @@ class Landscape {
         Color.lerp(shore, const Color(0xFFD9A030), .25 + .55 * _day)!,
       ];
       final heaps = [Path(), Path(), Path()];
-      for (final (p, r, order, tone) in tree.fallen) {
-        if (order < fallen) heaps[tone].addOval(Rect.fromCenter(center: p, width: r * 2, height: r * .9));
+      for (final (p, lLen, lWid, lAngle, order, tone) in tree.fallen) {
+        if (order < fallen) {
+          _addLeaf(heaps[tone], p, lLen, lWid, lAngle);
+        }
       }
       for (var i = 0; i < 3; i++) {
         canvas.drawPath(heaps[i], Paint()..color = dim(looks[i]));
@@ -649,13 +718,13 @@ class Landscape {
     final leaf = Color(scene.treeLeaf);
     final grow = .75 + .25 * leaves;
 
-    // --- Layer 0: Deep interior shadow canopy (behind branches) ---
+    // --- Layer 0: Deep interior shadow canopy (behind branches, small detailed leaves) ---
     if (leaves > 0) {
       final deepCanopy = Path();
-      for (final (c, r, order, _, rel, layer) in tree.leaves) {
+      for (final (c, len, wid, angle, order, _, rel, layer) in tree.leaves) {
         if (layer == 0 && order < leaves * 1.02) {
           final p = leafSway(c, rel, layer);
-          deepCanopy.addOval(Rect.fromCircle(center: p, radius: r * grow));
+          _addLeaf(deepCanopy, p, len * grow, wid * grow, angle);
         }
       }
       canvas.drawPath(deepCanopy, Paint()..color = dim(Color.lerp(shore, leaf, .35 * _day)!));
@@ -734,15 +803,16 @@ class Landscape {
     if (leaves > 0) {
       final body = Color.lerp(shore, leaf, .62 * _day)!;
       final midCrown = Path();
-      var box = Rect.fromCircle(center: tree.leaves.first.$1, radius: tree.leaves.first.$2);
+      var box = Rect.fromCenter(center: tree.leaves.first.$1, width: 24, height: 24);
 
-      // Layer 1: Mid-canopy body
-      for (final (c, r, order, _, rel, layer) in tree.leaves) {
+      // Layer 1: Mid-canopy body (individual detailed leaves)
+      for (final (c, len, wid, angle, order, _, rel, layer) in tree.leaves) {
         if (layer == 1 && order < leaves * 1.02) {
           final p = leafSway(c, rel, layer);
-          final o = Rect.fromCircle(center: p, radius: r * grow);
-          midCrown.addOval(o);
-          box = box.expandToInclude(o);
+          final lLen = len * grow;
+          final lWid = wid * grow;
+          _addLeaf(midCrown, p, lLen, lWid, angle);
+          box = box.expandToInclude(Rect.fromCenter(center: p, width: lLen * 2, height: lLen * 2));
         }
       }
       if (!midCrown.getBounds().isEmpty) {
@@ -757,15 +827,17 @@ class Landscape {
         );
       }
 
-      // Layer 2: Foreground clusters with tonal variation and rim lighting
+      // Layer 2: Foreground clusters with tonal variation, faceted leaves, midrib veins, and rim lighting
       final bright = Color.lerp(Color.lerp(shore, leaf, .9 * _day + .1)!, glow, .28 + .2 * warm)!;
       final tones = [
         Color.lerp(bright, const Color(0xFFF0D060), .16)!,
         bright,
         Color.lerp(bright, const Color(0xFFB84A2A), .14)!,
       ];
-      final paths = List.generate(6, (_) => Path());
-      final shade = Path();
+      final litLeftFacets = List.generate(3, (_) => Path());
+      final litRightFacets = List.generate(3, (_) => Path());
+      final shadeLeaves = Path();
+      final midribs = Path();
       final rimPath = Path();
 
       // Dynamic rim lighting color calculation reflecting sun/moon and season
@@ -787,35 +859,56 @@ class Landscape {
           : (scene.moon.up ? math.sin(scene.moon.progress.clamp(0.0, 1.0) * math.pi) : 0.4);
       final rimStrength = (_day * (.55 + .4 * warm) + .4 * moonlight).clamp(0.0, 1.0);
 
-      for (final (c, r, order, tone, rel, layer) in tree.leaves) {
+      for (final (c, len, wid, angle, order, tone, rel, layer) in tree.leaves) {
         if (layer == 2 && order < leaves * 1.02) {
           final p = leafSway(c, rel, layer);
-          final rad = r * grow;
+          final lLen = len * grow;
+          final lWid = wid * grow;
+          final flutter = math.sin(t * 3.2 + p.dx * 0.45) * 0.12 * (wind > 0.01 ? 1.0 : 0.2);
+          final lAngle = angle + flutter;
+
           final facing = rel.dx * side * .75 - rel.dy * .65;
 
           if (facing < -.22) {
-            shade.addOval(Rect.fromCircle(center: p + Offset(-side * .2, .25) * rad, radius: rad * .75));
-          } else if (facing > .04) {
+            _addLeaf(shadeLeaves, p, lLen, lWid, lAngle);
+          } else {
             final tIndex = (tone < -.35 ? 0 : (tone > .35 ? 2 : 1));
-            paths[(facing > .38 ? 3 : 0) + tIndex].addOval(
-              Rect.fromCircle(center: p + Offset(side * .3, -.35) * rad, radius: rad * .64),
-            );
+            // Faceted leaf: sun-facing half is brighter, opposite half has body tone
+            _addLeaf(litLeftFacets[tIndex], p, lLen, lWid, lAngle, leftFacetOnly: true);
+            _addLeaf(litRightFacets[tIndex], p, lLen, lWid, lAngle, rightFacetOnly: true);
+            _addLeafMidrib(midribs, p, lLen, lAngle);
           }
 
           // Rim lighting highlight along outer edges facing sun/moon
           final rimFacing = (rel.dx * side * 0.8 + (1.0 - elevation) * 0.3 - rel.dy * 0.4).clamp(-1.0, 1.0);
           if (rimFacing > 0.08) {
-            final rimOffset = Offset(side * 0.35, -0.4 * elevation - 0.2) * rad;
-            rimPath.addOval(Rect.fromCircle(center: p + rimOffset, radius: rad * 0.42));
+            final rimOffset = Offset(side * 0.35, -0.4 * elevation - 0.2) * (lLen * 0.25);
+            _addLeaf(rimPath, p + rimOffset, lLen * 0.88, lWid * 0.7, lAngle);
           }
         }
       }
 
-      canvas.drawPath(shade, Paint()..color = dim(shore).withValues(alpha: .3 * _day));
+      // Draw shaded leaves
+      canvas.drawPath(shadeLeaves, Paint()..color = dim(shore).withValues(alpha: .32 * _day));
+
+      // Draw lit leaves with faceted 3D depth
       if (lit > .02) {
-        for (var i = 0; i < 6; i++) {
-          canvas.drawPath(paths[i], Paint()..color = dim(tones[i % 3]).withValues(alpha: lit * (i < 3 ? .4 : .75)));
+        for (var i = 0; i < 3; i++) {
+          final tone = tones[i];
+          final sunlitHalf = dim(tone).withValues(alpha: lit * 0.88);
+          final shadeHalf = dim(Color.lerp(tone, shore, 0.25)!).withValues(alpha: lit * 0.72);
+          canvas.drawPath(litLeftFacets[i], Paint()..color = sunlitHalf);
+          canvas.drawPath(litRightFacets[i], Paint()..color = shadeHalf);
         }
+        // Draw fine leaf midrib veins
+        canvas.drawPath(
+          midribs,
+          Paint()
+            ..color = dim(Color.lerp(shore, const Color(0xFF1E3516), 0.5)!).withValues(alpha: lit * 0.45)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.35
+            ..strokeCap = StrokeCap.round,
+        );
       }
 
       // Draw rim lighting
@@ -906,10 +999,10 @@ Path khatam(Offset c, double r) {
 /// variety in colour).
 final ({
   List<(Offset, Offset, Offset, double, double, int)> limbs,
-  List<(Offset, double, double, double, Offset, int)> leaves,
+  List<(Offset, double, double, double, double, double, Offset, int)> leaves,
   List<(Offset, double, double, bool, int)> blossoms,
   List<(Offset, double, double)> fruits,
-  List<(Offset, double, double, int)> fallen,
+  List<(Offset, double, double, double, double, int)> fallen,
 })
 _bigTree = () {
   final rnd = math.Random(5150);
@@ -962,47 +1055,95 @@ _bigTree = () {
 
   final centre = clumps.map((c) => c.$1).reduce((a, b) => a + b) / clumps.length.toDouble();
   final far = clumps.map((c) => (c.$1 - centre).distance + c.$2).reduce(math.max);
-  final leaves = <(Offset, double, double, double, Offset, int)>[];
+  final leaves = <(Offset, double, double, double, double, double, Offset, int)>[];
 
   for (final (c, r, order, tone, _) in clumps) {
-    // 3 layers of leaves per clump:
+    // Botanical leaves arranged in natural radiating sprigs
     // Layer 0: Deep interior silhouette shadow (behind branches)
-    for (var k = 0; k < 4; k++) {
+    for (var k = 0; k < 8; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
-      final p = c + Offset(math.cos(a), math.sin(a) * .8) * (math.sqrt(rnd.nextDouble()) * r * .65);
+      final dist = math.sqrt(rnd.nextDouble()) * r * 0.72;
+      final p = c + Offset(math.cos(a), math.sin(a) * 0.85) * dist;
+      final outAngle = (p - c).distance > 0.1 ? (p - c).direction : -math.pi / 2;
+      final leafAngle = outAngle + (rnd.nextDouble() - 0.5) * 0.65;
+      final lLen = 3.2 + rnd.nextDouble() * 1.2;
+      final lWid = lLen * (0.42 + rnd.nextDouble() * 0.1);
       leaves.add((
         p,
-        r * (.28 + rnd.nextDouble() * .18),
+        lLen,
+        lWid,
+        leafAngle,
         (order + (rnd.nextDouble() - .5) * .14).clamp(0.0, 1.0),
         tone + (rnd.nextDouble() - .5) * .5,
         (p - centre) / far,
         0, // layer 0: deep shadow
       ));
     }
-    // Layer 1: Mid-canopy volume clumps
-    for (var k = 0; k < 6; k++) {
+    // Layer 1: Mid-canopy volume leaves
+    for (var k = 0; k < 12; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
-      final p = c + Offset(math.cos(a), math.sin(a) * .85) * (math.sqrt(rnd.nextDouble()) * r * .82);
+      final dist = math.sqrt(rnd.nextDouble()) * r * 0.88;
+      final p = c + Offset(math.cos(a), math.sin(a) * 0.88) * dist;
+      final outAngle = (p - c).distance > 0.1 ? (p - c).direction : -math.pi / 2;
+      final leafAngle = outAngle + (rnd.nextDouble() - 0.5) * 0.65;
+      final lLen = 3.4 + rnd.nextDouble() * 1.3;
+      final lWid = lLen * (0.43 + rnd.nextDouble() * 0.1);
       leaves.add((
         p,
-        r * (.24 + rnd.nextDouble() * .16),
+        lLen,
+        lWid,
+        leafAngle,
         (order + (rnd.nextDouble() - .5) * .16).clamp(0.0, 1.0),
         tone + (rnd.nextDouble() - .5) * .6,
         (p - centre) / far,
         1, // layer 1: mid canopy
       ));
     }
-    // Layer 2: Outer foreground clusters (fluttering, rim lighting)
-    for (var k = 0; k < 6; k++) {
+    // Layer 2: Outer foreground leaves (reaching out into the air, rim lighting, detailed facets)
+    for (var k = 0; k < 14; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
-      final p = c + Offset(math.cos(a), math.sin(a) * .88) * (math.sqrt(rnd.nextDouble()) * r * .95);
+      final dist = (0.35 + 0.65 * math.sqrt(rnd.nextDouble())) * r * 1.04;
+      final p = c + Offset(math.cos(a), math.sin(a) * 0.9) * dist;
+      final outAngle = (p - c).distance > 0.1 ? (p - c).direction : -math.pi / 2;
+      final leafAngle = outAngle + (rnd.nextDouble() - 0.5) * 0.6;
+      final lLen = 3.6 + rnd.nextDouble() * 1.4;
+      final lWid = lLen * (0.44 + rnd.nextDouble() * 0.08);
       leaves.add((
         p,
-        r * (.22 + rnd.nextDouble() * .15),
+        lLen,
+        lWid,
+        leafAngle,
         (order + (rnd.nextDouble() - .5) * .16).clamp(0.0, 1.0),
         tone + (rnd.nextDouble() - .5) * .7,
         (p - centre) / far,
         2, // layer 2: foreground & rim
+      ));
+    }
+  }
+
+  // Also add small sprigs of leaves directly along the smaller branches (depth >= 2)
+  for (final (a, b, _, _, wb, depth) in limbs) {
+    if (depth < 2 || wb > 2.8) continue;
+    final limbDir = (b - a).direction;
+    for (var k = 0; k < 4; k++) {
+      final t = 0.3 + rnd.nextDouble() * 0.65;
+      final pt = Offset.lerp(a, b, t)!;
+      final sideSign = (k % 2 == 0) ? 1.0 : -1.0;
+      final offsetDist = 1.2 + rnd.nextDouble() * 2.5;
+      final normal = Offset(-math.sin(limbDir), math.cos(limbDir));
+      final p = pt + normal * (sideSign * offsetDist);
+      final leafAngle = limbDir + sideSign * (0.45 + rnd.nextDouble() * 0.4);
+      final lLen = 3.2 + rnd.nextDouble() * 1.0;
+      final lWid = lLen * 0.44;
+      leaves.add((
+        p,
+        lLen,
+        lWid,
+        leafAngle,
+        rnd.nextDouble(),
+        (rnd.nextDouble() - 0.5) * 0.8,
+        (p - centre) / far,
+        (rnd.nextDouble() < 0.6 ? 2 : 1),
       ));
     }
   }
@@ -1030,12 +1171,18 @@ _bigTree = () {
     final a = extra.nextDouble() * 2 * math.pi;
     fruits.add((c + Offset(math.cos(a), math.sin(a)) * (r * .75 * extra.nextDouble()), 1.5 + extra.nextDouble() * .5, extra.nextDouble()));
   }
-  final fallen = <(Offset, double, double, int)>[];
-  for (var k = 0; k < 110; k++) {
+  final fallen = <(Offset, double, double, double, double, int)>[];
+  for (var k = 0; k < 120; k++) {
     final spread = .25 + .75 * extra.nextDouble();
+    final p = Offset((extra.nextDouble() * 2 - 1) * 50 * spread, .2 + extra.nextDouble() * 9 * spread);
+    final lLen = 2.8 + extra.nextDouble() * 1.2;
+    final lWid = lLen * (0.38 + extra.nextDouble() * 0.1);
+    final lAngle = (extra.nextDouble() - 0.5) * 0.6; // gentle ground resting tilt
     fallen.add((
-      Offset((extra.nextDouble() * 2 - 1) * 50 * spread, .2 + extra.nextDouble() * 9 * spread),
-      .9 + extra.nextDouble() * .8,
+      p,
+      lLen,
+      lWid,
+      lAngle,
       extra.nextDouble(),
       extra.nextInt(3),
     ));
