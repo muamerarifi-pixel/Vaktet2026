@@ -2,7 +2,7 @@ name: Android APK & Native Windows
 
 # Builds:
 #   1. Android APK: vaktet-arm64.apk (ARM64 only)
-#   2. 100% Native Windows: Vaktet-Windows-Portable.zip and Vaktet.msi (Flutter C++ / Win32 / DirectX)
+#   2. 100% Native Windows: Vaktet.msi installer (Flutter C++ / Win32 / DirectX)
 #
 # To publish them as a GitHub Release, run this workflow by hand (Actions → Android APK & Native Windows → Run workflow) with
 # "Publish a release" ticked, or push a tag such as v1.9.14.
@@ -109,7 +109,7 @@ jobs:
         working-directory: flutter_app
         run: flutter build windows --release
 
-      - name: Package Native Windows Deliverables (ZIP & MSI)
+      - name: Package Native Windows MSI
         shell: powershell
         run: |
           powershell -ExecutionPolicy Bypass -File windows/build.ps1 -FlutterReleaseDir "flutter_app\build\windows\x64\runner\Release"
@@ -117,9 +117,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: vaktet-windows
-          path: |
-            dist/windows/Vaktet-Windows-Portable.zip
-            dist/windows/Vaktet.msi
+          path: dist/windows/Vaktet.msi
           if-no-files-found: error
 
   publish-release:
@@ -153,7 +151,6 @@ jobs:
         with:
           files: |
             release-assets/vaktet-arm64.apk
-            release-assets/Vaktet-Windows-Portable.zip
             release-assets/Vaktet.msi
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}

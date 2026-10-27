@@ -23,17 +23,8 @@ if (-not (Test-Path "$FlutterReleaseDir\vaktet.exe")) {
 $DistDir = Join-Path $RootDir "dist\windows"
 if (-not (Test-Path $DistDir)) { New-Item -ItemType Directory -Path $DistDir -Force | Out-Null }
 
-# 1. Create Portable ZIP
-Write-Host "`n[1/3] Creating Vaktet-Windows-Portable.zip..." -ForegroundColor Yellow
-$PortableZip = Join-Path $DistDir "Vaktet-Windows-Portable.zip"
-if (Test-Path $PortableZip) { Remove-Item $PortableZip -Force }
-
-Compress-Archive -Path "$FlutterReleaseDir\*" -DestinationPath $PortableZip -CompressionLevel Optimal
-$ZipSize = (Get-Item $PortableZip).Length / 1MB
-Write-Host "  -> Vaktet-Windows-Portable.zip created ($([math]::Round($ZipSize, 2)) MB)" -ForegroundColor Green
-
-# 2. Check for WiX tools (heat, candle, light)
-Write-Host "`n[2/3] Checking WiX Toolset..." -ForegroundColor Yellow
+# 1. Check for WiX tools (heat, candle, light)
+Write-Host "`n[1/2] Checking WiX Toolset..." -ForegroundColor Yellow
 $CandleExe = Get-Command "candle.exe" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 $LightExe = Get-Command "light.exe" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 $HeatExe = Get-Command "heat.exe" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
@@ -58,8 +49,8 @@ if (-not $CandleExe -or -not $LightExe -or -not $HeatExe) {
     $HeatExe = "$LocalWix\heat.exe"
 }
 
-# 3. Harvest Release components and compile MSI
-Write-Host "`n[3/3] Compiling Native Vaktet.msi with WiX..." -ForegroundColor Yellow
+# 2. Harvest Release components and compile MSI
+Write-Host "`n[2/2] Compiling Native Vaktet.msi with WiX..." -ForegroundColor Yellow
 $AppComponentsWxs = Join-Path $RootDir "windows\AppComponents.wxs"
 $WxsFile = Join-Path $RootDir "windows\Vaktet.wxs"
 $MsiOutput = Join-Path $DistDir "Vaktet.msi"
