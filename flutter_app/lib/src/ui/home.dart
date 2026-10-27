@@ -16,6 +16,7 @@ import 'settings.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
 import 'text.dart';
+import 'tree_interaction.dart';
 import 'today_view.dart';
 import 'widgets.dart';
 
@@ -497,6 +498,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         onHorizontalDragDown: c.on(Feature.daySwipe) ? _downSide : null,
         onHorizontalDragUpdate: c.on(Feature.daySwipe) ? _updateSideDrag : null,
         onHorizontalDragEnd: c.on(Feature.daySwipe) ? _endSideDrag : null,
+        onTapDown: (details) {
+          if (_sheet.value > 0) return;
+          final size = MediaQuery.sizeOf(context);
+          if (c.on(Feature.landscape) && TreeInteraction.isTreeHit(details.localPosition, size)) {
+            final isDay = (skyPalettes[c.model.phase]?.stars ?? 0) < 0.75;
+            TreeInteraction.shared.tap(details.localPosition, size, c.model.scene, isDay: isDay);
+          }
+        },
         onTap: () {
           if (_sheet.value > 0) _settleSheet(false);
         },

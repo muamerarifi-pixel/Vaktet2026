@@ -382,7 +382,7 @@ void main() {
 
   testWidgets('settings: font, text size and countdown thickness', (tester) async {
     final handle = tester.ensureSemantics();
-    final c = await _open(tester);
+    final c = await _open(tester, prefs: {'countdownWeight': 900});
     double countdownWeight() {
       final digit = tester.widget<Text>(find.descendant(of: _countdown('01:14:00'), matching: find.byType(Text)).first);
       return digit.style!.fontVariations!.single.value;

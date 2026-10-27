@@ -93,17 +93,24 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       _clock = clock ?? _systemClock {
     city = cityById(prefs.getString(_kCity));
     theme = ThemeChoice.dark;
-    font = FontChoice.values.firstWhere((f) => f.name == prefs.getString(_kFont), orElse: () => FontChoice.figtree);
-    final scale = prefs.getDouble(_kFontScale) ?? 1.0;
-    fontScale = fontScales.contains(scale) ? scale : 1.0;
+    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    font = FontChoice.values.firstWhere(
+      (f) => f.name == prefs.getString(_kFont),
+      orElse: () => isAndroid ? FontChoice.nunito : FontChoice.figtree,
+    );
+    final defaultScale = isAndroid ? .9 : 1.0;
+    final scale = prefs.getDouble(_kFontScale) ?? defaultScale;
+    fontScale = fontScales.contains(scale) ? scale : defaultScale;
     countdownFont = CountdownFont.values.firstWhere(
       (f) => f.name == prefs.getString(_kCountFont),
       orElse: () => CountdownFont.text,
     );
-    final weight = prefs.getInt(_kCountWeight) ?? 900;
-    countdownWeight = countdownWeights.contains(weight) ? weight : 900;
-    final countSize = prefs.getDouble(_kCountSize) ?? 1.0;
-    countdownSize = countdownSizes.contains(countSize) ? countSize : 1.0;
+    final defaultWeight = isAndroid ? 300 : 900;
+    final weight = prefs.getInt(_kCountWeight) ?? defaultWeight;
+    countdownWeight = countdownWeights.contains(weight) ? weight : defaultWeight;
+    final defaultCountSize = isAndroid ? 1.15 : 1.0;
+    final countSize = prefs.getDouble(_kCountSize) ?? defaultCountSize;
+    countdownSize = countdownSizes.contains(countSize) ? countSize : defaultCountSize;
     lookNotifier = ValueNotifier<Look>(_look);
     final adj = prefs.getInt(_kHijri) ?? 0;
     hijriAdj = adj.clamp(-2, 2);

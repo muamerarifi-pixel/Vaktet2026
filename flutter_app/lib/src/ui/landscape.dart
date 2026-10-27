@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../logic/prayer.dart';
 import 'colors.dart';
+import 'tree_interaction.dart';
 
 /// The land under the full-screen sky, as it looks from a valley: a far mountain range, low and pale with
 /// distance, wooded ridges one in front of the other with mist lying between them, a lake that mirrors them, and
@@ -252,6 +253,7 @@ class Landscape {
     _lake(canvas, picture);
     _shore(canvas);
     _tree(canvas);
+    TreeInteraction.shared.paint(canvas, size, t, _day > .3, scene);
     picture.dispose();
   }
 
@@ -678,7 +680,8 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
     final lit = (_day * (.55 + .2 * warm) + .35 * moonlight).clamp(0.0, 1.0);
 
     // Dynamic wind effect: soothing natural breeze
-    final wind = (math.sin(t * 1.05) * 0.7 + math.sin(t * 1.85 + 0.8) * 0.3) * (0.85 + 0.15 * math.sin(t * 0.35));
+    final rustle = TreeInteraction.shared.rustleAt(t);
+    final wind = (math.sin(t * 1.05) * 0.7 + math.sin(t * 1.85 + 0.8) * 0.3) * (0.85 + 0.15 * math.sin(t * 0.35)) + rustle;
     Offset limbSway(Offset pt, int depth) =>
         pt + Offset(wind * math.pow(depth / 5.0, 1.7) * 2.8, -wind.abs() * 0.3 * (depth / 5.0));
     Offset leafSway(Offset pt, Offset rel, int layer) {
