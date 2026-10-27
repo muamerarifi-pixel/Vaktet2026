@@ -1,2 +1,11 @@
 .wrangler/
 live_web_preview.png
+windows/tools/
+windows/bin/
+windows/*.exe
+windows/*.msi
+windows/*.wixobj
+windows/*.wixpdb
+windows/assets.zip
+
+

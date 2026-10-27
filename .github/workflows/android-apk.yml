@@ -1,9 +1,11 @@
-name: Android APK
+name: Android APK & Windows
 
-# Builds the Flutter app (flutter_app/) into installable APKs: vaktet-arm64.apk for nearly every phone of the
-# (ARM64 only)
-# To publish them as a GitHub Release, run this workflow by hand (Actions → Android APK → Run workflow) with
-# "Publish a release" ticked, or push a tag such as v1.0.0.
+# Builds:
+#   1. Android APK: vaktet-arm64.apk (ARM64 only)
+#   2. Windows Desktop: Vaktet.exe (Portable offline app) and Vaktet.msi (Installer)
+#
+# To publish them as a GitHub Release, run this workflow by hand (Actions → Android APK & Windows → Run workflow) with
+# "Publish a release" ticked, or push a tag such as v1.9.14.
 
 on:
   push:
@@ -11,15 +13,35 @@ on:
     tags: ['v*']
     paths:
       - 'flutter_app/**'
+      - 'windows/**'
+      - 'icons/**'
+      - 'fonts/**'
+      - 'index.html'
+      - 'styles.css'
+      - 'app.js'
+      - 'data.js'
+      - 'tips.js'
+      - 'sw.js'
+      - 'manifest.webmanifest'
       - '.github/workflows/android-apk.yml'
   pull_request:
     paths:
       - 'flutter_app/**'
+      - 'windows/**'
+      - 'icons/**'
+      - 'fonts/**'
+      - 'index.html'
+      - 'styles.css'
+      - 'app.js'
+      - 'data.js'
+      - 'tips.js'
+      - 'sw.js'
+      - 'manifest.webmanifest'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
     inputs:
       publish:
-        description: 'Publish a release with the APKs'
+        description: 'Publish a release with APK and Windows deliverables'
         type: boolean
         default: false
 
@@ -27,15 +49,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: apk-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-apk:
+    name: Build Android APK (ARM64)
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    permissions:
-      contents: write # only used to attach the APK to a release
     defaults:
       run:
         working-directory: flutter_app
@@ -64,11 +85,10 @@ jobs:
       - name: Test
         run: flutter test
 
-      # one APK per kind of processor: about a third of the size of one APK for all of them
-      - name: Build the APKs
+      # Build exclusively ARM64 APK
+      - name: Build the APK
         run: flutter build apk --release --split-per-abi
 
-      # fixed names, so .../releases/latest/download/vaktet-arm64.apk always gives the newest one
       - name: Name the APKs
         run: |
           mkdir -p dist
@@ -77,16 +97,64 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: vaktet-apk
-          path: flutter_app/dist/*.apk
+          name: vaktet-arm64-apk
+          path: flutter_app/dist/vaktet-arm64.apk
           if-no-files-found: error
 
-      - name: Publish a release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+  build-windows:
+    name: Build Windows (EXE & MSI)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Windows Deliverables
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File windows/build.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vaktet-windows
+          path: |
+            dist/windows/Vaktet.exe
+            dist/windows/Vaktet.msi
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-apk, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create release directory
+        run: mkdir -p release-assets
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: vaktet-arm64-apk
+          path: release-assets
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: vaktet-windows
+          path: release-assets
+
+      - name: List Release Assets
+        run: ls -la release-assets
+
+      - name: Publish Release to GitHub
         uses: softprops/action-gh-release@v2
         with:
-          files: flutter_app/dist/vaktet-arm64.apk
+          files: |
+            release-assets/vaktet-arm64.apk
+            release-assets/Vaktet.exe
+            release-assets/Vaktet.msi
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
-          target_commitish: ${{ github.sha }} # tag the commit the APK was built from, not the default branch
+          target_commitish: ${{ github.sha }}
           name: Vaktet ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build {0}', github.run_number) }}
           generate_release_notes: true

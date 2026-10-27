@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="Vaktet 2026"
+           Language="1033"
+           Codepage="65001"
+           Version="1.9.14"
+           Manufacturer="Vaktet"
+           UpgradeCode="2A3B4C5D-6E7F-8A9B-0C1D-2E3F4A5B6C7D">
+
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             InstallScope="perUser"
+             Comments="Kohët e namazit në Kosovë (Offline Windows Application)" />
+
+    <MajorUpgrade DowngradeErrorMessage="Një version më i ri i Vaktet 2026 është tashmë i instaluar." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon.ico" SourceFile="icons\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/muamerarifi-pixel/Vaktet2026" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/muamerarifi-pixel/Vaktet2026" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <!-- Per-user installation directory in LocalAppData\Programs\Vaktet -->
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="Vaktet 2026" />
+        </Directory>
+      </Directory>
+
+      <!-- Start Menu shortcuts directory -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Vaktet 2026" />
+      </Directory>
+
+      <!-- Desktop shortcuts directory -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="3F8C9D1E-2B4A-4C5D-8E7F-9A0B1C2D3E4F">
+        <File Id="VaktetExe"
+              Name="Vaktet.exe"
+              Source="windows\Vaktet.exe"
+              KeyPath="yes" />
+
+        <File Id="VaktetIcon"
+              Name="app.ico"
+              Source="icons\app.ico" />
+
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Vaktet\Vaktet2026"
+                       Name="Installed"
+                       Type="integer"
+                       Value="1" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="StartMenuShortcutComponent" Guid="5A6B7C8D-9E0F-1A2B-3C4D-5E6F7A8B9C0D">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="Vaktet 2026"
+                  Description="Kohët e namazit në Kosovë"
+                  Target="[#VaktetExe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon.ico" />
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Vaktet\Vaktet2026"
+                       Name="StartMenuShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="7B8C9D0E-1F2A-3B4C-5D6E-7F8A9B0C1D2E">
+        <Shortcut Id="ApplicationDesktopShortcut"
+                  Name="Vaktet 2026"
+                  Description="Kohët e namazit në Kosovë"
+                  Target="[#VaktetExe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon.ico" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Vaktet\Vaktet2026"
+                       Name="DesktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="ProductFeature" Title="Vaktet 2026" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+    </Feature>
+  </Product>
+</Wix>

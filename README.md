@@ -9,11 +9,15 @@
 Kohët zyrtare nga **Takvimi i Bashkësisë Islame të Kosovës**, për 18 qytete,<br>
 nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
-[![Shkarko për Android](https://img.shields.io/badge/Shkarko_për_Android-APK-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)
+[![Shkarko për Android](https://img.shields.io/badge/Android-vaktet--arm64.apk-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)
+&nbsp;
+[![Shkarko për Windows Portable](https://img.shields.io/badge/Windows_Portable-Vaktet.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.exe)
+&nbsp;
+[![Shkarko për Windows MSI](https://img.shields.io/badge/Windows_MSI-Vaktet.msi-005A9E?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi)
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.9.14 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Versioni 1.9.14 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [Vaktet.exe (Portable)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.exe) · [Vaktet.msi (Instaluesi)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -54,9 +58,12 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 ---
 
-## Risitë në versionin 1.9.14 (Android)
+## Risitë në versionin 1.9.14 (Android & Windows)
 
-- 🌙 **Përjashtimisht pamje e errët (Dark Theme Only):** Pamja e çelët është hequr plotësisht nga i gjithë aplikacioni. Aplikacioni ekzekutohet gjithmonë me temë të errët me xham të tejdukshëm frosted glass, dhe zgjedhja e pamjes në cilësime është hequr si e panevojshme.
+- 💻 **Aplikacion i plotë offline për Windows (Vaktet.exe & Vaktet.msi):**
+  - **Vaktet.exe (Portable):** Ekzekutues i pavarur, pa nevojë instalimi, që punon 100% pa internet dhe integron të gjitha veçoritë e plota: pamjen e errët, efektin xham të tejdukshëm (frosted glass), pemën me lëkundje flladi dhe gjethe të imta botanike, ujin me valëzim e reflektime drite, dhe të gjitha kohët e 2026-ës.
+  - **Vaktet.msi (Windows Installer):** Projekt instaluesi standard Windows Installer me shkurtore në Start Menu & Desktop dhe mbështetje për çinstalim të plotë.
+- 🌙 **Përjashtimisht pamje e errët (Dark Theme Only):** Pamja e çelët është hequr plotësisht nga i gjithë aplikacioni (Android, Windows, dhe Web). Aplikacioni ekzekutohet gjithmonë me temë të errët elegante me xham të tejdukshëm frosted glass.
 
 ---
 
@@ -93,6 +100,10 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 ## Si ta marrësh
 
+**Windows (Aplikacion për PC pa internet)**
+- 💻 **Versioni Portabël ([Vaktet.exe](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.exe)):** Nuk kërkon asnjë instalim. Shkarkoni skedarin dhe ekzekutojeni menjëherë (nga Desktop, USB, etj.). Punon 100% pa lidhje interneti, me dritare të dedikuar të aplikacionit dhe ruan të gjitha preferencat tuaja.
+- 📦 **Instaluesi Zyrtar ([Vaktet.msi](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi)):** Për instalim të përhershëm në sistem me shkurtore në menynë Start dhe Desktop, ikonë zyrtare dhe çinstalues të pastër.
+
 **Android**
 1. Shkarko **[vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)** (ARM64 për Android).
 2. Hape në telefon. Nëse të pyet, lejo instalimin nga ky burim (një herë).
@@ -100,7 +111,7 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 Versioni i ri instalohet mbi të vjetrin. Nëse të del „App not installed”, çinstalo një herë versionin e vjetër dhe instalo të riun.
 
-**iPhone, laptop ose çdo pajisje tjetër**
+**iPhone, laptop ose shfletues Web**
 1. Hap [vaktet.muamer-arifi.workers.dev](https://vaktet.muamer-arifi.workers.dev).
 2. Nga menyja e shfletuesit zgjidh **„Shto në ekranin kryesor"** / **„Install app"**.
 3. Pas hapjes së parë punon edhe pa internet.
