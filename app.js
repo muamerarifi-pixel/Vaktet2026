@@ -136,7 +136,7 @@
   const state = {
     view: "today",
     city: cityById(store.get("city", "kosove")),
-    theme: store.get("theme", "auto"),
+    theme: "dark",
     hijriAdj: parseInt(store.get("hijri", "0"), 10) || 0,
     alarmOffset: parseInt(store.get("alarm", "30"), 10) || 30,
     font: ["figtree", "manrope", "nunito", "lora", "mono"].includes(store.get("font", "figtree")) ? store.get("font", "figtree") : "figtree",
@@ -155,8 +155,7 @@
   // ---------- Theme ----------
   function applyTheme() {
     const root = document.documentElement;
-    if (state.theme === "light" || state.theme === "dark") root.dataset.theme = state.theme;
-    else delete root.dataset.theme;
+    root.dataset.theme = "dark";
     updateChrome();
   }
 

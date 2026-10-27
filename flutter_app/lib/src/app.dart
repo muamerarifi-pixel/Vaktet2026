@@ -39,13 +39,9 @@ class VaktetApp extends StatelessWidget {
       builder: (context, look, _) => MaterialApp(
         title: 'Vaktet',
         debugShowCheckedModeBanner: false,
-        theme: _theme(VaktetColors.light, look.font),
+        theme: _theme(VaktetColors.darkTheme, look.font),
         darkTheme: _theme(VaktetColors.darkTheme, look.font),
-        themeMode: switch (look.theme) {
-          ThemeChoice.auto => ThemeMode.system,
-          ThemeChoice.light => ThemeMode.light,
-          ThemeChoice.dark => ThemeMode.dark,
-        },
+        themeMode: ThemeMode.dark,
         // the phone's text size (within limits), times the size picked in the settings
         builder: (context, child) {
           final media = MediaQuery.of(context);

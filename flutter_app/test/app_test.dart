@@ -360,10 +360,7 @@ void main() {
     final c = await _open(tester);
     await tester.tap(_label('Cilësimet'));
     await tester.pumpAndSettle();
-    expect(find.text('Pamja'), findsOneWidget);
     expect(find.text('Data hixhri'), findsOneWidget);
-    await tester.tap(find.text('E errët'));
-    await tester.pumpAndSettle();
     expect(c.theme, ThemeChoice.dark);
     await tester.tap(find.text('+1'));
     await tester.pumpAndSettle();
@@ -372,7 +369,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.alarmOffset, 60);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('theme'), 'dark');
+    expect(c.theme, ThemeChoice.dark);
     expect(prefs.getInt('hijri'), 1);
     expect(prefs.getInt('alarm'), 60);
     await tester.tap(_label('Mbyll'));
@@ -398,15 +395,15 @@ void main() {
     await tester.tap(find.text('Klasike'));
     await tester.pumpAndSettle();
     expect(c.font, FontChoice.lora);
-    expect(Theme.of(tester.element(find.text('Pamja'))).textTheme.bodyMedium!.fontFamily, 'Lora');
+    expect(Theme.of(tester.element(find.text('Data hixhri'))).textTheme.bodyMedium!.fontFamily, 'Lora');
     await tester.tap(find.descendant(of: find.byType(Segmented<FontChoice>), matching: find.text('E lehtë')));
     await tester.pumpAndSettle();
     expect(c.font, FontChoice.manrope);
-    expect(Theme.of(tester.element(find.text('Pamja'))).textTheme.bodyMedium!.fontFamily, 'Manrope');
+    expect(Theme.of(tester.element(find.text('Data hixhri'))).textTheme.bodyMedium!.fontFamily, 'Manrope');
     await tester.tap(find.text('E madhe'));
     await tester.pumpAndSettle();
     expect(c.fontScale, 1.12);
-    expect(MediaQuery.textScalerOf(tester.element(find.text('Pamja'))).scale(100), closeTo(112, .01));
+    expect(MediaQuery.textScalerOf(tester.element(find.text('Data hixhri'))).scale(100), closeTo(112, .01));
     await tester.scrollUntilVisible(find.text('Hollë'), 200);
     await tester.tap(find.text('Hollë'));
     await tester.pumpAndSettle();

@@ -221,9 +221,13 @@ class _CurrentPrayerPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 7),
-          Text(
-            text,
-            style: vt(12.5, 700, color: _white, ls: .04),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: vt(12.5, 700, color: _white, ls: .04),
+            ),
           ),
         ],
       ),

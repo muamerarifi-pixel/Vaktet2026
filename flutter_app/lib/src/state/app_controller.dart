@@ -92,7 +92,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     : _prefs = prefs,
       _clock = clock ?? _systemClock {
     city = cityById(prefs.getString(_kCity));
-    theme = ThemeChoice.values.firstWhere((t) => t.name == prefs.getString(_kTheme), orElse: () => ThemeChoice.auto);
+    theme = ThemeChoice.dark;
     font = FontChoice.values.firstWhere((f) => f.name == prefs.getString(_kFont), orElse: () => FontChoice.figtree);
     final scale = prefs.getDouble(_kFontScale) ?? 1.0;
     fontScale = fontScales.contains(scale) ? scale : 1.0;

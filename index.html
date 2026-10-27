@@ -5,13 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Vaktet – Kohët e namazit në Kosovë</title>
   <meta name="description" content="Kohët e namazit për qytetet e Kosovës sipas Takvimit të Bashkësisë Islame të Kosovës. Funksionon edhe pa internet.">
-  <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#EEF1EE" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#000000">
   <style>
     /* Paint the right background before anything else loads, so opening the app at night never flashes light. */
-    html { background: #EEF1EE; }
-    @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #000000; } }
+    html { background: #000000; }
     html[data-theme="dark"] { background: #000000; }
   </style>
   <script>
@@ -24,7 +22,7 @@
         if (z >= .9 && z <= 1.25) r.style.setProperty("--text-scale", z);
         if (w >= 300 && w <= 900) r.style.setProperty("--cd-weight", w);
         if (t === "light" || t === "dark") {
-          document.documentElement.dataset.theme = t;
+          document.documentElement.dataset.theme = "dark";
           var c = t === "dark" ? "#000000" : "#EEF1EE";
           var m = document.querySelectorAll('meta[name="theme-color"]');
           for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
@@ -207,14 +205,7 @@
         </button>
       </div>
 
-      <fieldset class="field">
-        <legend>Pamja</legend>
-        <div class="segmented" role="radiogroup">
-          <label><input type="radio" name="theme" value="auto"><span>Automatike</span></label>
-          <label><input type="radio" name="theme" value="light"><span>E çelët</span></label>
-          <label><input type="radio" name="theme" value="dark"><span>E errët</span></label>
-        </div>
-      </fieldset>
+
 
       <fieldset class="field">
         <legend>Data hixhri</legend>

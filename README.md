@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.9.13 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9.14 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -51,6 +51,12 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit, dhe ora verore e dimërore llogaritet vetë, vit pas viti.
 
 🔒 **Pa reklama, pa llogari, pa gjurmim** – asnjë e dhënë nuk largohet nga telefoni yt.
+
+---
+
+## Risitë në versionin 1.9.14 (Android)
+
+- 🌙 **Përjashtimisht pamje e errët (Dark Theme Only):** Pamja e çelët është hequr plotësisht nga i gjithë aplikacioni. Aplikacioni ekzekutohet gjithmonë me temë të errët me xham të tejdukshëm frosted glass, dhe zgjedhja e pamjes në cilësime është hequr si e panevojshme.
 
 ---
 

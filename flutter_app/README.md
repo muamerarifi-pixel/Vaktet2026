@@ -6,6 +6,10 @@ the same: the sky card that follows the prayer time, active prayer indicator pil
 alarm suggestion, the month table, Hijri date with correction, light/dark/automatic theme, a choice of font, text size and countdown thickness, 19 towns. Works fully
 offline.
 
+## What's new in v1.9.14
+
+- **Exclusive Dark Theme Mode:** Light theme completely removed across the application. The entire UI permanently renders in the optimized dark aesthetic with pure translucent frosted glass surfaces, and the redundant appearance setting selector has been removed.
+
 ## What's new in v1.9.13
 
 - **Pure Translucent Frosted Glass Settings Card:** Redesigned Settings dialog with true glassmorphism featuring 80%+ translucency, linear specular light gradients, refined 28px gaussian backdrop blur, luminous glass edge highlights, translucent segmented control tracks with floating glass selection pills, and crisp contrast in both dark and light modes.

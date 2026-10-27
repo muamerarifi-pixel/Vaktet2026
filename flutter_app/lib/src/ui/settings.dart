@@ -115,18 +115,7 @@ class _Sheet extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _Field(
-              title: 'Pamja',
-              child: Segmented<ThemeChoice>(
-                options: const [
-                  ('Automatike', ThemeChoice.auto),
-                  ('E çelët', ThemeChoice.light),
-                  ('E errët', ThemeChoice.dark),
-                ],
-                value: c.theme,
-                onChanged: c.setTheme,
-              ),
-            ),
+
             _Field(
               title: 'Data hixhri',
               hint: 'Nëse data hixhri ndryshon nga ajo e shpallur nga BIK, korrigjojeni me ditë.',
