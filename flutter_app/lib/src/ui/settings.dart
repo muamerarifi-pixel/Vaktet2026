@@ -15,12 +15,12 @@ Future<void> showSettings(BuildContext context, AppController controller) {
     context: context,
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: const Color(0x66080E0C),
+    barrierColor: const Color(0x28000000),
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (dialogContext, animation, secondaryAnimation) => Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
         // only the settings change what it shows, not the ticking clock
@@ -58,28 +58,43 @@ class _Sheet extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? .5 : .06),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: isDark ? .30 : .12),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+            spreadRadius: -4,
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? .85 : .14),
-            blurRadius: 32,
-            offset: const Offset(0, 10),
-            spreadRadius: -8,
+            color: Colors.black.withValues(alpha: isDark ? .18 : .05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xD4131B17) : const Color(0xDCF8FAF8),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? const [
+                        Color(0x38FFFFFF),
+                        Color(0x2418221D),
+                        Color(0x2E0E1713),
+                      ]
+                    : const [
+                        Color(0x80FFFFFF),
+                        Color(0x55FFFFFF),
+                        Color(0x3EFFFFFF),
+                      ],
+                stops: const [0.0, 0.45, 1.0],
+              ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: isDark ? const Color(0x38FFFFFF) : const Color(0x88FFFFFF),
+                color: isDark ? const Color(0x50FFFFFF) : const Color(0x85FFFFFF),
                 width: 1.2,
               ),
             ),
@@ -94,9 +109,9 @@ class _Sheet extends StatelessWidget {
                     children: [
                       Semantics(
                         header: true,
-                        child: Text('Cilësimet', style: vt(19, 850, color: colors.ink, height: 1.5)),
+                        child: Text('Cilësimet', style: vt(19, 850, color: isDark ? Colors.white : colors.ink, height: 1.5)),
                       ),
-                      RoundIconButton(icon: VIcon.close, label: 'Mbyll', onTap: () => Navigator.of(context).pop()),
+                      RoundIconButton(icon: VIcon.close, label: 'Mbyll', onTap: () => Navigator.of(context).pop(), onSky: true),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -173,9 +188,9 @@ class _Sheet extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(top: 20, bottom: 2),
-              child: Text('Veçoritë', style: vt(15, 800, color: colors.ink, height: 1.5)),
+              child: Text('Veçoritë', style: vt(15, 800, color: isDark ? Colors.white : colors.ink, height: 1.5)),
             ),
-            Text('Ndizni ose fikni çdo pjesë të aplikacionit.', style: vt(13.5, 500, color: colors.muted)),
+            Text('Ndizni ose fikni çdo pjesë të aplikacionit.', style: vt(13.5, 500, color: isDark ? const Color(0xC0FFFFFF) : colors.muted)),
             const SizedBox(height: 6),
             for (final f in Feature.values)
               _Switch(title: f.title, hint: f.hint, value: c.on(f), onChanged: (v) => c.setFeature(f, v)),
@@ -183,19 +198,19 @@ class _Sheet extends StatelessWidget {
               margin: const EdgeInsets.only(top: 18),
               padding: const EdgeInsets.only(top: 14),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: colors.line)),
+                border: Border(top: BorderSide(color: isDark ? const Color(0x35FFFFFF) : colors.line)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Kohët janë nga Takvimi zyrtar i Bashkësisë Islame të Kosovës. Qytetet që Takvimi i shënon me dallim (Prishtina, Ferizaj, Gjilani, Podujeva, Vushtrria −1 min, Sharri +2 min) e kanë të llogaritur dallimin; qytetet e tjera përdorin kohët bazë.',
-                    style: vt(13.5, 500, color: colors.muted),
+                    style: vt(13.5, 500, color: isDark ? const Color(0xC0FFFFFF) : colors.muted),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Aplikacioni punon pa internet dhe e llogarit vetë kalimin në orën verore e dimërore, prandaj kohët mbeten të sakta edhe në vitet në vijim.',
-                    style: vt(13.5, 500, color: colors.muted),
+                    style: vt(13.5, 500, color: isDark ? const Color(0xC0FFFFFF) : colors.muted),
                   ),
                 ],
               ),
@@ -243,10 +258,10 @@ class _CountdownFonts extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: on
-                  ? (c.dark ? const Color(0x38FFFFFF) : c.surface)
-                  : (c.dark ? const Color(0x20000000) : const Color(0x28FFFFFF)),
+                  ? (c.dark ? const Color(0x48FFFFFF) : const Color(0xB0FFFFFF))
+                  : (c.dark ? const Color(0x1E000000) : const Color(0x2AFFFFFF)),
               border: Border.all(
-                color: on ? c.accent : c.line.withValues(alpha: 0.6),
+                color: on ? c.accent : (c.dark ? const Color(0x28FFFFFF) : const Color(0x25000000)),
                 width: on ? 1.6 : 1,
               ),
               boxShadow: on
@@ -269,7 +284,7 @@ class _CountdownFonts extends StatelessWidget {
                     style: vt(
                       24,
                       weight.toDouble(),
-                      color: on ? c.ink : c.muted,
+                      color: on ? (c.dark ? Colors.white : c.ink) : (c.dark ? const Color(0xCCFFFFFF) : c.muted),
                       height: 1.15,
                     ).copyWith(fontFamily: f.family, fontFeatures: const [FontFeature.liningFigures()]),
                   ),
@@ -279,7 +294,7 @@ class _CountdownFonts extends StatelessWidget {
                   f.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: vt(12, 700, color: on ? c.accent : c.muted, height: 1.3),
+                  style: vt(12, 700, color: on ? c.accent : (c.dark ? const Color(0x9EFFFFFF) : c.muted), height: 1.3),
                 ),
               ],
             ),
@@ -342,8 +357,8 @@ class _Switch extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: vt(14.5, 750, color: colors.ink, height: 1.35)),
-                    Text(hint, style: vt(12.5, 500, color: colors.muted, height: 1.35)),
+                    Text(title, style: vt(14.5, 750, color: colors.dark ? Colors.white : colors.ink, height: 1.35)),
+                    Text(hint, style: vt(12.5, 500, color: colors.dark ? const Color(0xB8FFFFFF) : colors.muted, height: 1.35)),
                   ],
                 ),
               ),
@@ -373,7 +388,7 @@ class _Toggle extends StatelessWidget {
       width: 44,
       height: 26,
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), color: on ? c.accent : c.line),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), color: on ? c.accent : (c.dark ? const Color(0x35FFFFFF) : c.line)),
       child: AnimatedAlign(
         duration: d,
         curve: Curves.easeOut,
@@ -407,10 +422,10 @@ class _Field extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: vt(15, 800, color: colors.ink, height: 1.5)),
+          Text(title, style: vt(15, 800, color: colors.dark ? Colors.white : colors.ink, height: 1.5)),
           if (hint != null) ...[
             const SizedBox(height: 4),
-            Text(hint!, style: vt(13.5, 500, color: colors.muted)),
+            Text(hint!, style: vt(13.5, 500, color: colors.dark ? const Color(0xC0FFFFFF) : colors.muted)),
             const SizedBox(height: 10),
           ] else
             const SizedBox(height: 8),
@@ -448,8 +463,8 @@ class Segmented<T> extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: isDark ? const Color(0x30000000) : const Color(0x38FFFFFF),
-        border: Border.all(color: c.line.withValues(alpha: 0.6)),
+        color: isDark ? const Color(0x24000000) : const Color(0x1C000000),
+        border: Border.all(color: isDark ? const Color(0x30FFFFFF) : const Color(0x22000000), width: 1),
       ),
       child: Row(
         children: [
@@ -477,12 +492,18 @@ class Segmented<T> extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
                       color: options[i].$2 == value
-                          ? (isDark ? const Color(0x4DFFFFFF) : c.surface)
+                          ? (isDark ? const Color(0x4EFFFFFF) : const Color(0xD8FFFFFF))
+                          : null,
+                      border: options[i].$2 == value
+                          ? Border.all(
+                              color: isDark ? const Color(0x65FFFFFF) : const Color(0x88FFFFFF),
+                              width: 1,
+                            )
                           : null,
                       boxShadow: options[i].$2 == value
                           ? [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? .35 : .10),
+                                color: Colors.black.withValues(alpha: isDark ? .20 : .08),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1.5),
                               ),
@@ -497,7 +518,7 @@ class Segmented<T> extends StatelessWidget {
                         style: vt(
                           14,
                           weightOf?.call(options[i].$2) ?? 720,
-                          color: options[i].$2 == value ? c.ink : c.muted,
+                          color: options[i].$2 == value ? (isDark ? Colors.white : c.ink) : (isDark ? const Color(0xB8FFFFFF) : c.muted),
                           height: 1.5,
                         ).copyWith(fontFamily: fontOf?.call(options[i].$2)),
                       ),

@@ -13,7 +13,7 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Android 1.9.12 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Android 1.9.13 · për telefona shumë të vjetër: [vaktet-arm32.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm32.apk) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -51,6 +51,12 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 📴 **Pa internet, përgjithmonë** – të gjitha kohët janë brenda aplikacionit, dhe ora verore e dimërore llogaritet vetë, vit pas viti.
 
 🔒 **Pa reklama, pa llogari, pa gjurmim** – asnjë e dhënë nuk largohet nga telefoni yt.
+
+---
+
+## Risitë në versionin 1.9.13 (Android)
+
+- 🪟 **Karta e cilësimeve me efekt xhami të tejdukshëm (Pure Translucent Frosted Glass):** Riformatim i plotë i kartës së cilësimeve me xham vërtet të tejdukshëm (mbi 80% tejdukshmëri) ku qielli, malet, pema dhe uji mbeten të dukshëm në sfond nën mjegullimin e butë gaussian (sigma 28). Kontrolluesit e përzgjedhjes (Segmented) janë shndërruar në pilula lundruese qelqi me dritë skajore dhe kontrast të përkryer të shkrimit në të dyja temat (çelët e errët).
 
 ---
 
