@@ -67,7 +67,7 @@ $MsiOutput = Join-Path $DistDir "Vaktet.msi"
 & $HeatExe dir "$FlutterReleaseDir" `
     -cg AppComponents `
     -dr INSTALLFOLDER `
-    -scom -sfrag -srd `
+    -scom -sfrag -srd -sreg -gg `
     -var var.SourceDir `
     -out "$AppComponentsWxs"
 
