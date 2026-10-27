@@ -1,10 +1,10 @@
-name: Android APK & Windows
+name: Android APK & Native Windows
 
 # Builds:
 #   1. Android APK: vaktet-arm64.apk (ARM64 only)
-#   2. Windows Desktop: Vaktet.exe (Portable offline app) and Vaktet.msi (Installer)
+#   2. 100% Native Windows: Vaktet-Windows-Portable.zip and Vaktet.msi (Flutter C++ / Win32 / DirectX)
 #
-# To publish them as a GitHub Release, run this workflow by hand (Actions → Android APK & Windows → Run workflow) with
+# To publish them as a GitHub Release, run this workflow by hand (Actions → Android APK & Native Windows → Run workflow) with
 # "Publish a release" ticked, or push a tag such as v1.9.14.
 
 on:
@@ -15,33 +15,17 @@ on:
       - 'flutter_app/**'
       - 'windows/**'
       - 'icons/**'
-      - 'fonts/**'
-      - 'index.html'
-      - 'styles.css'
-      - 'app.js'
-      - 'data.js'
-      - 'tips.js'
-      - 'sw.js'
-      - 'manifest.webmanifest'
       - '.github/workflows/android-apk.yml'
   pull_request:
     paths:
       - 'flutter_app/**'
       - 'windows/**'
       - 'icons/**'
-      - 'fonts/**'
-      - 'index.html'
-      - 'styles.css'
-      - 'app.js'
-      - 'data.js'
-      - 'tips.js'
-      - 'sw.js'
-      - 'manifest.webmanifest'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
     inputs:
       publish:
-        description: 'Publish a release with APK and Windows deliverables'
+        description: 'Publish a release with APK and Native Windows deliverables'
         type: boolean
         default: false
 
@@ -102,22 +86,39 @@ jobs:
           if-no-files-found: error
 
   build-windows:
-    name: Build Windows (EXE & MSI)
+    name: Build Native Windows App (Flutter C++ & MSI)
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Windows Deliverables
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.6'
+          cache: true
+
+      - name: Enable Windows Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Fetch Flutter Dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Build Native Windows App (Release)
+        working-directory: flutter_app
+        run: flutter build windows --release
+
+      - name: Package Native Windows Deliverables (ZIP & MSI)
         shell: powershell
         run: |
-          powershell -ExecutionPolicy Bypass -File windows/build.ps1
+          powershell -ExecutionPolicy Bypass -File windows/build.ps1 -FlutterReleaseDir "flutter_app\build\windows\x64\runner\Release"
 
       - uses: actions/upload-artifact@v4
         with:
           name: vaktet-windows
           path: |
-            dist/windows/Vaktet.exe
+            dist/windows/Vaktet-Windows-Portable.zip
             dist/windows/Vaktet.msi
           if-no-files-found: error
 
@@ -152,7 +153,7 @@ jobs:
         with:
           files: |
             release-assets/vaktet-arm64.apk
-            release-assets/Vaktet.exe
+            release-assets/Vaktet-Windows-Portable.zip
             release-assets/Vaktet.msi
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
           target_commitish: ${{ github.sha }}

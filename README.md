@@ -11,13 +11,13 @@ nën një qiell që ndjek orën, me hënën e vërtetë dhe male në mjegull.
 
 [![Shkarko për Android](https://img.shields.io/badge/Android-vaktet--arm64.apk-1f6f5c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)
 &nbsp;
-[![Shkarko për Windows Portable](https://img.shields.io/badge/Windows_Portable-Vaktet.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.exe)
+[![Shkarko për Windows Portable](https://img.shields.io/badge/Windows_Nativ-Portable_ZIP-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet-Windows-Portable.zip)
 &nbsp;
-[![Shkarko për Windows MSI](https://img.shields.io/badge/Windows_MSI-Vaktet.msi-005A9E?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi)
+[![Shkarko për Windows MSI](https://img.shields.io/badge/Windows_Instalues-Vaktet.msi-005A9E?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi)
 &nbsp;
 [![Hape në shfletues](https://img.shields.io/badge/Hape_në_shfletues-Web-2b4a8a?style=for-the-badge&logo=googlechrome&logoColor=white)](https://vaktet.muamer-arifi.workers.dev)
 
-<sub>Versioni 1.9.14 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [Vaktet.exe (Portable)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.exe) · [Vaktet.msi (Instaluesi)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
+<sub>Versioni 1.9.14 · [vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk) · [Vaktet-Windows-Portable.zip](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet-Windows-Portable.zip) · [Vaktet.msi (Instaluesi)](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi) · [të gjitha versionet](https://github.com/muamerarifi-pixel/Vaktet2026/releases)</sub>
 
 <br>
 
@@ -58,11 +58,12 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 ---
 
-## Risitë në versionin 1.9.14 (Android & Windows)
+## Risitë në versionin 1.9.14 (Android & 100% Nativ Windows)
 
-- 💻 **Aplikacion i plotë offline për Windows (Vaktet.exe & Vaktet.msi):**
-  - **Vaktet.exe (Portable):** Ekzekutues i pavarur, pa nevojë instalimi, që punon 100% pa internet dhe integron të gjitha veçoritë e plota: pamjen e errët, efektin xham të tejdukshëm (frosted glass), pemën me lëkundje flladi dhe gjethe të imta botanike, ujin me valëzim e reflektime drite, dhe të gjitha kohët e 2026-ës.
-  - **Vaktet.msi (Windows Installer):** Projekt instaluesi standard Windows Installer me shkurtore në Start Menu & Desktop dhe mbështetje për çinstalim të plotë.
+- 💻 **Aplikacion 100% Nativ Windows i ndërtuar me Flutter (C++ / Win32 / DirectX):**
+  - **Zero motor uebi, zero Chrome/Edge:** Kompilohet direkt në kod binar makine për Windows x64 përmes motorit nativ të Flutter-it dhe DirectX.
+  - **Vaktet-Windows-Portable.zip:** Version portabël i pavarur pa nevojë instalimi, 100% offline.
+  - **Vaktet.msi (Windows Installer):** Paketë instaluesi zyrtar me shkurtore në menynë Start dhe Desktop.
 - 🌙 **Përjashtimisht pamje e errët (Dark Theme Only):** Pamja e çelët është hequr plotësisht nga i gjithë aplikacioni (Android, Windows, dhe Web). Aplikacioni ekzekutohet gjithmonë me temë të errët elegante me xham të tejdukshëm frosted glass.
 
 ---
@@ -100,9 +101,9 @@ Vaktet nuk është një tabelë e thatë me orë. Është qielli i Kosovës në 
 
 ## Si ta marrësh
 
-**Windows (Aplikacion për PC pa internet)**
-- 💻 **Versioni Portabël ([Vaktet.exe](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.exe)):** Nuk kërkon asnjë instalim. Shkarkoni skedarin dhe ekzekutojeni menjëherë (nga Desktop, USB, etj.). Punon 100% pa lidhje interneti, me dritare të dedikuar të aplikacionit dhe ruan të gjitha preferencat tuaja.
-- 📦 **Instaluesi Zyrtar ([Vaktet.msi](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi)):** Për instalim të përhershëm në sistem me shkurtore në menynë Start dhe Desktop, ikonë zyrtare dhe çinstalues të pastër.
+**Windows (100% Nativ me Flutter – pa shfletues, pa internet)**
+- 💻 **Versioni Portabël ([Vaktet-Windows-Portable.zip](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet-Windows-Portable.zip)):** Aplikacion 100% nativ Windows (C++ / Win32 / DirectX). Shkarkoni arkivin ZIP, zbërthejeni kudo në PC dhe klikoni `vaktet.exe`. Nuk kërkon instalim, nuk ka asnjë varësi nga Chrome/Edge/uebi dhe punon 100% offline.
+- 📦 **Instaluesi Zyrtar ([Vaktet.msi](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/Vaktet.msi)):** Paketë instalimi Windows Installer (MSI) që vendos aplikacionin nativ në sistem, krijon shkurtoret zyrtare në menynë Start dhe Desktop, dhe ofron çinstalim të pastër.
 
 **Android**
 1. Shkarko **[vaktet-arm64.apk](https://github.com/muamerarifi-pixel/Vaktet2026/releases/latest/download/vaktet-arm64.apk)** (ARM64 për Android).
