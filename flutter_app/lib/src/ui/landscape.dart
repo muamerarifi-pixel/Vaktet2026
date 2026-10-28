@@ -364,7 +364,6 @@ class Landscape {
     canvas.scale(1, -1);
     canvas.drawPicture(land);
     canvas.restore();
-    canvas.restore();
     // the water is darker and a little blue
     canvas.drawRect(
       water,
