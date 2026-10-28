@@ -27,6 +27,9 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // Show window immediately so user sees the dark branded window without launch lag
+  this->Show();
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });

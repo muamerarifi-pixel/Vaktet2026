@@ -97,7 +97,7 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-    window_class.hbrBackground = 0;
+    window_class.hbrBackground = CreateSolidBrush(RGB(14, 23, 19));
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);
@@ -146,10 +146,20 @@ bool Win32Window::Create(const std::wstring& title,
 
   UpdateTheme(window);
 
+  // Restore saved window size, position, and maximized state from last session
+  RestorePlacement();
+
   return OnCreate();
 }
 
 bool Win32Window::Show() {
+  if (window_handle_) {
+    WINDOWPLACEMENT wp{};
+    wp.length = sizeof(WINDOWPLACEMENT);
+    if (::GetWindowPlacement(window_handle_, &wp)) {
+      return ShowWindow(window_handle_, wp.showCmd);
+    }
+  }
   return ShowWindow(window_handle_, SW_SHOWNORMAL);
 }
 
@@ -179,7 +189,16 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_EXITSIZEMOVE:
+      SavePlacement();
+      return 0;
+
+    case WM_CLOSE:
+      SavePlacement();
+      break;
+
     case WM_DESTROY:
+      SavePlacement();
       window_handle_ = nullptr;
       Destroy();
       if (quit_on_close_) {
@@ -285,4 +304,43 @@ void Win32Window::UpdateTheme(HWND const window) {
     DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
                           &enable_dark_mode, sizeof(enable_dark_mode));
   }
+}
+
+void Win32Window::SavePlacement() {
+  if (!window_handle_ || !::IsWindow(window_handle_)) {
+    return;
+  }
+  WINDOWPLACEMENT wp{};
+  wp.length = sizeof(WINDOWPLACEMENT);
+  if (::GetWindowPlacement(window_handle_, &wp)) {
+    HKEY key;
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Vaktet\\Vaktet2026", 0, nullptr,
+                          REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
+      ::RegSetValueExW(key, L"WindowPlacement", 0, REG_BINARY,
+                       reinterpret_cast<const BYTE*>(&wp), sizeof(WINDOWPLACEMENT));
+      ::RegCloseKey(key);
+    }
+  }
+}
+
+bool Win32Window::RestorePlacement() {
+  if (!window_handle_ || !::IsWindow(window_handle_)) {
+    return false;
+  }
+  HKEY key;
+  if (::RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Vaktet\\Vaktet2026", 0, KEY_READ, &key) == ERROR_SUCCESS) {
+    WINDOWPLACEMENT wp{};
+    DWORD size = sizeof(WINDOWPLACEMENT);
+    DWORD type = REG_BINARY;
+    LONG status = ::RegQueryValueExW(key, L"WindowPlacement", nullptr, &type,
+                                     reinterpret_cast<BYTE*>(&wp), &size);
+    ::RegCloseKey(key);
+    if (status == ERROR_SUCCESS && size == sizeof(WINDOWPLACEMENT) && wp.length == sizeof(WINDOWPLACEMENT)) {
+      HMONITOR mon = ::MonitorFromRect(&wp.rcNormalPosition, MONITOR_DEFAULTTONULL);
+      if (mon != nullptr) {
+        return ::SetWindowPlacement(window_handle_, &wp) != 0;
+      }
+    }
+  }
+  return false;
 }

@@ -71,6 +71,10 @@ class Win32Window {
   // Called when Destroy is called.
   virtual void OnDestroy();
 
+  // Save and restore window placement (size, position, maximized state)
+  void SavePlacement();
+  bool RestorePlacement();
+
  private:
   friend class WindowClassRegistrar;
 

@@ -358,9 +358,8 @@ class Landscape {
           dim(Color.lerp(pal.colors[pal.colors.length ~/ 2], _ink, .6)!),
         ]),
     );
-    // the land, mirrored and softened
+    // the land, mirrored into the lake (optimized without heavy saveLayer blur)
     canvas.save();
-    canvas.saveLayer(water, Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: .8, sigmaY: 1.6));
     canvas.translate(0, 2 * waterY);
     canvas.scale(1, -1);
     canvas.drawPicture(land);
@@ -1063,7 +1062,7 @@ _bigTree = () {
   for (final (c, r, order, tone, _) in clumps) {
     // Botanical leaves arranged in natural radiating sprigs
     // Layer 0: Deep interior silhouette shadow (behind branches)
-    for (var k = 0; k < 8; k++) {
+    for (var k = 0; k < 3; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
       final dist = math.sqrt(rnd.nextDouble()) * r * 0.72;
       final p = c + Offset(math.cos(a), math.sin(a) * 0.85) * dist;
@@ -1083,7 +1082,7 @@ _bigTree = () {
       ));
     }
     // Layer 1: Mid-canopy volume leaves
-    for (var k = 0; k < 12; k++) {
+    for (var k = 0; k < 5; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
       final dist = math.sqrt(rnd.nextDouble()) * r * 0.88;
       final p = c + Offset(math.cos(a), math.sin(a) * 0.88) * dist;
@@ -1103,7 +1102,7 @@ _bigTree = () {
       ));
     }
     // Layer 2: Outer foreground leaves (reaching out into the air, rim lighting, detailed facets)
-    for (var k = 0; k < 14; k++) {
+    for (var k = 0; k < 6; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
       final dist = (0.35 + 0.65 * math.sqrt(rnd.nextDouble())) * r * 1.04;
       final p = c + Offset(math.cos(a), math.sin(a) * 0.9) * dist;
