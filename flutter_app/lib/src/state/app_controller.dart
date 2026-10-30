@@ -52,7 +52,6 @@ enum Feature {
   nafile('Sugjerime për namaze nafile', 'Duha, Evvabini dhe Tehexhudi, me shkronja të vogla kur u vjen koha.', true),
   tips('Këshillat e ditës', 'Dy këshilla për çdo ditë, nën vaktet.', true),
   hints('Udhëzimi i rrëshqitjes', '„Rrëshqit lart për vaktet“ në fund të ekranit.', true),
-  daySwipe('Rrëshqit majtas/djathtas për ditët', 'Me një rrëshqitje anash kalon te dita tjetër ose e mëparshme.', true),
   pulse('Drita kur hyn vakti', 'Një valë e butë drite kur vjen koha e namazit.', true),
   haptics('Dridhja e lehtë', 'Një dridhje e vogël kur ndryshon dita.', true);
 

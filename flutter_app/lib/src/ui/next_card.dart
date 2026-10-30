@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../logic/day.dart';
 import '../logic/format.dart';
 import '../logic/prayer.dart';
 import 'glass.dart';
@@ -196,11 +197,24 @@ class _NameAndTime extends StatelessWidget {
   }
 }
 
+/// The last 20 minutes of a prayer's time: orange at 20 minutes, turning red as the time runs out.
+Color? endingColor(NextCardModel card, int now) {
+  final end = card.endsAt;
+  if (card.forbidden || end == null) return null;
+  final left = end - now;
+  const span = endingMinutes * msPerMinute;
+  if (left > span || left <= 0) return null;
+  return Color.lerp(const Color(0xFFFFB347), const Color(0xFFFF4D4D), 1 - left / span);
+}
+
 class _CurrentPrayerPill extends StatelessWidget {
-  const _CurrentPrayerPill({required this.text, this.center = true});
+  const _CurrentPrayerPill({required this.text, this.center = true, this.ending = false});
 
   final String text;
   final bool center;
+
+  /// The prayer's time is running out: the dot turns orange.
+  final bool ending;
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +231,7 @@ class _CurrentPrayerPill extends StatelessWidget {
             height: 7,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF68D391),
+              color: ending ? const Color(0xFFFF9F43) : const Color(0xFF68D391),
             ),
           ),
           const SizedBox(width: 7),
@@ -279,7 +293,11 @@ class CountdownNumber extends StatelessWidget {
     this.full = false,
     this.family,
     this.gold = false,
+    this.color,
   });
+
+  /// The digits' colour while a prayer's time runs out (null: white).
+  final Color? color;
 
   /// The seconds' size next to the hours and minutes.
   static const double secondsScale = .5;
@@ -305,7 +323,7 @@ class CountdownNumber extends StatelessWidget {
     var base = vt(
       size,
       weight.toDouble(),
-      color: _white,
+      color: color ?? _white,
       ls: family == null ? (full ? -.03 : -.025) : 0,
       height: 1,
       shadows: gold
@@ -344,7 +362,7 @@ class CountdownNumber extends StatelessWidget {
       // evenly between their top and their bottom
       child: Transform.translate(
         offset: Offset(0, -style.fontSize! * .1),
-        child: Text(':', style: style.copyWith(color: const Color(0x8CFFFFFF))),
+        child: Text(':', style: style.copyWith(color: (color ?? _white).withValues(alpha: .55))),
       ),
     );
 
@@ -544,7 +562,7 @@ class _Normal extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (card.currentPrayerText != null) ...[
-            _CurrentPrayerPill(text: card.currentPrayerText!, center: false),
+            _CurrentPrayerPill(text: card.currentPrayerText!, center: false, ending: card.ending),
             const SizedBox(height: 8),
           ],
           _Intro(card: card, center: false),
@@ -553,14 +571,18 @@ class _Normal extends StatelessWidget {
           const SizedBox(height: 10),
           ValueListenableBuilder(
             valueListenable: time,
-            builder: (context, now, _) => CountdownNumber(
-              text: fmtCount(card.target - now),
-              size: clampPx(54, vw * .16, 74),
-              weight: weight,
-              center: false,
-              family: family,
-              gold: gold,
-            ),
+            builder: (context, now, _) {
+              final warn = endingColor(card, now);
+              return CountdownNumber(
+                text: fmtCount(card.target - now),
+                size: clampPx(54, vw * .16, 74),
+                weight: weight,
+                center: false,
+                family: family,
+                gold: gold && warn == null,
+                color: warn,
+              );
+            },
           ),
           const SizedBox(height: 6),
           _CountdownLabel(text: card.countdownLabel),
@@ -658,15 +680,19 @@ class _FullScreen extends StatelessWidget {
           final size = (box.maxWidth * .205 * scale).clamp(0.0, 124.0 * scale);
           final number = ValueListenableBuilder(
             valueListenable: time,
-            builder: (context, now, _) => CountdownNumber(
-              text: fmtCount(card.target - now),
-              size: size,
-              weight: weight,
-              center: true,
-              full: true,
-              family: family,
-              gold: gold,
-            ),
+            builder: (context, now, _) {
+              final warn = endingColor(card, now);
+              return CountdownNumber(
+                text: fmtCount(card.target - now),
+                size: size,
+                weight: weight,
+                center: true,
+                full: true,
+                family: family,
+                gold: gold && warn == null,
+                color: warn,
+              );
+            },
           );
           final layout = Center(
             child: Column(
@@ -674,7 +700,7 @@ class _FullScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (card.currentPrayerText != null) ...[
-                  _CurrentPrayerPill(text: card.currentPrayerText!, center: true),
+                  _CurrentPrayerPill(text: card.currentPrayerText!, center: true, ending: card.ending),
                   const SizedBox(height: 14),
                 ],
                 _Intro(card: card, center: true, full: true),

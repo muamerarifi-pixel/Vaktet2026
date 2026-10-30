@@ -3,6 +3,9 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include <flutter_windows.h>
+
+#include "resource.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,13 +28,18 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
-  SetChildContent(flutter_controller_->view()->GetNativeWindow());
+  view_ = flutter_controller_->view()->GetNativeWindow();
+  SetChildContent(view_);
 
-  // Show window immediately so user sees the dark branded window without launch lag
+  // Until Flutter has drawn its first frame its view is only black: keep it hidden and show the window at once
+  // with a painted splash (the sky's colours, the icon, "Vaktet"), so the app appears the moment it is opened.
+  ShowWindow(view_, SW_HIDE);
   this->Show();
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+  flutter_controller_->engine()->SetNextFrameCallback([this]() {
+    shown_ = true;
+    ShowWindow(view_, SW_SHOW);
+    SetFocus(view_);
   });
 
   // Flutter can complete the first frame before the "show window" callback is
@@ -68,7 +76,67 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
+    case WM_ERASEBKGND:
+      if (!shown_) {
+        return 1;
+      }
+      break;
+    case WM_PAINT:
+      if (!shown_) {
+        PaintSplash(hwnd);
+        return 0;
+      }
+      break;
+    case WM_SIZE:
+      if (!shown_) {
+        InvalidateRect(hwnd, nullptr, FALSE);
+      }
+      break;
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+}
+
+void FlutterWindow::PaintSplash(HWND hwnd) {
+  PAINTSTRUCT ps;
+  HDC dc = BeginPaint(hwnd, &ps);
+  RECT r;
+  GetClientRect(hwnd, &r);
+  const int height = r.bottom - r.top;
+  // The night sky of the app: deep blue at the top, softer towards the bottom.
+  const int bands = 64;
+  for (int i = 0; i < bands; i++) {
+    const double t = static_cast<double>(i) / (bands - 1);
+    const COLORREF c = RGB(static_cast<int>(15 + t * 33), static_cast<int>(26 + t * 42),
+                           static_cast<int>(46 + t * 58));
+    RECT band = r;
+    band.top = r.top + height * i / bands;
+    band.bottom = r.top + height * (i + 1) / bands;
+    HBRUSH brush = CreateSolidBrush(c);
+    FillRect(dc, &band, brush);
+    DeleteObject(brush);
+  }
+  const double scale = FlutterDesktopGetDpiForHWND(hwnd) / 96.0;
+  const int cx = (r.left + r.right) / 2;
+  const int cy = r.top + height * 45 / 100;
+  const int icon = static_cast<int>(84 * scale);
+  HICON hicon = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APP_ICON),
+                                              IMAGE_ICON, icon, icon, LR_DEFAULTCOLOR));
+  if (hicon) {
+    DrawIconEx(dc, cx - icon / 2, cy - icon, hicon, icon, icon, 0, nullptr, DI_NORMAL);
+    DestroyIcon(hicon);
+  }
+  HFONT font = CreateFontW(-static_cast<int>(30 * scale), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+                           DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                           DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+  HGDIOBJ old = SelectObject(dc, font);
+  SetBkMode(dc, TRANSPARENT);
+  SetTextColor(dc, RGB(233, 215, 165));
+  RECT text = r;
+  text.top = cy + static_cast<int>(16 * scale);
+  text.bottom = text.top + static_cast<int>(48 * scale);
+  DrawTextW(dc, L"Vaktet", -1, &text, DT_CENTER | DT_SINGLELINE | DT_TOP);
+  SelectObject(dc, old);
+  DeleteObject(font);
+  EndPaint(hwnd, &ps);
 }

@@ -28,6 +28,15 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Flutter's view, kept hidden (it is black) until its first frame is drawn.
+  HWND view_ = nullptr;
+
+  // True once Flutter has drawn its first frame; until then the window paints the splash.
+  bool shown_ = false;
+
+  // Paints the splash: the sky's colours, the app's icon and its name.
+  void PaintSplash(HWND hwnd);
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

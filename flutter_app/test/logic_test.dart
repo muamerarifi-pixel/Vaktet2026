@@ -89,6 +89,22 @@ void main() {
       expect(card.currentPrayerText, 'Ikindia tashmë ka hyrë');
     });
 
+    test('prayer text: entered for 30 min, then "Koha për namazin e …", then "po i del koha" in the last 20 min', () {
+      final city = cityById('kosove');
+      const day = Day(2026, 10, 26);
+      final rows = dayRows(day, city);
+      final maghrib = rowOf(rows, PrayerKey.maghrib);
+      final isha = rowOf(rows, PrayerKey.isha);
+      NextCardModel at(int t) => nextCard(now: t, day: day, rows: rows, city: city);
+      expect(at(maghrib.instant + 5 * msPerMinute).currentPrayerText, 'Akshami tashmë ka hyrë');
+      expect(at(maghrib.instant + 40 * msPerMinute).currentPrayerText, 'Koha për namazin e Akshamit');
+      expect(at(maghrib.instant + 40 * msPerMinute).ending, isFalse);
+      final late = at(isha.instant - 10 * msPerMinute);
+      expect(late.currentPrayerText, 'Akshamit tashmë po i del koha');
+      expect(late.ending, isTrue);
+      expect(late.endsAt, isha.instant);
+    });
+
     test('after Jacia the card shows tomorrow\'s Imsaku and the alarm is for tomorrow', () {
       final city = cityById('kosove');
       const day = Day(2026, 10, 3);

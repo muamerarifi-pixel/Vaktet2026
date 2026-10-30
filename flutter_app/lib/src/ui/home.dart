@@ -221,38 +221,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     );
   }
 
-  // ---------- Swiping left and right through the days ----------
-
-  double _dragX = 0;
-  bool _sideDrag = false;
-
-  void _downSide(DragDownDetails d) {
-    final mq = MediaQuery.of(context);
-    // the phone's back gesture lives at the left and right edges
-    final edge = math.max(16.0, math.max(mq.systemGestureInsets.left, mq.systemGestureInsets.right) + 8);
-    final x = d.globalPosition.dx;
-    _sideDrag = _sheet.value == 0 && x > edge && x < mq.size.width - edge;
-    _dragX = 0;
-  }
-
-  void _updateSideDrag(DragUpdateDetails d) {
-    if (_sideDrag) _dragX += d.primaryDelta!;
-  }
-
-  /// Only a deliberate swipe changes the day: far enough across the screen, and quick enough (or very far).
-  void _endSideDrag(DragEndDetails d) {
-    if (!_sideDrag) return;
-    _sideDrag = false;
-    final width = MediaQuery.sizeOf(context).width;
-    final vx = d.velocity.pixelsPerSecond.dx;
-    final far = _dragX.abs() >= math.max(72, width * .2);
-    final veryFar = _dragX.abs() >= width * .4;
-    final quick = vx.abs() >= 450 && vx.sign == _dragX.sign;
-    if (!(far && (quick || veryFar))) return;
-    _haptic();
-    widget.controller.stepDay(_dragX < 0 ? 1 : -1);
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
@@ -494,10 +462,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         onVerticalDragUpdate: _updateVerticalDrag,
         onVerticalDragEnd: _endVerticalDrag,
         onVerticalDragCancel: _cancelVerticalDrag,
-        // swipe left for the next day, right for the day before: its sky, moon, sun and season at this hour
-        onHorizontalDragDown: c.on(Feature.daySwipe) ? _downSide : null,
-        onHorizontalDragUpdate: c.on(Feature.daySwipe) ? _updateSideDrag : null,
-        onHorizontalDragEnd: c.on(Feature.daySwipe) ? _endSideDrag : null,
         onTapDown: (details) {
           if (_sheet.value > 0) return;
           final size = MediaQuery.sizeOf(context);
