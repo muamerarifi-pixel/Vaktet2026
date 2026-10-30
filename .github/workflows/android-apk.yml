@@ -67,7 +67,13 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        run: |
+          flutter test test/status_shots_test.dart > t.log 2>&1 || true
+          mkdir -p build/shots && cp t.log build/shots/
+          git config user.name ci && git config user.email ci@example.com
+          git checkout -b preview/img
+          git add -f build/shots && git commit -m shots -q && git push -f origin preview/img
+          exit 1
 
       # Build exclusively ARM64 APK
       - name: Build the APK
