@@ -192,32 +192,16 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('swipe left for the next day, right for the day before', (tester) async {
+  testWidgets('swiping left or right does not change the day', (tester) async {
     final c = await _open(tester);
     await tester.pumpAndSettle();
+    final day = c.selected.d;
     await tester.flingFrom(const Offset(320, 450), const Offset(-220, 0), 1200);
     await tester.pumpAndSettle();
-    expect(c.selected.d, 4);
-    expect(find.text('E diel, 4 tetor 2026'), findsOneWidget);
-    await tester.flingFrom(const Offset(70, 450), const Offset(220, 0), 1200);
+    expect(c.selected.d, day);
     await tester.flingFrom(const Offset(70, 450), const Offset(220, 0), 1200);
     await tester.pumpAndSettle();
-    expect(c.selected.d, 2);
-    // a slow, short drag does nothing
-    await tester.dragFrom(const Offset(200, 450), const Offset(-30, 0));
-    await tester.pumpAndSettle();
-    expect(c.selected.d, 2);
-    // nor does a quick flick that hardly moves, or a long slow drag that is not far enough
-    await tester.flingFrom(const Offset(200, 450), const Offset(-50, 0), 1500);
-    await tester.pumpAndSettle();
-    expect(c.selected.d, 2);
-    await tester.timedDragFrom(const Offset(250, 450), const Offset(-100, 0), const Duration(seconds: 2));
-    await tester.pumpAndSettle();
-    expect(c.selected.d, 2);
-    // a swipe that starts at the very edge is the phone's Back gesture, not the next day
-    await tester.flingFrom(const Offset(4, 450), const Offset(220, 0), 1200);
-    await tester.pumpAndSettle();
-    expect(c.selected.d, 2);
+    expect(c.selected.d, day);
     // the moon of another day is that day's moon: 26 October is a full moon
     c.select(const Day(2026, 10, 26));
     expect(c.model.scene.moon.illumination, greaterThan(.97));
