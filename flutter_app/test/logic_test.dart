@@ -89,7 +89,7 @@ void main() {
       expect(card.currentPrayerText, 'Ikindia tashmë ka hyrë');
     });
 
-    test('prayer text: entered for 30 min, then "Koha për namazin e …", then "po i del koha" in the last 20 min', () {
+    test('prayer text: entered for 30 min, then "Koha për namazin e …", then "Koha e … po mbaron" in the last 20 min', () {
       final city = cityById('kosove');
       const day = Day(2026, 10, 26);
       final rows = dayRows(day, city);
@@ -97,10 +97,10 @@ void main() {
       final isha = rowOf(rows, PrayerKey.isha);
       NextCardModel at(int t) => nextCard(now: t, day: day, rows: rows, city: city);
       expect(at(maghrib.instant + 5 * msPerMinute).currentPrayerText, 'Akshami tashmë ka hyrë');
-      expect(at(maghrib.instant + 40 * msPerMinute).currentPrayerText, 'Koha për namazin e Akshamit');
+      expect(at(maghrib.instant + 40 * msPerMinute).currentPrayerText, 'Koha për namazin e akshamit');
       expect(at(maghrib.instant + 40 * msPerMinute).ending, isFalse);
       final late = at(isha.instant - 10 * msPerMinute);
-      expect(late.currentPrayerText, 'Akshamit tashmë po i del koha');
+      expect(late.currentPrayerText, 'Koha e akshamit po mbaron');
       expect(late.ending, isTrue);
       expect(late.endsAt, isha.instant);
     });

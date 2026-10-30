@@ -207,7 +207,7 @@ class NextCardModel {
   final bool ending;
 }
 
-/// How long a prayer's entry is told ("Akshami tashmë ka hyrë"), and when "po i del koha" starts.
+/// How long a prayer's entry is told ("Akshami tashmë ka hyrë"), and when "Koha e akshamit po mbaron" starts.
 const int justEnteredMinutes = 30;
 const int endingMinutes = 20;
 
@@ -267,29 +267,29 @@ NextCardModel nextCard({required int now, required Day day, required List<Prayer
   // The prayer whose time is running: its name, its name in the genitive, and when its time starts and ends.
   ({String nom, String gen, int start, int end})? cur;
   if (now >= isha.instant) {
-    cur = (nom: 'Jacia', gen: 'Jacisë', start: isha.instant, end: rowOf(dayRows(day.addDays(1), city), PrayerKey.imsak).instant);
+    cur = (nom: 'Jacia', gen: 'jacisë', start: isha.instant, end: rowOf(dayRows(day.addDays(1), city), PrayerKey.imsak).instant);
   } else if (now >= maghrib.instant) {
-    cur = (nom: 'Akshami', gen: 'Akshamit', start: maghrib.instant, end: isha.instant);
+    cur = (nom: 'Akshami', gen: 'akshamit', start: maghrib.instant, end: isha.instant);
   } else if (now >= asr.instant) {
-    cur = (nom: 'Ikindia', gen: 'Ikindisë', start: asr.instant, end: maghrib.instant);
+    cur = (nom: 'Ikindia', gen: 'ikindisë', start: asr.instant, end: maghrib.instant);
   } else if (now >= dreka.instant) {
     cur = day.weekday == 5
-        ? (nom: 'Xhumaja', gen: 'Xhumasë', start: dreka.instant, end: asr.instant)
-        : (nom: 'Dreka', gen: 'Drekës', start: dreka.instant, end: asr.instant);
+        ? (nom: 'Xhumaja', gen: 'xhumasë', start: dreka.instant, end: asr.instant)
+        : (nom: 'Dreka', gen: 'drekës', start: dreka.instant, end: asr.instant);
   } else if (now >= sunrise.instant) {
     currentPrayerText = 'Dielli tashmë ka lindur';
   } else if (now >= sabah.instant) {
-    cur = (nom: 'Sabahu', gen: 'Sabahut', start: sabah.instant, end: sunrise.instant);
+    cur = (nom: 'Sabahu', gen: 'sabahut', start: sabah.instant, end: sunrise.instant);
   } else if (now >= imsak.instant) {
     currentPrayerText = 'Imsaku tashmë ka hyrë';
   } else {
-    cur = (nom: 'Jacia', gen: 'Jacisë', start: rowOf(dayRows(day.addDays(-1), city), PrayerKey.isha).instant, end: imsak.instant);
+    cur = (nom: 'Jacia', gen: 'jacisë', start: rowOf(dayRows(day.addDays(-1), city), PrayerKey.isha).instant, end: imsak.instant);
   }
   var ending = false;
   if (cur != null) {
     if (cur.end - now <= endingMinutes * msPerMinute) {
       ending = true;
-      currentPrayerText = '${cur.gen} tashmë po i del koha';
+      currentPrayerText = 'Koha e ${cur.gen} po mbaron';
     } else if (now - cur.start < justEnteredMinutes * msPerMinute) {
       currentPrayerText = '${cur.nom} tashmë ka hyrë';
     } else {
