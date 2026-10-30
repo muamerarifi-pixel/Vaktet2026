@@ -40,6 +40,8 @@ jobs:
   build-apk:
     name: Build Android APK (ARM64)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 40
     defaults:
       run:
@@ -94,6 +96,7 @@ jobs:
   build-windows:
     name: Build Native Windows App (Flutter C++ & MSI)
     runs-on: windows-latest
+    if: false
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
