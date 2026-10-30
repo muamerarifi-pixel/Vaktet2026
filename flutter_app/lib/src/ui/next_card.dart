@@ -229,7 +229,7 @@ class _CurrentPrayerPill extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: ending ? const Color(0xFFFF9F43) : const Color(0xFF68D391),
             ),
