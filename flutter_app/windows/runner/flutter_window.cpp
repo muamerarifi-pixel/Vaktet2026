@@ -31,20 +31,21 @@ bool FlutterWindow::OnCreate() {
   view_ = flutter_controller_->view()->GetNativeWindow();
   SetChildContent(view_);
 
-  // Until Flutter has drawn its first frame its view is only black: keep it hidden and show the window at once
-  // with a painted splash (the sky's colours, the icon, "Vaktet"), so the app appears the moment it is opened.
-  ShowWindow(view_, SW_HIDE);
-  this->Show();
-
+  // Register the first-frame callback before hiding/showing so we never miss an early frame.
   flutter_controller_->engine()->SetNextFrameCallback([this]() {
     shown_ = true;
     ShowWindow(view_, SW_SHOW);
     SetFocus(view_);
+    InvalidateRect(view_, nullptr, FALSE);
   });
 
-  // Flutter can complete the first frame before the "show window" callback is
-  // registered. The following call ensures a frame is pending to ensure the
-  // window is shown. It is a no-op if the first frame hasn't completed yet.
+  // Keep the Flutter view hidden only for the brief instant before frame 1 is ready,
+  // while immediately presenting the native window with a lightweight sky splash.
+  ShowWindow(view_, SW_HIDE);
+  this->Show();
+  UpdateWindow(GetHandle());
+
+  // Ensure a first frame is scheduled right away.
   flutter_controller_->ForceRedraw();
 
   return true;
@@ -103,12 +104,12 @@ void FlutterWindow::PaintSplash(HWND hwnd) {
   RECT r;
   GetClientRect(hwnd, &r);
   const int height = r.bottom - r.top;
-  // The night sky of the app: deep blue at the top, softer towards the bottom.
-  const int bands = 64;
+  // Lightweight luminous sky gradient matching the app's horizon palette (fast 16-band fill).
+  const int bands = 16;
   for (int i = 0; i < bands; i++) {
     const double t = static_cast<double>(i) / (bands - 1);
-    const COLORREF c = RGB(static_cast<int>(15 + t * 33), static_cast<int>(26 + t * 42),
-                           static_cast<int>(46 + t * 58));
+    const COLORREF c = RGB(static_cast<int>(18 + t * 14), static_cast<int>(54 + t * 44),
+                           static_cast<int>(88 + t * 40));
     RECT band = r;
     band.top = r.top + height * i / bands;
     band.bottom = r.top + height * (i + 1) / bands;

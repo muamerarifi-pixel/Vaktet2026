@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,8 +17,10 @@ int Function()? _testClock() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Draw behind the status and navigation bars (the sky runs to the edges).
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // Draw behind the status and navigation bars on mobile (the sky runs to the edges).
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
   final prefs = await SharedPreferences.getInstance();
   runApp(
     VaktetApp(

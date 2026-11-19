@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
@@ -111,14 +112,22 @@ class RenderStillSky extends RenderBox {
   }
 
   ui.Image? _image;
+  ui.Picture? _picture;
   Size? _imageFor;
+  int _renderGen = 0;
+  bool _disposed = false;
+
+  static bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   /// Whether the picture is there (for tests).
-  bool get hasPicture => _image != null;
+  bool get hasPicture => _image != null || _picture != null;
 
   void _forget() {
+    _renderGen++;
     _image?.dispose();
     _image = null;
+    _picture?.dispose();
+    _picture = null;
     markNeedsPaint();
   }
 
@@ -135,6 +144,34 @@ class RenderStillSky extends RenderBox {
   @override
   void paint(PaintingContext context, Offset offset) {
     if (size.isEmpty) return;
+    if (_isWindows) {
+      if (_image != null && _imageFor == size) {
+        final image = _image!;
+        context.canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          offset & size,
+          Paint()..filterQuality = FilterQuality.low,
+        );
+        return;
+      }
+      // On Windows, avoid synchronous GPU-stalling toImageSync() on frame 1 or during window resize:
+      // draw the recorded Picture immediately (sub-millisecond) and rasterize to ui.Image asynchronously.
+      if (_picture == null || _imageFor != size) {
+        _renderGen++;
+        _image?.dispose();
+        _image = null;
+        _picture?.dispose();
+        _picture = _recordPicture(1.0, 1.0);
+        _imageFor = size;
+        _rasterizeAsync(size, _renderGen);
+      }
+      context.canvas.save();
+      context.canvas.translate(offset.dx, offset.dy);
+      context.canvas.drawPicture(_picture!);
+      context.canvas.restore();
+      return;
+    }
     if (_image == null || _imageFor != size) {
       _image?.dispose();
       _image = _render();
@@ -149,20 +186,46 @@ class RenderStillSky extends RenderBox {
     );
   }
 
-  ui.Image _render() {
-    // the screen's own pixels, but never a huge picture (a tablet): at most about 9 million pixels, 4096 a side
-    final area = size.width * size.height;
-    final scale = math.max(
-      .25,
-      math.min(_pixelRatio, math.min(4096 / math.max(size.width, size.height), math.sqrt(9.4e6 / area))),
-    );
-    final w = math.max(1, (size.width * scale).ceil()), h = math.max(1, (size.height * scale).ceil());
+  ui.Picture _recordPicture(double sx, double sy) {
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder)..scale(w / size.width, h / size.height);
+    final canvas = Canvas(recorder);
+    if (sx != 1.0 || sy != 1.0) canvas.scale(sx, sy);
     for (final painter in _painters) {
       painter.paint(canvas, size);
     }
-    final picture = recorder.endRecording();
+    return recorder.endRecording();
+  }
+
+  (int, int) _targetDims(Size s) {
+    // the screen's own pixels, but never a huge picture (a tablet): at most about 9 million pixels, 4096 a side
+    final area = s.width * s.height;
+    final scale = math.max(
+      .25,
+      math.min(_pixelRatio, math.min(4096 / math.max(s.width, s.height), math.sqrt(9.4e6 / area))),
+    );
+    return (math.max(1, (s.width * scale).ceil()), math.max(1, (s.height * scale).ceil()));
+  }
+
+  void _rasterizeAsync(Size targetSize, int gen) {
+    final (w, h) = _targetDims(targetSize);
+    final pic = _recordPicture(w / targetSize.width, h / targetSize.height);
+    pic.toImage(w, h).then((img) {
+      pic.dispose();
+      if (_disposed || gen != _renderGen || _imageFor != targetSize) {
+        img.dispose();
+        return;
+      }
+      _image?.dispose();
+      _image = img;
+      _picture?.dispose();
+      _picture = null;
+      markNeedsPaint();
+    });
+  }
+
+  ui.Image _render() {
+    final (w, h) = _targetDims(size);
+    final picture = _recordPicture(w / size.width, h / size.height);
     final image = picture.toImageSync(w, h);
     picture.dispose();
     return image;
@@ -170,8 +233,12 @@ class RenderStillSky extends RenderBox {
 
   @override
   void dispose() {
+    _disposed = true;
+    _renderGen++;
     _image?.dispose();
     _image = null;
+    _picture?.dispose();
+    _picture = null;
     super.dispose();
   }
 }
@@ -393,11 +460,22 @@ const List<(double, double, double)> _puffs = [
 /// look (about once a minute) or the screen changes size.
 class _CloudImages {
   static Object? _key;
+  static Object? _pendingKey;
   static List<ui.Image> _images = const [];
+
+  static bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   static List<ui.Image> of(double w, SkyScene scene, Color Function(Color)? dim) {
     final key = (w, scene.cloudCover, scene.cloudThin, scene.cloudSunset, dim != null);
     if (key == _key) return _images;
+    if (_isWindows) {
+      // On Windows, rasterize clouds asynchronously so frame 1 completes immediately without blocking the splash.
+      if (key != _pendingKey) {
+        _pendingKey = key;
+        _paintAsync(key, w, scene, dim ?? (c) => c);
+      }
+      return _images;
+    }
     for (final image in _images) {
       image.dispose();
     }
@@ -405,7 +483,29 @@ class _CloudImages {
     return _images = _paint(w, scene, dim ?? (c) => c);
   }
 
-  static List<ui.Image> _paint(double w, SkyScene scene, Color Function(Color) k) {
+  static Future<void> _paintAsync(Object key, double w, SkyScene scene, Color Function(Color) k) async {
+    final specs = _recordClouds(w, scene, k);
+    final built = <ui.Image>[];
+    for (final (pic, iw, ih) in specs) {
+      final img = await pic.toImage(iw, ih);
+      pic.dispose();
+      if (key != _pendingKey) {
+        img.dispose();
+        for (final prev in built) {
+          prev.dispose();
+        }
+        return;
+      }
+      built.add(img);
+    }
+    for (final old in _images) {
+      old.dispose();
+    }
+    _images = built;
+    _key = key;
+  }
+
+  static List<(ui.Picture, int, int)> _recordClouds(double w, SkyScene scene, Color Function(Color) k) {
     final cover = scene.cloudCover, thin = scene.cloudThin, sunset = scene.cloudSunset;
     final strength = .3 * (.55 + .45 * cover);
     const white = Color(0xFFFFFFFF);
@@ -413,13 +513,13 @@ class _CloudImages {
     final rim = Color.lerp(white, const Color(0xFFFFD08A), sunset)!;
     final shown = cover * _clouds.length;
     final paint = Paint();
-    final images = <ui.Image>[];
+    final out = <(ui.Picture, int, int)>[];
     for (var i = 0; i < _clouds.length; i++) {
       final fade = (shown - i).clamp(0.0, 1.0);
       if (fade <= 0) break;
       final (_, scale0, _, _) = _clouds[i];
       final cw = w * .55 * scale0 * (.75 + .45 * cover);
-      final iw = (cw * 2.4 * (1 + .3 * thin)).ceil(), ih = (cw * 1.5).ceil();
+      final iw = math.max(1, (cw * 2.4 * (1 + .3 * thin)).ceil()), ih = math.max(1, (cw * 1.5).ceil());
       final centre = Offset(iw / 2, ih / 2);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -447,7 +547,14 @@ class _CloudImages {
         );
         canvas.drawCircle(c, radius, paint);
       }
-      final picture = recorder.endRecording();
+      out.add((recorder.endRecording(), iw, ih));
+    }
+    return out;
+  }
+
+  static List<ui.Image> _paint(double w, SkyScene scene, Color Function(Color) k) {
+    final images = <ui.Image>[];
+    for (final (picture, iw, ih) in _recordClouds(w, scene, k)) {
       images.add(picture.toImageSync(iw, ih));
       picture.dispose();
     }
