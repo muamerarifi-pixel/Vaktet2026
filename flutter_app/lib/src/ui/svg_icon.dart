@@ -165,10 +165,11 @@ class VIcon {
       Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r)));
 
   // The web app's icons, with the same paths.
-  // the logo: a crescent opening upwards with a star above it (the same as the app icon)
-  static final brand = VIcon.filled(32, [
-    'M6.816 12.293A10 10 0 1 0 25.184 12.293A9.2 9.2 0 0 1 6.816 12.293Z',
-    'M16 5.75Q16.8 8.95 20 9.75Q16.8 10.55 16 13.75Q15.2 10.55 12 9.75Q15.2 8.95 16 5.75Z',
+  // the logo: minimalist prostrating (sujood) silhouette resting on a clean horizon line
+  static final brand = VIcon.filled(420, [
+    'M 50 282 C 44 282 42 273 49 269 L 100 248 C 99 208 106 166 128 140 C 146 119 172 116 196 130 C 232 150 266 182 292 218 C 298 226 295 236 286 239 C 274 243 264 252 268 263 C 272 271 286 270 296 273 C 302 275 303 284 294 284 L 250 284 C 240 284 235 276 238 266 L 247 236 C 226 214 196 194 170 190 C 156 188 149 198 152 216 L 160 268 C 162 278 156 284 144 284 L 50 284 Z',
+    circle(332, 255, 29),
+    rrect(30, 302, 360, 18, 9),
   ]);
   static final settings = VIcon.stroked(24, 1.7, [
     circle(12, 12, 3),

@@ -1,7 +1,7 @@
 name: vaktet
 description: "Vaktet – kohët e namazit në Kosovë sipas Takvimit të Bashkësisë Islame të Kosovës. Punon pa internet."
 publish_to: 'none'
-version: 1.9.20+37
+version: 1.9.21+38
 
 environment:
   sdk: ">=3.13.0 <4.0.0"

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fallback cerulean-to-teal dawn sky gradient matching the generated adaptive background PNGs. -->
+<!-- Fallback deep twilight emerald-teal gradient matching the generated adaptive background PNGs. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient
         android:type="linear"
         android:angle="270"
-        android:startColor="#174975"
-        android:centerColor="#1E6E8B"
-        android:endColor="#359A98" />
+        android:startColor="#0D2230"
+        android:centerColor="#11323E"
+        android:endColor="#06141C" />
 </shape>

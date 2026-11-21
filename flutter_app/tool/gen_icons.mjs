@@ -1,10 +1,9 @@
 // Draws every app icon from one design (uses local Chrome/Edge via CDP or Playwright):
 //   node flutter_app/tool/gen_icons.mjs
 //
-// The logo: Vaktet's signature upright crescent & four-point star sculpted in warm pearl-gold,
-// floating with soft 3D depth above a luminous cerulean-to-teal dawn sky, subtle celestial orbital arc,
-// layered Kosovo mountain silhouettes, and a tranquil reflective lake — inspired directly by the app's
-// living sky homescreen and daily prayer times.
+// The logo: a serene, minimalist human silhouette in sujood (prostration) sculpted in luminous
+// pearl-ivory and warm champagne-gold, resting on a dark reflective horizon plane against a deep
+// twilight emerald-teal atmospheric backdrop.
 //
 // Writes:
 //   icons/favicon.svg, icons/icon-192.png, icons/icon-512.png, icons/icon-maskable-512.png, icons/apple-touch-icon.png
@@ -22,9 +21,11 @@ const require = createRequire(import.meta.url);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const res = resolve(root, "flutter_app/android/app/src/main/res");
 
-// The mark, in a 32 x 32 box (same core geometry as the header mark in index.html and svg_icon.dart).
-export const CRESCENT = "M6.816 13.543A10 10 0 1 0 25.184 13.543A9.2 9.2 0 0 1 6.816 13.543Z";
-export const STAR = "M16 7Q16.8 10.2 20 11Q16.8 11.8 16 15Q15.2 11.8 12 11Q15.2 10.2 16 7Z";
+// Minimalist sujood (prostration) silhouette facing right in 512x512 space, resting on y = 358.
+export const BODY_PATH =
+  "M 96 356 C 90 356, 88 347, 95 343 L 146 322 C 145 282, 152 240, 174 214 C 192 193, 218 190, 242 204 C 278 224, 312 256, 338 292 C 344 300, 341 310, 332 313 C 320 317, 310 326, 314 337 C 318 345, 332 344, 342 347 C 348 349, 349 358, 340 358 L 296 358 C 286 358, 281 350, 284 340 L 293 310 C 272 288, 242 268, 216 264 C 202 262, 195 272, 198 290 L 206 342 C 208 352, 202 358, 190 358 L 96 358 Z";
+export const BACK_RIM_PATH =
+  "M 174 214 C 192 193, 218 190, 242 204 C 278 224, 312 256, 338 292";
 
 /**
  * Generates the SVG for Vaktet's icon.
@@ -37,31 +38,16 @@ export function buildIconSvg(size, mode = "square") {
   const isMaskable = mode === "maskable";
   const rx = mode === "square" ? S * 0.225 : 0;
 
-  // Balanced framing per platform safe-zone
-  const horizonY = isAdaptive ? 334 : isMaskable ? 362 : 374;
-  const markScale = isAdaptive ? 8.3 : isMaskable ? 10.8 : 12.4;
-  const markCx = 256;
-  const markCy = isAdaptive ? 224 : isMaskable ? 212 : 196;
+  const figScale = isAdaptive ? 0.72 : isMaskable ? 0.88 : 1.04;
+  const figTx = 256 - 252 * figScale;
+  const figTy = isAdaptive ? 268 - 290 * figScale : isMaskable ? 266 - 290 * figScale : 268 - 290 * figScale;
+  const horizonY = figTy + 358 * figScale;
 
-  // Whisper-thin celestial orbital arc hinting at the sun/moon passage across prayer times
-  const arcR = isAdaptive ? 148 : 206;
-  const arcCy = horizonY + 14;
+  const defs = `<linearGradient id="darkSky" x1="0.15" y1="0" x2="0.85" y2="1"><stop offset="0%" stop-color="#0D2230"/><stop offset="48%" stop-color="#11323E"/><stop offset="100%" stop-color="#0A2029"/></linearGradient><radialGradient id="overheadGlow" cx="0.54" cy="${((horizonY - 145 * figScale) / S).toFixed(3)}" r="0.60"><stop offset="0%" stop-color="#FFE4A0" stop-opacity="0.28"/><stop offset="32%" stop-color="#48B8A6" stop-opacity="0.24"/><stop offset="72%" stop-color="#1A5463" stop-opacity="0.10"/><stop offset="100%" stop-color="#0A2029" stop-opacity="0"/></radialGradient><radialGradient id="horizonGlow" cx="0.50" cy="${(horizonY / S).toFixed(3)}" r="0.46"><stop offset="0%" stop-color="#FFE6AC" stop-opacity="0.26"/><stop offset="50%" stop-color="#3BA89A" stop-opacity="0.12"/><stop offset="100%" stop-color="#0A2029" stop-opacity="0"/></radialGradient><linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#091C25"/><stop offset="45%" stop-color="#06141C"/><stop offset="100%" stop-color="#040D13"/></linearGradient><radialGradient id="floorReflect" cx="0.5" cy="0" r="0.65"><stop offset="0%" stop-color="#FFE8B2" stop-opacity="0.28"/><stop offset="45%" stop-color="#4CC0B0" stop-opacity="0.11"/><stop offset="100%" stop-color="#040D13" stop-opacity="0"/></radialGradient><linearGradient id="horizonLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#6DD5C5" stop-opacity="0"/><stop offset="18%" stop-color="#6DD5C5" stop-opacity="0.32"/><stop offset="50%" stop-color="#FFE9B5" stop-opacity="0.88"/><stop offset="82%" stop-color="#6DD5C5" stop-opacity="0.32"/><stop offset="100%" stop-color="#6DD5C5" stop-opacity="0"/></linearGradient><linearGradient id="lightBody" x1="0.80" y1="0.04" x2="0.18" y2="1"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="34%" stop-color="#FFF7E6"/><stop offset="72%" stop-color="#F1D499"/><stop offset="100%" stop-color="#C99E57"/></linearGradient><radialGradient id="lightHead" cx="0.62" cy="0.28" r="0.76"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="48%" stop-color="#FFF6E2"/><stop offset="100%" stop-color="#DFB872"/></radialGradient><linearGradient id="topHighlight" x1="0" y1="0" x2="1" y2="0.65"><stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/><stop offset="48%" stop-color="#FFFFFF" stop-opacity="0.98"/><stop offset="100%" stop-color="#FFF2CC" stop-opacity="0.45"/></linearGradient><linearGradient id="mirrorFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFEEC4" stop-opacity="0.24"/><stop offset="45%" stop-color="#8ADCC8" stop-opacity="0.06"/><stop offset="100%" stop-color="#040D13" stop-opacity="0"/></linearGradient><linearGradient id="frameEdge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.26"/><stop offset="30%" stop-color="#FFFFFF" stop-opacity="0.05"/><stop offset="75%" stop-color="#6DD5C5" stop-opacity="0.05"/><stop offset="100%" stop-color="#6DD5C5" stop-opacity="0.18"/></linearGradient><filter id="figShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#020A0E" flood-opacity="0.58"/></filter><filter id="figGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="12"/></filter><filter id="reflectBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4.5"/></filter><clipPath id="cardClip"><rect width="${S}" height="${S}" rx="${rx}"/></clipPath><clipPath id="groundClip"><rect x="0" y="${horizonY.toFixed(1)}" width="${S}" height="${(S - horizonY).toFixed(1)}"/></clipPath>`;
 
-  const defs = `<linearGradient id="sky" x1="0.08" y1="0" x2="0.18" y2="1"><stop offset="0%" stop-color="#174975"/><stop offset="32%" stop-color="#1E6E8B"/><stop offset="64%" stop-color="#359A98"/><stop offset="100%" stop-color="#84D3B6"/></linearGradient><radialGradient id="topDome" cx="0.5" cy="0.10" r="0.60"><stop offset="0%" stop-color="#85EDE0" stop-opacity="0.22"/><stop offset="100%" stop-color="#85EDE0" stop-opacity="0"/></radialGradient><radialGradient id="dawnGlow" cx="0.5" cy="${((horizonY - 22) / S).toFixed(3)}" r="0.54"><stop offset="0%" stop-color="#FFF2C6" stop-opacity="0.90"/><stop offset="30%" stop-color="#F7C97E" stop-opacity="0.48"/><stop offset="66%" stop-color="#60C5B4" stop-opacity="0.15"/><stop offset="100%" stop-color="#359A98" stop-opacity="0"/></radialGradient><linearGradient id="arcStroke" x1="0" y1="0.6" x2="1" y2="0.6"><stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="22%" stop-color="#DFF7F0" stop-opacity="0.18"/><stop offset="50%" stop-color="#FFF5D6" stop-opacity="0.28"/><stop offset="78%" stop-color="#DFF7F0" stop-opacity="0.18"/><stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient><linearGradient id="mtnBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#286D84" stop-opacity="0.68"/><stop offset="100%" stop-color="#184C62" stop-opacity="0.92"/></linearGradient><linearGradient id="mtnFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#164B60"/><stop offset="100%" stop-color="#0D3445"/></linearGradient><linearGradient id="mtnRim" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#9BE6D6" stop-opacity="0.08"/><stop offset="50%" stop-color="#FFECB8" stop-opacity="0.55"/><stop offset="100%" stop-color="#9BE6D6" stop-opacity="0.08"/></linearGradient><linearGradient id="lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#19526A"/><stop offset="40%" stop-color="#123E54"/><stop offset="100%" stop-color="#0B2A3C"/></linearGradient><radialGradient id="lakeGlow" cx="0.5" cy="0" r="0.72"><stop offset="0%" stop-color="#FFECB8" stop-opacity="0.56"/><stop offset="42%" stop-color="#6ACBB8" stop-opacity="0.22"/><stop offset="100%" stop-color="#0B2A3C" stop-opacity="0"/></radialGradient><linearGradient id="shoreLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8AD8C8" stop-opacity="0.06"/><stop offset="28%" stop-color="#DDF6EC" stop-opacity="0.45"/><stop offset="50%" stop-color="#FFF5D4" stop-opacity="0.92"/><stop offset="72%" stop-color="#DDF6EC" stop-opacity="0.45"/><stop offset="100%" stop-color="#8AD8C8" stop-opacity="0.06"/></linearGradient><radialGradient id="markHalo" cx="0.5" cy="0.50" r="0.52"><stop offset="0%" stop-color="#FFF6D6" stop-opacity="0.42"/><stop offset="52%" stop-color="#A8F0DF" stop-opacity="0.14"/><stop offset="100%" stop-color="#A8F0DF" stop-opacity="0"/></radialGradient><linearGradient id="crescentFill" x1="0.22" y1="0.04" x2="0.78" y2="1"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="32%" stop-color="#FFF8E6"/><stop offset="68%" stop-color="#F6D590"/><stop offset="100%" stop-color="#D29A48"/></linearGradient><linearGradient id="crescentRim" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.98"/><stop offset="48%" stop-color="#FFF9EB" stop-opacity="0.30"/><stop offset="100%" stop-color="#FFE9B5" stop-opacity="0.72"/></linearGradient><radialGradient id="starFill" cx="0.5" cy="0.45" r="0.58"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="62%" stop-color="#FFF8E5"/><stop offset="100%" stop-color="#F2D18C"/></radialGradient><linearGradient id="frameEdge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/><stop offset="28%" stop-color="#FFFFFF" stop-opacity="0.05"/><stop offset="78%" stop-color="#80E2CC" stop-opacity="0.04"/><stop offset="100%" stop-color="#80E2CC" stop-opacity="0.18"/></linearGradient><filter id="markShadow" x="-45%" y="-45%" width="190%" height="190%"><feDropShadow dx="0" dy="1.05" stdDeviation="1.2" flood-color="#062030" flood-opacity="0.38"/></filter><filter id="starGlow" x="-90%" y="-90%" width="280%" height="280%"><feGaussianBlur stdDeviation="1.15"/></filter><filter id="waterReflectBlur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter><clipPath id="cardClip"><rect width="${S}" height="${S}" rx="${rx}"/></clipPath>`;
+  const bgLayer = `<rect width="${S}" height="${S}" fill="url(#darkSky)"/><rect width="${S}" height="${S}" fill="url(#overheadGlow)"/><rect width="${S}" height="${S}" fill="url(#horizonGlow)"/><rect x="0" y="${horizonY.toFixed(1)}" width="${S}" height="${(S - horizonY).toFixed(1)}" fill="url(#groundGrad)"/><rect x="0" y="${horizonY.toFixed(1)}" width="${S}" height="${(S - horizonY).toFixed(1)}" fill="url(#floorReflect)"/><line x1="0" y1="${horizonY.toFixed(1)}" x2="${S}" y2="${horizonY.toFixed(1)}" stroke="url(#horizonLine)" stroke-width="2.2"/>`;
 
-  const hy = horizonY;
-  const backMtn = `M-12 ${hy + 8} L-12 ${hy - 46} Q38 ${hy - 68} 78 ${hy - 86} Q106 ${hy - 98} 142 ${hy - 64} Q188 ${hy - 30} 256 ${hy - 22} Q318 ${hy - 28} 358 ${hy - 72} Q392 ${hy - 102} 428 ${hy - 74} Q472 ${hy - 48} 524 ${hy - 40} L524 ${hy + 8} Z`;
-  const frontMtn = `M-12 ${hy + 6} L-12 ${hy - 20} Q56 ${hy - 48} 118 ${hy - 28} Q178 ${hy - 6} 256 ${hy - 2} Q334 ${hy - 6} 394 ${hy - 30} Q456 ${hy - 50} 524 ${hy - 16} L524 ${hy + 6} Z`;
-  const frontRim = `M-12 ${hy - 20} Q56 ${hy - 48} 118 ${hy - 28} Q178 ${hy - 6} 256 ${hy - 2} Q334 ${hy - 6} 394 ${hy - 30} Q456 ${hy - 50} 524 ${hy - 16}`;
-  const celestialArc = `M${256 - arcR} ${arcCy} A${arcR} ${arcR} 0 0 1 ${256 + arcR} ${arcCy}`;
-
-  const dashScale = isAdaptive ? 0.78 : 1.0;
-  const d = (w) => ((w * dashScale) / 2).toFixed(1);
-  const dy = (off) => (hy + off * (isAdaptive ? 0.85 : 1.0)).toFixed(1);
-
-  const bgLayer = `<rect width="${S}" height="${S}" fill="url(#sky)"/><rect width="${S}" height="${S}" fill="url(#topDome)"/><rect width="${S}" height="${S}" fill="url(#dawnGlow)"/><path d="${celestialArc}" fill="none" stroke="url(#arcStroke)" stroke-width="2.2" stroke-dasharray="6 9" stroke-linecap="round"/><circle cx="${isAdaptive ? 156 : 112}" cy="${isAdaptive ? 154 : 106}" r="2.6" fill="#FFF9E6" opacity="0.48"/><circle cx="${isAdaptive ? 364 : 404}" cy="${isAdaptive ? 168 : 124}" r="2.1" fill="#E3FAF3" opacity="0.40"/><circle cx="${isAdaptive ? 184 : 152}" cy="${isAdaptive ? 204 : 158}" r="1.5" fill="#E3FAF3" opacity="0.28"/><circle cx="${isAdaptive ? 336 : 362}" cy="${isAdaptive ? 142 : 94}" r="1.6" fill="#FFF9E6" opacity="0.30"/><path d="${backMtn}" fill="url(#mtnBack)"/><path d="${frontMtn}" fill="url(#mtnFront)"/><path d="${frontRim}" fill="none" stroke="url(#mtnRim)" stroke-width="2.0" stroke-linecap="round"/><rect x="0" y="${hy}" width="${S}" height="${S - hy}" fill="url(#lake)"/><rect x="0" y="${hy}" width="${S}" height="${S - hy}" fill="url(#lakeGlow)"/><ellipse cx="256" cy="${dy(24)}" rx="${(48 * dashScale).toFixed(1)}" ry="${(20 * dashScale).toFixed(1)}" fill="#FFE9B5" opacity="0.22" filter="url(#waterReflectBlur)"/><line x1="0" y1="${hy}" x2="${S}" y2="${hy}" stroke="url(#shoreLine)" stroke-width="2.2"/><g stroke-linecap="round"><line x1="${(256 - +d(92)).toFixed(1)}" y1="${dy(18)}" x2="${(256 + +d(92)).toFixed(1)}" y2="${dy(18)}" stroke="#FFF5D4" stroke-width="4.4" opacity="0.68"/><line x1="${(256 - +d(62)).toFixed(1)}" y1="${dy(36)}" x2="${(256 + +d(62)).toFixed(1)}" y2="${dy(36)}" stroke="#FFECB8" stroke-width="3.6" opacity="0.48"/><line x1="${(256 - +d(38)).toFixed(1)}" y1="${dy(54)}" x2="${(256 + +d(38)).toFixed(1)}" y2="${dy(54)}" stroke="#C8F0E4" stroke-width="3.0" opacity="0.32"/><line x1="${(256 - +d(20)).toFixed(1)}" y1="${dy(70)}" x2="${(256 + +d(20)).toFixed(1)}" y2="${dy(70)}" stroke="#9CE2D4" stroke-width="2.4" opacity="0.20"/></g>`;
-
-  const fgLayer = `<g transform="translate(${(markCx - 16 * markScale).toFixed(2)} ${(markCy - 16 * markScale).toFixed(2)}) scale(${markScale.toFixed(4)})"><g transform="translate(0 -1.25)"><ellipse cx="16" cy="17.2" rx="14.5" ry="13.5" fill="url(#markHalo)"/><g filter="url(#markShadow)"><path d="${CRESCENT}" fill="url(#crescentFill)"/><path d="${CRESCENT}" fill="none" stroke="url(#crescentRim)" stroke-width="0.28"/></g><path d="${STAR}" fill="#FFF8E2" opacity="0.70" filter="url(#starGlow)"/><g filter="url(#markShadow)"><path d="${STAR}" fill="url(#starFill)"/></g></g></g>`;
+  const fgLayer = `<g clip-path="url(#groundClip)" opacity="0.55" filter="url(#reflectBlur)"><g transform="translate(0 ${(2 * horizonY + 2).toFixed(2)}) scale(1 -0.38)"><g transform="translate(${figTx.toFixed(2)} ${figTy.toFixed(2)}) scale(${figScale.toFixed(4)})"><path d="${BODY_PATH}" fill="url(#mirrorFade)"/><circle cx="378" cy="329" r="28" fill="url(#mirrorFade)"/></g></g></g><g transform="translate(${figTx.toFixed(2)} ${figTy.toFixed(2)}) scale(${figScale.toFixed(4)})"><path d="${BODY_PATH}" fill="#FFE8B0" opacity="0.22" filter="url(#figGlow)"/><circle cx="378" cy="329" r="28" fill="#FFE8B0" opacity="0.26" filter="url(#figGlow)"/><g filter="url(#figShadow)"><path d="${BODY_PATH}" fill="url(#lightBody)"/><path d="${BACK_RIM_PATH}" fill="none" stroke="url(#topHighlight)" stroke-width="3.2" stroke-linecap="round"/><circle cx="378" cy="329" r="28" fill="url(#lightHead)"/><path d="M 358 309 A 28 28 0 0 1 401 314" fill="none" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" opacity="0.88"/></g></g>`;
 
   const frameStroke = mode === "square"
     ? `<rect x="1.25" y="1.25" width="${S - 2.5}" height="${S - 2.5}" rx="${rx - 0.75}" fill="none" stroke="url(#frameEdge)" stroke-width="2.5"/>`
@@ -80,11 +66,11 @@ export function buildIconSvg(size, mode = "square") {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${S} ${S}"><defs>${defs}</defs>${wrapped}</svg>`;
 }
 
-/** Packs an array of { size, pngBuffer } into a standard Windows multi-resolution ICO binary. */
+/** Packs an array of { size, png } into a standard Windows multi-resolution ICO binary. */
 function buildIcoBuffer(entries) {
   const header = Buffer.alloc(6);
-  header.writeUInt16LE(0, 0); // reserved
-  header.writeUInt16LE(1, 2); // type: 1 = ICO
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2);
   header.writeUInt16LE(entries.length, 4);
 
   const dirEntries = [];
@@ -93,10 +79,10 @@ function buildIcoBuffer(entries) {
     const dir = Buffer.alloc(16);
     dir.writeUInt8(size >= 256 ? 0 : size, 0);
     dir.writeUInt8(size >= 256 ? 0 : size, 1);
-    dir.writeUInt8(0, 2); // palette
-    dir.writeUInt8(0, 3); // reserved
-    dir.writeUInt16LE(1, 4); // planes
-    dir.writeUInt16LE(32, 6); // bpp
+    dir.writeUInt8(0, 2);
+    dir.writeUInt8(0, 3);
+    dir.writeUInt16LE(1, 4);
+    dir.writeUInt16LE(32, 6);
     dir.writeUInt32LE(png.length, 8);
     dir.writeUInt32LE(offset, 12);
     dirEntries.push(dir);
@@ -121,7 +107,6 @@ function findBrowser() {
 }
 
 async function createRenderer() {
-  // Prefer Playwright if installed, otherwise use local Chrome/Edge via native CDP WebSocket
   try {
     let pw;
     try { pw = require("playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); }
@@ -241,7 +226,7 @@ try {
   writeFileSync(resolve(root, "icons/app.ico"), icoBuf);
   writeFileSync(resolve(root, "flutter_app/windows/runner/resources/app_icon.ico"), icoBuf);
 
-  console.log("All icons (Web, Android adaptive & legacy, Windows multi-size ICO) generated successfully.");
+  console.log("All dark sujood icons generated successfully.");
 } finally {
   await renderer.close();
 }
