@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Politika e Privatësisë — Vaktet</title>
+  <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08161E;
+      --card: rgba(17, 46, 58, 0.55);
+      --border: rgba(255, 236, 188, 0.16);
+      --ink: #F4F1E8;
+      --muted: #B6C8C5;
+      --accent: #F1D499;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #123745 0%, var(--bg) 60%, #040D13 100%);
+      color: var(--ink);
+      line-height: 1.65;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px;
+      backdrop-filter: blur(18px);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    header img { width: 48px; height: 48px; border-radius: 12px; }
+    h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
+    .sub { margin: 2px 0 0; font-size: 0.9rem; color: var(--muted); }
+    h2 { margin-top: 28px; font-size: 1.15rem; color: var(--accent); }
+    p, li { color: var(--ink); font-size: 0.97rem; }
+    ul { padding-left: 20px; }
+    .divider { margin: 36px 0; border: 0; border-top: 1px solid var(--border); }
+    footer { margin-top: 32px; font-size: 0.85rem; color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="/icons/icon-192.png" alt="Vaktet">
+      <div>
+        <h1>Politika e Privatësisë / Privacy Policy</h1>
+        <p class="sub">Vaktet – Kohët e namazit në Kosovë • Përditësuar: 21 nëntor 2026</p>
+      </div>
+    </header>
+
+    <section lang="sq">
+      <h2>Shqip</h2>
+      <p><strong>Vaktet</strong> është një aplikacion plotësisht jashtë linje (offline) për kohët e namazit në Kosovë sipas Takvimit të Bashkësisë Islame të Kosovës. Privatësia juaj respektohet plotësisht:</p>
+      <ul>
+        <li><strong>Asnjë mbledhje të dhënash:</strong> Aplikacioni nuk mbledh, nuk ruan në serverë dhe nuk ndan asnjë të dhënë personale, vendndodhje GPS, identifikues pajisjeje apo statistika përdorimi.</li>
+        <li><strong>Asnjë llogari dhe asnjë reklamë:</strong> Nuk kërkohet regjistrim, nuk ka reklama dhe nuk përdoret asnjë shërbim gjurmimi i palëve të treta.</li>
+        <li><strong>Ruajtja lokale:</strong> Preferencat tuaja (qyteti i zgjedhur, pamja, shkronjat dhe cilësimet e njoftimeve) ruhen ekskluzivisht në pajisjen tuaj dhe fshihen plotësisht kur çinstaloni aplikacionin.</li>
+        <li><strong>Lejet e pajisjes (Android):</strong> Leja për njoftime (<code>POST_NOTIFICATIONS</code>) dhe alarmet (<code>SCHEDULE_EXACT_ALARM</code> / <code>RECEIVE_BOOT_COMPLETED</code>) përdoren vetëm nëse i aktivizoni njoftimet në Cilësime, për t'ju njoftuar në kohë për vaktet e namazit pa pasur nevojë për internet.</li>
+      </ul>
+    </section>
+
+    <hr class="divider">
+
+    <section lang="en">
+      <h2>English</h2>
+      <p><strong>Vaktet</strong> is a 100% offline prayer times application for Kosovo based on the official Takvim of the Islamic Community of Kosovo (BIK). Your privacy is completely respected:</p>
+      <ul>
+        <li><strong>No data collection:</strong> Vaktet does not collect, transmit, store on external servers, or share any personal data, GPS location, device identifiers, or analytics.</li>
+        <li><strong>No accounts, ads, or trackers:</strong> No sign-in is required, there are no advertisements, and no third-party tracking SDKs are included.</li>
+        <li><strong>Local storage only:</strong> Your settings (selected city, typography, display options, and notification preferences) are stored solely on your device and are removed when you uninstall the app.</li>
+        <li><strong>Device permissions (Android):</strong> Notification (<code>POST_NOTIFICATIONS</code>) and alarm scheduling permissions (<code>SCHEDULE_EXACT_ALARM</code> / <code>RECEIVE_BOOT_COMPLETED</code>) are used strictly when you opt in via Settings to deliver offline prayer-time reminders on time.</li>
+      </ul>
+    </section>
+
+    <footer>
+      Kontakt / Contact: <a href="https://github.com/muamerarifi-pixel/Vaktet2026">github.com/muamerarifi-pixel/Vaktet2026</a>
+    </footer>
+  </main>
+</body>
+</html>

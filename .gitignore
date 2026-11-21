@@ -7,5 +7,8 @@ windows/*.msi
 windows/*.wixobj
 windows/*.wixpdb
 windows/assets.zip
+flutter_app/android/key.properties
+*.jks
+*.keystore
 
 

@@ -69,20 +69,50 @@ jobs:
       - name: Test
         run: flutter test
 
-      # Build exclusively ARM64 APK
+      - name: Configure Play Store release signing (if secrets are set)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+            cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+            echo "Release upload keystore configured."
+          else
+            echo "No KEYSTORE_BASE64 secret set; building with debug signing."
+          fi
+
+      # Build exclusively ARM64 APK + Play Store App Bundle (.aab)
       - name: Build the APK
         run: flutter build apk --release --split-per-abi
 
-      - name: Name the APKs
+      - name: Build Play Store App Bundle (.aab)
+        run: flutter build appbundle --release
+
+      - name: Name the deliverables
         run: |
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/vaktet-arm64.apk
+          cp build/app/outputs/bundle/release/app-release.aab dist/vaktet-playstore.aab
           ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
           name: vaktet-arm64-apk
           path: flutter_app/dist/vaktet-arm64.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vaktet-playstore-aab
+          path: flutter_app/dist/vaktet-playstore.aab
           if-no-files-found: error
 
   build-windows:
