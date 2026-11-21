@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../state/app_controller.dart';
+import '../state/notification_service.dart';
 import 'colors.dart';
 import 'svg_icon.dart';
 import 'text.dart';
@@ -134,6 +135,67 @@ class _Sheet extends StatelessWidget {
                 onChanged: c.setAlarmOffset,
               ),
             ),
+            if (NotificationService.isSupported) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 18, bottom: 2),
+                child: Text('Njoftimet', style: vt(15, 800, color: isDark ? Colors.white : colors.ink, height: 1.5)),
+              ),
+              _Switch(
+                title: 'Njoftimet e vakteve',
+                hint: 'Njoftime automatike në kohë të namazit, punon edhe pa internet.',
+                value: c.notificationsEnabled,
+                onChanged: (v) {
+                  c.setNotificationsEnabled(v);
+                },
+              ),
+              if (c.notificationsEnabled) ...[
+                _Field(
+                  title: 'Kujtesa para vaktit',
+                  hint: 'Kur të dërgohet njoftimi: në kohë ose disa minuta më herët.',
+                  child: Segmented<int>(
+                    options: [
+                      for (final m in AppController.notifyBeforeChoices)
+                        (m == 0 ? 'Në kohë' : '${m}m', m),
+                    ],
+                    value: c.notifyBeforeMin,
+                    onChanged: c.setNotifyBeforeMin,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                for (final p in NotifyPrayer.values)
+                  _Switch(
+                    title: p.label,
+                    hint: p == NotifyPrayer.sunrise
+                        ? 'Njoftim kur lind dielli.'
+                        : 'Njoftim për ${p.label.toLowerCase()}.',
+                    value: c.notifyOn(p),
+                    onChanged: (v) => c.setNotifyPrayer(p, v),
+                  ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      c.sendTestNotification();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0x28FFFFFF) : colors.accentSoft,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? const Color(0x40FFFFFF) : colors.line),
+                      ),
+                      child: Text(
+                        'Testo njoftimin',
+                        style: vt(13, 700, color: isDark ? Colors.white : colors.ink),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
             _Field(
               title: 'Stili i shkronjave',
               child: Segmented<FontChoice>(

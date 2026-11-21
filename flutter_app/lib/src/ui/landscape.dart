@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../logic/prayer.dart';
 import 'colors.dart';
 import 'tree_interaction.dart';
+
+bool get _isAndroidRich => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 /// The land under the full-screen sky, as it looks from a valley: a far mountain range, low and pale with
 /// distance, wooded ridges one in front of the other with mist lying between them, a lake that mirrors them, and
@@ -358,12 +361,39 @@ class Landscape {
           dim(Color.lerp(pal.colors[pal.colors.length ~/ 2], _ink, .6)!),
         ]),
     );
-    // the land, mirrored into the lake (optimized without heavy saveLayer blur)
+    // the land, mirrored into the lake (softened reflection blur on Android APK)
     canvas.save();
+    if (_isAndroidRich) {
+      canvas.saveLayer(water, Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 0.65, sigmaY: 1.55));
+    }
     canvas.translate(0, 2 * waterY);
     canvas.scale(1, -1);
     canvas.drawPicture(land);
+    if (_isAndroidRich) {
+      canvas.restore();
+    }
     canvas.restore();
+
+    // Subtle horizontal water-ripple streaks cutting through the mirrored tree & shore on Android
+    if (_isAndroidRich) {
+      final treeCx = x(_treeX);
+      final rippleTint = dim(Color.lerp(_air, pal.sun, 0.25 + 0.35 * warm)!);
+      final treeRipplePaint = Paint()
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      for (var i = 0; i < 11; i++) {
+        final f = (i + 0.4) / 11.0;
+        final yy = waterY + 3.0 + f * (h - waterY) * 0.72;
+        final span = (26.0 + 44.0 * (1.0 - f * 0.45)) * u;
+        final drift = math.sin(t * 1.15 + i * 1.45) * 4.5;
+        final pulse = 0.55 + 0.45 * math.sin(t * 1.6 + i * 2.1);
+        final alpha = ((0.06 + 0.11 * daylight + 0.05 * moonlight) * (1.0 - f * 0.55) * pulse).clamp(0.0, 0.22);
+        treeRipplePaint
+          ..strokeWidth = 0.75 + 0.45 * (1.0 - f)
+          ..color = rippleTint.withValues(alpha: alpha);
+        canvas.drawLine(Offset(treeCx - span * 0.5 + drift, yy), Offset(treeCx + span * 0.5 + drift, yy), treeRipplePaint);
+      }
+    }
     // the water is darker and a little blue
     canvas.drawRect(
       water,
@@ -677,17 +707,23 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
         : const Color(0xFFB9C7E8);
     final lit = (_day * (.55 + .2 * warm) + .35 * moonlight).clamp(0.0, 1.0);
 
-    // Dynamic wind effect: soothing natural breeze
+    // On Android APK: ultra-detailed static tree (zero continuous wind sway for low battery)
+    // that still springs to life with tap rustle; other platforms keep gentle breeze sway.
     final rustle = TreeInteraction.shared.rustleAt(t);
-    final wind = (math.sin(t * 1.05) * 0.7 + math.sin(t * 1.85 + 0.8) * 0.3) * (0.85 + 0.15 * math.sin(t * 0.35)) + rustle;
-    Offset limbSway(Offset pt, int depth) =>
-        pt + Offset(wind * math.pow(depth / 5.0, 1.7) * 2.8, -wind.abs() * 0.3 * (depth / 5.0));
+    final wind = _isAndroidRich
+        ? rustle
+        : (math.sin(t * 1.05) * 0.7 + math.sin(t * 1.85 + 0.8) * 0.3) * (0.85 + 0.15 * math.sin(t * 0.35)) + rustle;
+    Offset limbSway(Offset pt, int depth) => wind.abs() < 0.0005
+        ? pt
+        : pt + Offset(wind * math.pow(depth / 5.0, 1.7) * 2.8, -wind.abs() * 0.3 * (depth / 5.0));
     Offset leafSway(Offset pt, Offset rel, int layer) {
+      if (_isAndroidRich && rustle.abs() < 0.0005) return pt;
       final k = layer == 2 ? 1.0 : (layer == 1 ? 0.6 : 0.25);
       final phase = (pt.dx * 0.19 + pt.dy * 0.27);
+      final micro = _isAndroidRich ? 0.0 : 1.0;
       return pt + Offset(
-        wind * 2.5 * k + math.sin(t * 2.1 + phase) * 0.9 * k,
-        -wind.abs() * 0.4 * k + math.cos(t * 1.7 + phase) * 0.4 * k,
+        wind * 2.5 * k + math.sin(t * 2.1 + phase) * 0.9 * k * micro,
+        -wind.abs() * 0.4 * k + math.cos(t * 1.7 + phase) * 0.4 * k * micro,
       );
     }
 
@@ -775,13 +811,114 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
           begin: Alignment(side * 0.5, -1),
           end: Alignment(-side * 0.5, 1),
           colors: [
-            Color.lerp(bark, glow, .12 * lit)!,
+            Color.lerp(bark, glow, .16 * lit)!,
             bark,
             dim(shore),
           ],
           stops: const [0, .68, 1],
         ).createShader(const Rect.fromLTRB(-65, -135, 65, 5)),
     );
+
+    // Android APK: rich fissured bark texture, sunlit/moonlit bark rim, sky bounce & grounded root shadow
+    if (_isAndroidRich) {
+      // Soft ambient occlusion where root flares grip the shore
+      canvas.drawOval(
+        const Rect.fromLTRB(-15.5, 0.2, 15.5, 5.2),
+        Paint()..color = Colors.black.withValues(alpha: 0.24 + 0.16 * _day),
+      );
+
+      final fissures = Path();
+      final barkSunRim = Path();
+      final barkCoolRim = Path();
+      final rimSide = side >= 0 ? 1.0 : -1.0;
+
+      for (final (rawA, rawB, rawC, wa, wb, depth) in tree.limbs) {
+        if (depth > 2) continue;
+        final a = limbSway(rawA, math.max(0, depth - 1));
+        final b = limbSway(rawB, depth);
+        final c = limbSway(rawC, depth);
+        final d1 = b - a;
+        final dist1 = d1.distance > 0.001 ? d1.distance : 1.0;
+        final n1 = Offset(-d1.dy, d1.dx) / dist1;
+        final wMid = (wa + wb) * 0.5;
+
+        // Longitudinal bark fissures carved along the trunk & primary boughs
+        final grooves = depth == 0 ? 3 : (depth == 1 ? 2 : 1);
+        for (var g = 0; g < grooves; g++) {
+          final frac = grooves == 1 ? 0.0 : ((g / (grooves - 1)) - 0.5) * 0.62;
+          final ga = a + n1 * (wa * frac * 0.48);
+          final gc = c + n1 * (wMid * frac * 0.42);
+          final gb = b + n1 * (wb * frac * 0.36);
+          fissures
+            ..moveTo(ga.dx, ga.dy)
+            ..quadraticBezierTo(gc.dx, gc.dy, gb.dx, gb.dy);
+        }
+
+        // Sun/moonlit rim edge on the illuminated side of trunk & main limbs
+        final rimDir = (n1.dx * rimSide >= 0) ? n1 : -n1;
+        barkSunRim
+          ..moveTo(a.dx + rimDir.dx * (wa * 0.42), a.dy + rimDir.dy * (wa * 0.42))
+          ..quadraticBezierTo(
+            c.dx + rimDir.dx * (wMid * 0.42),
+            c.dy + rimDir.dy * (wMid * 0.42),
+            b.dx + rimDir.dx * (wb * 0.42),
+            b.dy + rimDir.dy * (wb * 0.42),
+          );
+
+        // Cool atmospheric sky rim on the opposite shaded edge for cylindrical 3D depth
+        barkCoolRim
+          ..moveTo(a.dx - rimDir.dx * (wa * 0.44), a.dy - rimDir.dy * (wa * 0.44))
+          ..quadraticBezierTo(
+            c.dx - rimDir.dx * (wMid * 0.44),
+            c.dy - rimDir.dy * (wMid * 0.44),
+            b.dx - rimDir.dx * (wb * 0.44),
+            b.dy - rimDir.dy * (wb * 0.44),
+          );
+      }
+
+      // Draw deep bark crevices
+      canvas.drawPath(
+        fissures,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.75
+          ..strokeCap = StrokeCap.round
+          ..color = dim(const Color(0xFF1A120C)).withValues(alpha: 0.34 + 0.24 * _day),
+      );
+
+      // Draw warm sunlit / silver moonlit bark highlight ridge
+      if (lit > 0.04) {
+        final barkHighlight = _day > 0.3
+            ? Color.lerp(const Color(0xFFD6B48C), const Color(0xFFFFB86B), warm * 0.75)!
+            : const Color(0xFFBFD2F2);
+        canvas.drawPath(
+          barkSunRim,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.95
+            ..strokeCap = StrokeCap.round
+            ..color = dim(barkHighlight).withValues(alpha: (0.18 + 0.36 * lit).clamp(0.0, 0.58)),
+        );
+      }
+
+      // Draw subtle cool sky ambient rim on opposite bark edge
+      canvas.drawPath(
+        barkCoolRim,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.65
+          ..strokeCap = StrokeCap.round
+          ..color = dim(Color.lerp(_air, Colors.white, 0.3)!).withValues(alpha: 0.14 + 0.12 * _day + 0.08 * moonlight),
+      );
+
+      // Subtle dappled canopy shadow cast onto the upper trunk fork
+      if (leaves > 0.15) {
+        canvas.drawOval(
+          const Rect.fromLTRB(-11, -68, 12, -32),
+          Paint()..color = dim(shore).withValues(alpha: 0.22 * leaves * _day),
+        );
+      }
+    }
 
     // Snow on branches in winter
     final snow = scene.treeSnow;
@@ -919,6 +1056,61 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
           Paint()
             ..color = dim(rimColor).withValues(alpha: (rimStrength * 0.72).clamp(0.0, 0.95)),
         );
+      }
+
+      // Android APK: dynamic golden-hour backlit subsurface translucency, lake bounce light & moonlit glints
+      if (_isAndroidRich) {
+        // 1. Warm backlit subsurface scattering through outer sun-facing foliage at dawn/golden-hour/dusk
+        if (_day > 0.2 && warm > 0.12) {
+          final subsurface = Path();
+          for (final (c, len, wid, angle, order, _, rel, layer) in tree.leaves) {
+            if (layer == 2 && order < leaves * 1.02) {
+              final edgeDist = rel.distance;
+              final sunSide = rel.dx * side;
+              if (edgeDist > 0.58 && sunSide > 0.05) {
+                final p = leafSway(c, rel, layer);
+                _addLeaf(subsurface, p, len * grow * 1.08, wid * grow * 1.05, angle);
+              }
+            }
+          }
+          final sssColor = Color.lerp(const Color(0xFFFFCA6B), const Color(0xFFFF883B), warm * 0.65)!;
+          canvas.drawPath(
+            subsurface,
+            Paint()..color = dim(sssColor).withValues(alpha: (warm * 0.34 * _day).clamp(0.0, 0.38)),
+          );
+        }
+
+        // 2. Subtle lake-to-canopy water bounce light illuminating the underside of lower leaves
+        final bounceStrength = (0.14 * _day + 0.12 * warm + 0.10 * moonlight).clamp(0.0, 0.28);
+        if (bounceStrength > 0.03) {
+          final underBounce = Path();
+          for (final (c, len, wid, angle, order, _, rel, layer) in tree.leaves) {
+            if (layer >= 1 && order < leaves * 1.02 && rel.dy > 0.22) {
+              final p = leafSway(c, rel, layer);
+              _addLeaf(underBounce, p + const Offset(0, 0.55), len * grow * 0.82, wid * grow * 0.62, angle);
+            }
+          }
+          final waterLight = Color.lerp(_air, pal.sun, 0.32 + 0.35 * warm)!;
+          canvas.drawPath(
+            underBounce,
+            Paint()..color = dim(waterLight).withValues(alpha: bounceStrength),
+          );
+        }
+
+        // 3. Delicate moonlit silver dewdrop glints on select outer leaves at night
+        if (_day < 0.35 && moonlight > 0.08) {
+          final glintPaint = Paint()..style = PaintingStyle.fill;
+          var idx = 0;
+          for (final (c, _, _, _, order, _, rel, layer) in tree.leaves) {
+            idx++;
+            if (layer == 2 && idx % 17 == 0 && order < leaves && rel.dy < 0.15) {
+              final p = leafSway(c, rel, layer);
+              final twinkle = 0.45 + 0.55 * math.sin(t * 1.8 + idx * 1.7);
+              glintPaint.color = const Color(0xFFE6F0FF).withValues(alpha: (0.42 * moonlight * twinkle).clamp(0.0, 0.55));
+              canvas.drawCircle(p, 0.75, glintPaint);
+            }
+          }
+        }
       }
     }
 
@@ -1058,10 +1250,14 @@ _bigTree = () {
   final far = clumps.map((c) => (c.$1 - centre).distance + c.$2).reduce(math.max);
   final leaves = <(Offset, double, double, double, double, double, Offset, int)>[];
 
+  final l0Count = _isAndroidRich ? 9 : 3;
+  final l1Count = _isAndroidRich ? 14 : 5;
+  final l2Count = _isAndroidRich ? 16 : 6;
+
   for (final (c, r, order, tone, _) in clumps) {
     // Botanical leaves arranged in natural radiating sprigs
     // Layer 0: Deep interior silhouette shadow (behind branches)
-    for (var k = 0; k < 3; k++) {
+    for (var k = 0; k < l0Count; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
       final dist = math.sqrt(rnd.nextDouble()) * r * 0.72;
       final p = c + Offset(math.cos(a), math.sin(a) * 0.85) * dist;
@@ -1081,7 +1277,7 @@ _bigTree = () {
       ));
     }
     // Layer 1: Mid-canopy volume leaves
-    for (var k = 0; k < 5; k++) {
+    for (var k = 0; k < l1Count; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
       final dist = math.sqrt(rnd.nextDouble()) * r * 0.88;
       final p = c + Offset(math.cos(a), math.sin(a) * 0.88) * dist;
@@ -1101,7 +1297,7 @@ _bigTree = () {
       ));
     }
     // Layer 2: Outer foreground leaves (reaching out into the air, rim lighting, detailed facets)
-    for (var k = 0; k < 6; k++) {
+    for (var k = 0; k < l2Count; k++) {
       final a = rnd.nextDouble() * 2 * math.pi;
       final dist = (0.35 + 0.65 * math.sqrt(rnd.nextDouble())) * r * 1.04;
       final p = c + Offset(math.cos(a), math.sin(a) * 0.9) * dist;

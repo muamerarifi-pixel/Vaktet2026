@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../logic/cities.dart';
 import '../logic/day.dart';
 import '../logic/prayer.dart';
+import 'notification_service.dart';
 
 enum ThemeChoice { auto, light, dark }
 
@@ -118,6 +119,12 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     for (final f in Feature.values) {
       _features[f] = prefs.getBool(f._key) ?? f.byDefault;
     }
+    notificationsEnabled = prefs.getBool(_kNotifEnabled) ?? false;
+    final before = prefs.getInt(_kNotifBefore) ?? 0;
+    notifyBeforeMin = notifyBeforeChoices.contains(before) ? before : 0;
+    for (final p in NotifyPrayer.values) {
+      _notifyPrayers[p] = prefs.getBool(p.prefKey) ?? p.byDefault;
+    }
     now = _clock();
     today = kosovoToday(now);
     selected = today;
@@ -125,6 +132,9 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     cursorM = today.m;
     _recompute();
     WidgetsBinding.instance.addObserver(this);
+    if (notificationsEnabled) {
+      syncNotifications();
+    }
   }
 
   static int _systemClock() {
@@ -144,8 +154,11 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   static const _kCountWeight = 'countdownWeight';
   static const _kCountFont = 'countdownFont';
   static const _kCountSize = 'countdownSize';
+  static const _kNotifEnabled = 'notif_enabled';
+  static const _kNotifBefore = 'notif_before_min';
 
   static const List<int> alarmChoices = [15, 30, 45, 60];
+  static const List<int> notifyBeforeChoices = [0, 5, 10, 15, 30];
 
   /// Text size, on top of the phone's own setting.
   static const List<double> fontScales = [.9, 1.0, 1.12, 1.25];
@@ -180,6 +193,13 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Whether a part of the app is switched on.
   bool on(Feature f) => _features[f] ?? f.byDefault;
+
+  late bool notificationsEnabled;
+  late int notifyBeforeMin;
+  final Map<NotifyPrayer, bool> _notifyPrayers = {};
+
+  /// Whether notifications are enabled for a specific prayer time.
+  bool notifyOn(NotifyPrayer p) => _notifyPrayers[p] ?? p.byDefault;
 
   /// Bumped on every change of the settings (not on the ticks), for the screens that only show settings.
   final ValueNotifier<int> settingsVersion = ValueNotifier<int>(0);
@@ -306,7 +326,67 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     city = c;
     _prefs.setString(_kCity, c.id);
     _settingChanged();
+    if (notificationsEnabled) {
+      syncNotifications();
+    }
   }
+
+  /// Toggles master prayer notifications (Android only). Requests Android 13+ permission when turning on.
+  Future<bool> setNotificationsEnabled(bool on) async {
+    if (on) {
+      final granted = await NotificationService.requestPermission();
+      if (!granted) {
+        notificationsEnabled = false;
+        await _prefs.setBool(_kNotifEnabled, false);
+        settingsVersion.value++;
+        return false;
+      }
+      notificationsEnabled = true;
+      await _prefs.setBool(_kNotifEnabled, true);
+      settingsVersion.value++;
+      await syncNotifications();
+      return true;
+    } else {
+      notificationsEnabled = false;
+      await _prefs.setBool(_kNotifEnabled, false);
+      settingsVersion.value++;
+      await NotificationService.cancelAll();
+      return true;
+    }
+  }
+
+  void setNotifyBeforeMin(int min) {
+    notifyBeforeMin = min;
+    _prefs.setInt(_kNotifBefore, min);
+    settingsVersion.value++;
+    if (notificationsEnabled) {
+      syncNotifications();
+    }
+  }
+
+  void setNotifyPrayer(NotifyPrayer p, bool on) {
+    _notifyPrayers[p] = on;
+    _prefs.setBool(p.prefKey, on);
+    settingsVersion.value++;
+    if (notificationsEnabled) {
+      syncNotifications();
+    }
+  }
+
+  Future<void> syncNotifications() async {
+    if (!notificationsEnabled) {
+      await NotificationService.cancelAll();
+      return;
+    }
+    await NotificationService.scheduleUpcoming(
+      city: city,
+      enabled: _notifyPrayers,
+      beforeMin: notifyBeforeMin,
+      nowUtcMs: _clock(),
+    );
+  }
+
+  Future<void> sendTestNotification() => NotificationService.showTest(city);
 
   void setTheme(ThemeChoice t) {
     theme = t;
