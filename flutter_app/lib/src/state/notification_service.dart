@@ -77,6 +77,49 @@ class NotificationService {
     }
   }
 
+  static Future<void> syncWidgetSchedule({
+    required City city,
+    required int nowUtcMs,
+    int days = 30,
+  }) async {
+    if (!isSupported) return;
+    final items = buildWidgetSchedule(city: city, nowUtcMs: nowUtcMs, days: days);
+    try {
+      await _channel.invokeMethod<void>('updateWidget', {'items': items});
+    } on MissingPluginException {
+      // Ignore in tests
+    } on PlatformException {
+      // Ignore
+    }
+  }
+
+  /// Builds the next [days] days of countdown targets (excluding Sabahu & Hyrja e drekës) for the lock/home widget.
+  static List<Map<String, Object>> buildWidgetSchedule({
+    required City city,
+    required int nowUtcMs,
+    int days = 30,
+  }) {
+    final startDay = kosovoToday(nowUtcMs);
+    final items = <Map<String, Object>>[];
+    const widgetKeys = {
+      PrayerKey.imsak,
+      PrayerKey.sunrise,
+      PrayerKey.dreka,
+      PrayerKey.asr,
+      PrayerKey.maghrib,
+      PrayerKey.isha,
+    };
+    for (var d = 0; d < days; d++) {
+      final rows = dayRows(startDay.addDays(d), city);
+      for (final row in rows) {
+        if (!widgetKeys.contains(row.key)) continue;
+        if (row.instant <= nowUtcMs) continue;
+        items.add({'name': row.name, 'instantMs': row.instant});
+      }
+    }
+    return items;
+  }
+
   /// Schedules the next [days] days of enabled prayer notifications for [city].
   static Future<void> scheduleUpcoming({
     required City city,

@@ -132,6 +132,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     cursorM = today.m;
     _recompute();
     WidgetsBinding.instance.addObserver(this);
+    NotificationService.syncWidgetSchedule(city: city, nowUtcMs: now);
     if (notificationsEnabled) {
       syncNotifications();
     }
@@ -326,6 +327,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     city = c;
     _prefs.setString(_kCity, c.id);
     _settingChanged();
+    NotificationService.syncWidgetSchedule(city: city, nowUtcMs: _clock());
     if (notificationsEnabled) {
       syncNotifications();
     }

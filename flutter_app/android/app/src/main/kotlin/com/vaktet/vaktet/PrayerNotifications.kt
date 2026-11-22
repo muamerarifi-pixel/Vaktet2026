@@ -233,6 +233,7 @@ class BootReceiver : BroadcastReceiver() {
             action == Intent.ACTION_TIMEZONE_CHANGED
         ) {
             PrayerNotifications.reschedulePersisted(context)
+            VaktetWidgetProvider.refreshAll(context)
         }
     }
 }

@@ -66,6 +66,12 @@ class MainActivity : FlutterActivity() {
                         PrayerNotifications.showNotification(this, 99999, title, body)
                         result.success(true)
                     }
+                    "updateWidget" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val items = call.argument<List<Map<String, Any>>>("items") ?: emptyList()
+                        VaktetWidgetProvider.saveScheduleAndRefresh(this, items)
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }
