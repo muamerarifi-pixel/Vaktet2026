@@ -149,11 +149,11 @@ class TreeInteraction extends ChangeNotifier {
     final u = boxH / 100.0;
     final s = u * 0.8;
 
-    // Hit bounds covering tree canopy and shore base with comfortable padding
+    // Hit bounds covering tree canopy (including lake-arching right bough) and shore base
     final hitRect = Rect.fromLTRB(
-      treeX - 75 * s - 25,
-      treeY - 150 * s - 25,
-      treeX + 75 * s + 25,
+      treeX - 80 * s - 25,
+      treeY - 165 * s - 25,
+      treeX + 100 * s + 25,
       treeY + 25 * s + 25,
     );
     return hitRect.contains(pos);
