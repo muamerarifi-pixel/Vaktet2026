@@ -73,7 +73,21 @@ void main() {
   group('Tree touch interaction', () {
     const size = Size(400, 800);
 
-    test('isTreeHit detects touches on canopy and shore, rejects distant touches', () {
+    test('hitZone distinguishes canopy pads, trunk, shoreline, and rejects distant touches', () {
+      // Canopy pads (upper-center & upper-right olive pads)
+      final padHit = TreeInteraction.hitZone(const Offset(80, 610), size);
+      expect(padHit?.zone, TreeTouchZone.canopyPad);
+      expect(padHit?.padIndex, greaterThanOrEqualTo(0));
+
+      // Trunk corridor
+      final trunkHit = TreeInteraction.hitZone(const Offset(76, 725), size);
+      expect(trunkHit?.zone, TreeTouchZone.trunk);
+
+      // Shoreline / reeds
+      final shoreHit = TreeInteraction.hitZone(const Offset(120, 770), size);
+      expect(shoreHit?.zone, TreeTouchZone.shoreline);
+
+      // Backward-compatible isTreeHit checks
       expect(TreeInteraction.isTreeHit(const Offset(70, 700), size), isTrue);
       expect(TreeInteraction.isTreeHit(const Offset(50, 720), size), isTrue);
       expect(TreeInteraction.isTreeHit(const Offset(90, 680), size), isTrue);
@@ -85,38 +99,44 @@ void main() {
       expect(TreeInteraction.isTreeHit(Offset.zero, size), isFalse);
     });
 
-    test('tap triggers rustle impulse, falling leaves, and startled bird on triple tap', () async {
+    test('zone taps trigger localized sway, shoreline reed swish, and quiet triple-tap bird', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(prefs: prefs);
       final scene = c.model.scene;
       final tree = TreeInteraction.shared;
 
-      // 1. Single tap
-      tree.tap(const Offset(70, 700), size, scene, isDay: true);
-      final rustle1 = tree.rustleAt(0.1);
-      expect(rustle1 != 0.0, isTrue);
+      // 1. Canopy pad tap triggers localized rustle stronger near tapped pad than far side
+      tree.tap(const Offset(132, 632), size, scene, isDay: true);
+      final nearSway = tree.rustleAtPoint(0.1, const Offset(36.5, -88.0)).abs();
+      final farSway = tree.rustleAtPoint(0.1, const Offset(-28.0, -84.0)).abs();
+      expect(nearSway, greaterThan(0.0));
+      expect(nearSway, greaterThan(farSway));
 
-      // 2. Painting runs cleanly with canvas recorder
+      // 2. Shoreline tap triggers reed sway
+      tree.tap(const Offset(120, 770), size, scene, isDay: true);
+      expect(tree.reedSwayAt(0.1).abs(), greaterThan(0.0));
+
+      // 3. Painting runs cleanly with explicit palette and canvas recorder
+      final palette = TreeLeafPalette.fromScene(scene, true);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      tree.paint(canvas, size, 0.2, true, scene);
+      tree.paint(canvas, size, 0.2, true, scene, palette: palette);
       final pic = recorder.endRecording();
       pic.dispose();
 
-      // 3. Quick consecutive taps trigger startled bird easter egg
-      tree.tap(const Offset(70, 700), size, scene, isDay: true);
-      tree.tap(const Offset(70, 700), size, scene, isDay: true);
+      // 4. Quick consecutive taps trigger quiet distant bird easter egg
+      tree.tap(const Offset(80, 610), size, scene, isDay: true);
+      tree.tap(const Offset(80, 610), size, scene, isDay: true);
 
       final recorder2 = ui.PictureRecorder();
       final canvas2 = Canvas(recorder2);
-      tree.paint(canvas2, size, 0.5, true, scene);
+      tree.paint(canvas2, size, 0.5, true, scene, palette: palette);
       final pic2 = recorder2.endRecording();
       pic2.dispose();
 
-      // 4. Night tap triggers fireflies
-      tree.tap(const Offset(70, 700), size, scene, isDay: false);
-
+      // 5. Night canopy tap paints cleanly with night palette
+      tree.tap(const Offset(80, 610), size, scene, isDay: false);
       final recorder3 = ui.PictureRecorder();
       final canvas3 = Canvas(recorder3);
       tree.paint(canvas3, size, 0.6, false, scene);

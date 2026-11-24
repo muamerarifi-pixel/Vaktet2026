@@ -242,6 +242,8 @@ class Landscape {
 
   // ---------- Painting ----------
 
+  TreeLeafPalette? _leafPalette;
+
   void paint(Canvas canvas) {
     // the land above the water, recorded once so the lake can mirror it
     final recorder = ui.PictureRecorder();
@@ -256,7 +258,7 @@ class Landscape {
     _lake(canvas, picture);
     _shore(canvas);
     _tree(canvas);
-    TreeInteraction.shared.paint(canvas, size, t, _day > .3, scene);
+    TreeInteraction.shared.paint(canvas, size, t, _day > .3, scene, palette: _leafPalette);
     picture.dispose();
   }
 
@@ -1169,11 +1171,13 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
         : const Color(0xFFAEC2E8);
     final lit = (_day * (.58 + .24 * warm) + .30 * moonlight).clamp(0.0, 1.0);
 
-    // Static for zero battery overhead; springs smoothly when tapped
-    final rustle = TreeInteraction.shared.rustleAt(t);
-    Offset swayAt(Offset pt, int depth) => rustle.abs() < 0.0005
-        ? pt
-        : pt + Offset(rustle * math.pow(depth / 5.0, 1.5) * 2.5, -rustle.abs() * 0.22 * (depth / 5.0));
+    // Static for zero battery overhead; springs smoothly with localized spatial falloff when tapped
+    Offset swayAt(Offset pt, int depth) {
+      final r = TreeInteraction.shared.rustleAtPoint(t, pt);
+      if (r.abs() < 0.0005) return pt;
+      return pt + Offset(r * math.pow(depth / 5.0, 1.5) * 2.5, -r.abs() * 0.22 * (depth / 5.0));
+    }
+    final reedSway = TreeInteraction.shared.reedSwayAt(t);
 
     canvas.save();
     canvas.translate(x(_treeX + 6.0), y(84.4));
@@ -1214,7 +1218,7 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
     final reedsFront = Path();
     final plumes = Path();
     for (final (bx, hgt, lean, wid, hasPlume, front) in tree.reeds) {
-      final sway = rustle * 1.3;
+      final sway = reedSway * 1.45;
       final tip = Offset(bx + lean + sway, 2.2 - hgt);
       final ctrl = Offset(bx + (lean + sway) * 0.42, 2.2 - hgt * 0.55);
       final target = front ? reedsFront : reedsBack;
@@ -1260,6 +1264,13 @@ void _addLeafMidrib(Path path, Offset center, double len, double angle) {
       litCol = Color.lerp(midCol, const Color(0xFF93ADD8), (0.08 + 0.18 * moonlight).clamp(0.0, 0.26))!;
       crestCol = Color.lerp(litCol, const Color(0xFFC4D7F5), (0.14 * moonlight).clamp(0.0, 0.18))!;
     }
+    _leafPalette = TreeLeafPalette(
+      shade: dim(shadeCol),
+      mid: dim(midCol),
+      lit: dim(litCol),
+      crest: dim(crestCol),
+      snow: dim(_snow),
+    );
 
     if (effLeaves > 0) {
       final backLeaves = Path();
