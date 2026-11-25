@@ -12,6 +12,7 @@ import 'colors.dart';
 import 'landscape.dart';
 import 'sky_info.dart';
 import 'text.dart';
+import 'touch_ripples.dart';
 
 /// How the sky card is shown.
 enum SkyMode {
@@ -1531,6 +1532,18 @@ class SkyCard extends StatelessWidget {
         Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.motion)))),
         Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.land)))),
         Positioned.fill(child: StillSky(painters: [painter(SkyLayer.front)])),
+        if (full)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ExcludeSemantics(
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: TouchRipplePainter(phase: model.phase, dark: dark),
+                  ),
+                ),
+              ),
+            ),
+          ),
         child,
         if (nowFn != null && model.isToday)
           Positioned.fill(

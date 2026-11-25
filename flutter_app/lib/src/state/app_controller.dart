@@ -54,6 +54,11 @@ enum Feature {
   tips('Këshillat e ditës', 'Dy këshilla për çdo ditë, nën vaktet.', true),
   hints('Udhëzimi i rrëshqitjes', '„Rrëshqit lart për vaktet“ në fund të ekranit.', true),
   pulse('Drita kur hyn vakti', 'Një valë e butë drite kur vjen koha e namazit.', true),
+  touchRipples(
+    'Valët e prekjes',
+    'Unaza të buta drite kur prekni ekranin; mbani gishtin për një valë qetësuese frymëmarrjeje.',
+    true,
+  ),
   haptics('Dridhja e lehtë', 'Një dridhje e vogël kur ndryshon dita.', true);
 
   const Feature(this.title, this.hint, this.byDefault);

@@ -16,6 +16,7 @@ import 'settings.dart';
 import 'sky.dart';
 import 'svg_icon.dart';
 import 'text.dart';
+import 'touch_ripples.dart';
 import 'tree_interaction.dart';
 import 'today_view.dart';
 import 'widgets.dart';
@@ -455,7 +456,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
         },
         child: child!,
       ),
-      child: GestureDetector(
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (event) {
+          if (_sheet.value > 0) return;
+          if (!c.on(Feature.touchRipples) || MediaQuery.disableAnimationsOf(context)) return;
+          final size = MediaQuery.sizeOf(context);
+          final isTreeTap = c.on(Feature.landscape) && TreeInteraction.isTreeHit(event.localPosition, size);
+          TouchRipples.shared.pointerDown(
+            event.pointer,
+            event.localPosition,
+            haptics: c.on(Feature.haptics),
+            isTreeTap: isTreeTap,
+          );
+        },
+        onPointerMove: (event) => TouchRipples.shared.pointerMove(event.pointer, event.localPosition),
+        onPointerUp: (event) => TouchRipples.shared.pointerUp(event.pointer),
+        onPointerCancel: (event) => TouchRipples.shared.pointerCancel(event.pointer),
+        child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onVerticalDragDown: _downVertical,
         onVerticalDragStart: _startVerticalDrag,
@@ -596,6 +614,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
             ],
           ),
         ),
+      ),
       ),
     );
   }
