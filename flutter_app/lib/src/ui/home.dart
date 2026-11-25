@@ -104,6 +104,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.stop();
     TouchRipples.shared.clear();
+    TreeInteraction.shared.clear();
     _sky.release(this);
     _follow.dispose();
     _sheet.dispose();
@@ -120,6 +121,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       widget.controller.stop();
       TouchRipples.shared.clear();
+      TreeInteraction.shared.clear();
       _sky.release(this);
       if (_resumed) setState(() => _resumed = false);
     }

@@ -244,8 +244,8 @@ class Landscape {
 
   TreeLeafPalette? _leafPalette;
 
-  void paint(Canvas canvas) {
-    // the land above the water, recorded once so the lake can mirror it
+  /// Paints only the static mountains, wooded ridges, mirrored lake and shore (cached once per minute in StillSky).
+  void paintBackdrop(Canvas canvas) {
     final recorder = ui.PictureRecorder();
     final land = Canvas(recorder);
     _farRange(land);
@@ -257,9 +257,18 @@ class Landscape {
     canvas.drawPicture(picture);
     _lake(canvas, picture);
     _shore(canvas);
+    picture.dispose();
+  }
+
+  /// Paints only the lakeside tree and active touch particles (repaints only when tapped, 0 fps when still).
+  void paintTreeAndInteraction(Canvas canvas) {
     _tree(canvas);
     TreeInteraction.shared.paint(canvas, size, t, _day > .3, scene, palette: _leafPalette);
-    picture.dispose();
+  }
+
+  void paint(Canvas canvas) {
+    paintBackdrop(canvas);
+    paintTreeAndInteraction(canvas);
   }
 
   /// The far range: one silhouette, pale with distance, its foot lost in the mist; the side towards the sun a

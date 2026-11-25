@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -256,7 +255,64 @@ class TreeInteraction extends ChangeNotifier {
 
   double _lastTapTime = -10.0;
   int _consecutiveTaps = 0;
-  Timer? _releaseTimer;
+  bool _clockHeld = false;
+
+  /// Whether any tree sway, falling leaf, mote, ripple, or bird is currently animating.
+  bool get hasActive =>
+      _tapImpulses.isNotEmpty ||
+      _reedImpulses.isNotEmpty ||
+      _leaves.isNotEmpty ||
+      _motes.isNotEmpty ||
+      _ripples.isNotEmpty ||
+      _activeBird != null;
+
+  void _ensureClock() {
+    if (_clockHeld) return;
+    _clockHeld = true;
+    SkyClock.shared.hold(this);
+    SkyClock.shared.addListener(_onTick);
+  }
+
+  void _releaseClock() {
+    if (!_clockHeld) return;
+    _clockHeld = false;
+    SkyClock.shared.removeListener(_onTick);
+    SkyClock.shared.release(this);
+  }
+
+  void _onTick() {
+    final t = SkyClock.shared.seconds;
+    _tapImpulses.removeWhere((item) => t - item.tapTime > 2.8);
+    _reedImpulses.removeWhere((item) => t - item.tapTime > 2.6);
+    _ripples.removeWhere((r) => t - r.spawnTime > _WaterRipple.duration);
+    _leaves.removeWhere((l) {
+      if (l.landTime != null) return t - l.landTime! > 1.65;
+      return t - l.spawnTime > 5.2;
+    });
+    _motes.removeWhere((mote) => t - mote.spawnTime > 3.8);
+    if (_activeBird != null && t - _activeBird!.spawnTime > 4.6) {
+      _activeBird = null;
+    }
+    if (!hasActive) {
+      _releaseClock();
+      notifyListeners();
+      return;
+    }
+    notifyListeners();
+  }
+
+  /// Clears all active tree animations and releases the clock immediately (e.g. on app pause).
+  void clear() {
+    final had = hasActive || _clockHeld;
+    _tapImpulses.clear();
+    _reedImpulses.clear();
+    _leaves.clear();
+    _motes.clear();
+    _ripples.clear();
+    _activeBird = null;
+    _releaseClock();
+    if (had) notifyListeners();
+  }
 
   static ({Offset origin, double scale, double u, double lakeY}) _metrics(Size size) {
     final boxH = math.min(.23 * size.height, 196.0);
@@ -316,12 +372,8 @@ class TreeInteraction extends ChangeNotifier {
     final m = _metrics(size);
     final localTap = (pos - m.origin) / m.scale;
 
-    // Wake the sky clock smoothly and release automatically once motion settles
-    SkyClock.shared.hold(this);
-    _releaseTimer?.cancel();
-    _releaseTimer = Timer(const Duration(milliseconds: 4800), () {
-      SkyClock.shared.release(this);
-    });
+    // Wake the sky clock smoothly and release automatically once all motion settles
+    _ensureClock();
 
     // Zone 3: Shoreline / Reeds — swish reeds & ripple water right where tapped, zero false leaves
     if (hit.zone == TreeTouchZone.shoreline) {

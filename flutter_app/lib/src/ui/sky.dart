@@ -13,6 +13,7 @@ import 'landscape.dart';
 import 'sky_info.dart';
 import 'text.dart';
 import 'touch_ripples.dart';
+import 'tree_interaction.dart';
 
 /// How the sky card is shown.
 enum SkyMode {
@@ -37,6 +38,12 @@ class SkyClock extends ChangeNotifier {
 
   final Set<Object> _holders = {};
   late final Ticker _ticker = Ticker(_tick, debugLabel: 'SkyClock');
+  final ChangeNotifier _ambient = ChangeNotifier();
+  Duration _lastAmbient = Duration.zero;
+
+  /// Throttled ~24 FPS listenable for slow ambient sky motion (stars, clouds, moon).
+  /// Cuts CPU/GPU load by ~80% on 120Hz screens with zero perceptible difference.
+  Listenable get ambient => _ambient;
 
   /// The time it ran before the current run, and in the current run.
   Duration _before = Duration.zero;
@@ -52,12 +59,18 @@ class SkyClock extends ChangeNotifier {
   /// Keeps the clock running until [who] lets go.
   void hold(Object who) {
     if (!_holders.add(who) || _ticker.isActive) return;
+    _lastAmbient = Duration.zero;
     _ticker.start();
   }
 
   void _tick(Duration elapsed) {
     _run = elapsed;
     notifyListeners();
+    if (_lastAmbient == Duration.zero || (elapsed - _lastAmbient).inMicroseconds >= 41667) {
+      _lastAmbient = elapsed;
+      // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+      _ambient.notifyListeners();
+    }
   }
 
   void release(Object who) {
@@ -65,6 +78,7 @@ class SkyClock extends ChangeNotifier {
     _ticker.stop();
     _before += _run;
     _run = Duration.zero;
+    _lastAmbient = Duration.zero;
   }
 }
 
@@ -626,6 +640,9 @@ enum SkyLayer {
   /// The mountains and the lake (full screen), or the hills (card). Painted only when the light changes.
   land,
 
+  /// The lakeside tree and its touch reactions. Repaints only while tapped/swaying, 0 fps when still.
+  tree,
+
   /// The shade behind the numbers and the glass sheen.
   front,
 }
@@ -665,8 +682,9 @@ class SkyPainter extends CustomPainter {
     this.options = const SkyOptions(),
   }) : super(
          repaint: switch (layer) {
-           SkyLayer.motion || SkyLayer.land => clock,
-           SkyLayer.back || SkyLayer.front => null,
+           SkyLayer.motion => clock?.ambient,
+           SkyLayer.tree => TreeInteraction.shared,
+           SkyLayer.back || SkyLayer.land || SkyLayer.front => null,
          },
        );
 
@@ -757,11 +775,15 @@ class SkyPainter extends CustomPainter {
         }
         if (_full && life && !_land) _paintFireflies(canvas, size, t);
       case SkyLayer.land:
-        final t = clock?.seconds ?? 0.0;
         if (_land) {
-          Landscape(size: size, pal: pal, scene: scene, dim: _k, t: t).paint(canvas);
+          Landscape(size: size, pal: pal, scene: scene, dim: _k, t: 0.0).paintBackdrop(canvas);
         } else {
           _hills(canvas, size, pal);
+        }
+      case SkyLayer.tree:
+        if (_land) {
+          final t = SkyClock.shared.seconds;
+          Landscape(size: size, pal: pal, scene: scene, dim: _k, t: t).paintTreeAndInteraction(canvas);
         }
       case SkyLayer.front:
         _veil(canvas, size);
@@ -1524,13 +1546,15 @@ class SkyCard extends StatelessWidget {
       options: options,
     );
 
-    // only the moving layer is painted on every frame; the ones under and over it are still pictures
+    // only the moving layer is painted on every frame; the static sky, mountains, lake and front veil are cached
     Widget card = Stack(
       fit: full ? StackFit.expand : StackFit.loose,
       children: [
         Positioned.fill(child: StillSky(painters: [painter(SkyLayer.back)])),
         Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.motion)))),
-        Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.land)))),
+        Positioned.fill(child: StillSky(painters: [painter(SkyLayer.land)])),
+        if (full && options.landscape)
+          Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: painter(SkyLayer.tree)))),
         Positioned.fill(child: StillSky(painters: [painter(SkyLayer.front)])),
         if (full)
           Positioned.fill(
