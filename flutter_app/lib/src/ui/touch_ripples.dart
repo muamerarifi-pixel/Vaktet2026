@@ -190,14 +190,14 @@ class TouchRipples extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Clears all active ripples (e.g. when toggled off in Settings or on sheet open).
+  /// Clears all active ripples (e.g. when toggled off in Settings or app paused).
   void clear() {
     _holdTimer?.cancel();
+    final had = _activeHold != null || _ripples.isNotEmpty || _clockHeld;
     _activeHold = null;
-    if (_ripples.isEmpty) return;
     _ripples.clear();
     _releaseClock();
-    notifyListeners();
+    if (had) notifyListeners();
   }
 
   void _addRipple(_SkyRipple ripple) {
